@@ -1,6 +1,7 @@
 # ===== Dev-only files (not shipped in releases) =====
 # Design docs & session notes (all markdown, everywhere)
 *.md
+!/README.md
 
 # Mockup HTML files
 mockup-*.html
