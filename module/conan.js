@@ -921,6 +921,13 @@ Hooks.once('ready', async function() {
   game.conan._invalidatePlayerVisCache = _invalidatePlayerVisCache;
   game.conan.dreadClock = dreadClock;
 
+  // Auto-create Albert (GM Tools) on first world load if none exists
+  if (game.user.isGM && !game.actors.find(a => a.type === 'tools')) {
+    const albert = await Actor.create({ name: 'Albert', type: 'tools' });
+    console.log('Conan | Created Albert (GM Tools) automatically');
+    ui.notifications.info('Albert (GM Tools) has been created in your Actors tab.');
+  }
+
   // Counter Ward — Wits contest triggered by clicking glowing icon
   game.conan.triggerCounterWard = async function() {
     const alert = game.conan?.counterWardAlert;
