@@ -1,0 +1,489 @@
+{{!-- TAB: HOME --}}
+<div class="tab-home">
+
+  {{!-- Trio Row: Flex Die, Physical Defense, Sorcery Defense --}}
+  <div class="sheet2-triSection">
+    {{!-- Settings Cog Toggle --}}
+    <button type="button" class="sheet2-triCogBtn toggle-trio-info" title="Edit Flex/Def">
+      <svg viewBox="0 0 24 24">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.488.488 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+      </svg>
+    </button>
+
+    {{!-- Front View (Display Mode) --}}
+    <div class="sheet2-triView sheet2-triView-front active">
+      <div class="sheet2-triRow">
+        <div class="sheet2-tri" title="Flex Die: {{effectiveFlexDie}}{{#if hasImprovedFlexII}} (Improved Flex II){{else}}{{#if hasImprovedFlex}} (Improved Flex){{/if}}{{/if}}">
+          {{#if hasImprovedFlexII}}
+          <img src="systems/conan/images/icons/improved_flex_ii_t_icon.png" class="sheet2-triToughBadge" alt="Improved Flex II" title="Improved Flex II"/>
+          {{else if hasImprovedFlex}}
+          <img src="systems/conan/images/icons/improved_flex_i_t_icon.png" class="sheet2-triToughBadge" alt="Improved Flex" title="Improved Flex"/>
+          {{/if}}
+          <span class="sheet2-triDisplay">{{#if (eq effectiveFlexDie "d10")}}10{{else}}{{#if (eq effectiveFlexDie "d8")}}8{{else}}{{#if (eq effectiveFlexDie "d6")}}6{{else}}1{{/if}}{{/if}}{{/if}}</span>
+          <span class="sheet2-triLabel">Flex</span>
+        </div>
+
+        <div class="sheet2-tri" title="Physical Defense: {{system.defense.physical}}{{#if hasToughSouled}} (Tough-Souled +1){{/if}}{{#if blockerActive}} (Blocker +1){{/if}}{{#if protectBonus}} (Protect +{{protectBonus}}){{/if}}">
+          {{#if system.armorEquipped.shield}}
+          <img src="systems/conan/images/icons/shield_icon.png" class="sheet2-triShieldBadge" alt="Shield" title="Shield Equipped (+1)"/>
+          {{/if}}
+          {{#if blockerActive}}
+          <img src="systems/conan/images/icons/blocker_i_t_icon.png" class="sheet2-triShieldBadge" alt="Blocker" title="Blocker Stance (+1)"/>
+          {{/if}}
+          {{#if hasToughSouled}}
+          <img src="systems/conan/images/icons/tough_souled_i_icon.png" class="sheet2-triToughBadge" alt="Tough-Souled" title="Tough-Souled (+1)"/>
+          {{/if}}
+          <span class="sheet2-triDisplay {{#if protectBonus}}protect-boosted{{/if}}">{{system.defense.physical}}</span>
+          <span class="sheet2-triLabel">Physical</span>
+        </div>
+
+        <div class="sheet2-tri" title="Sorcery Defense: {{system.defense.sorcery}}{{#if hasToughSouled}} (Tough-Souled +1){{/if}}{{#if hasUncannyWarding}} (Uncanny Warding +{{#if hasUncannyWardingII}}2{{else}}1{{/if}}){{/if}}">
+          {{#if hasToughSouled}}
+          <img src="systems/conan/images/icons/tough_souled_i_icon.png" class="sheet2-triToughBadge" alt="Tough-Souled" title="Tough-Souled (+1)"/>
+          {{/if}}
+          {{#if hasUncannyWardingII}}
+          <img src="systems/conan/images/icons/uncanny_warding_ii_t_icon.png" class="sheet2-sorceryBonusIcon" alt="Uncanny Warding II" title="Uncanny Warding II (+2 Sorcery Def)"/>
+          {{else if hasUncannyWarding}}
+          <img src="systems/conan/images/icons/uncanny_warding_i_t_icon.png" class="sheet2-sorceryBonusIcon" alt="Uncanny Warding" title="Uncanny Warding (+1 Sorcery Def)"/>
+          {{/if}}
+          <span class="sheet2-triDisplay">{{system.defense.sorcery}}</span>
+          <span class="sheet2-triLabel">Sorcery</span>
+        </div>
+      </div>
+    </div>
+
+    {{!-- Behind the Scenes View (Edit Mode) --}}
+    <div class="sheet2-triView sheet2-triView-bts">
+      <div class="sheet2-btsDenseGrid">
+        {{!-- Flex Die --}}
+        <div class="sheet2-btsField">
+          <label class="sheet2-btsLabel">Flex Die</label>
+          <select name="system.flex.die" class="sheet2-btsInput {{#if hasImprovedFlex}}skill-improved{{/if}} {{#if hasImprovedFlexII}}skill-improved{{/if}}">
+            {{#select effectiveFlexDie}}
+            <option value="d10">d10</option>
+            <option value="d8">d8</option>
+            <option value="d6">d6</option>
+            <option value="d1">d1 (GM Test)</option>
+            {{/select}}
+          </select>
+          {{#if hasImprovedFlexII}}
+          <small class="sheet2-btsHint sheet2-skillNote">IMPROVED II</small>
+          {{else}}
+          {{#if hasImprovedFlex}}
+          <small class="sheet2-btsHint sheet2-skillNote">IMPROVED</small>
+          {{/if}}
+          {{/if}}
+        </div>
+
+        {{!-- Physical Defense --}}
+        <div class="sheet2-btsField">
+          <label class="sheet2-btsLabel">
+            Phy
+            <input type="checkbox" name="system.defense.physicalLocked" class="sheet2-fieldLock toggle-defense-lock" data-defense="physical" {{#if system.defense.physicalLocked}}checked{{/if}} title="Toggle auto-calculate"/>
+          </label>
+          <input type="number" name="system.defense.physicalOverride" value="{{system.defense.physicalOverride}}" data-dtype="Number" class="sheet2-btsInput {{#if system.defense.physicalLocked}}locked{{/if}}" placeholder="Auto (Edge+2)" {{#if system.defense.physicalLocked}}readonly{{/if}}/>
+          <small class="sheet2-btsHint">Leave blank for auto-calculate</small>
+        </div>
+
+        {{!-- Sorcery Defense --}}
+        <div class="sheet2-btsField">
+          <label class="sheet2-btsLabel">
+            Sorc
+            <input type="checkbox" name="system.defense.sorceryLocked" class="sheet2-fieldLock toggle-defense-lock" data-defense="sorcery" {{#if system.defense.sorceryLocked}}checked{{/if}} title="Toggle auto-calculate"/>
+          </label>
+          <input type="number" name="system.defense.sorceryOverride" value="{{system.defense.sorceryOverride}}" data-dtype="Number" class="sheet2-btsInput {{#if system.defense.sorceryLocked}}locked{{/if}}" placeholder="Auto (Wits+2)" {{#if system.defense.sorceryLocked}}readonly{{/if}}/>
+          <small class="sheet2-btsHint">Leave blank for auto-calculate</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Stats Card --}}
+  <div class="sheet2-statsCard">
+    {{!-- Stats Row - All 4 always visible --}}
+    <div class="sheet2-statsGrid">
+      {{!-- MIGHT --}}
+      <div class="sheet2-statItem {{#if mightSkillBonus}}skill-boosted{{/if}} {{#if hasMightyII}}stat-tier-gold{{else}}{{#if hasMighty}}stat-tier-silver{{else}}stat-tier-bronze{{/if}}{{/if}}" data-attribute="might">
+        <div class="sheet2-statHeader">
+          <span class="sheet2-statChev stat-toggle" data-attribute="might">▶</span>
+          <span class="sheet2-statLabel">MIGHT</span>
+        </div>
+        <div class="sheet2-statDieWrapper">
+          <img src="systems/conan/images/{{effectiveMightDie}}_icon.jpg"
+               class="sheet2-statDieIcon roll-attribute {{#if hasMightyII}}legendary-die{{else}}{{#if hasMighty}}improved-die{{/if}}{{/if}}"
+               data-attribute="might"
+               title="Roll Might{{#if hasMightyII}} (Mighty II){{else}}{{#if hasMighty}} (Mighty){{/if}}{{/if}}"
+               alt="{{effectiveMightDie}}"/>
+          <span class="sheet2-statValueOverlay {{#if mightSkillBonus}}skill-value{{/if}} {{#if legendaryMight}}legendary-boosted{{/if}}">{{effectiveMight}}</span>
+        </div>
+      </div>
+
+      {{!-- EDGE --}}
+      <div class="sheet2-statItem {{#if edgeSkillBonus}}skill-boosted{{/if}} {{#if hasSharpnessII}}stat-tier-gold{{else}}{{#if hasSharpness}}stat-tier-silver{{else}}stat-tier-bronze{{/if}}{{/if}}" data-attribute="edge">
+        <div class="sheet2-statHeader">
+          <span class="sheet2-statChev stat-toggle" data-attribute="edge">▶</span>
+          <span class="sheet2-statLabel">EDGE</span>
+        </div>
+        <div class="sheet2-statDieWrapper">
+          <img src="systems/conan/images/{{effectiveEdgeDie}}_icon.jpg"
+               class="sheet2-statDieIcon roll-attribute {{#if hasSharpnessII}}legendary-die{{else}}{{#if hasSharpness}}improved-die{{/if}}{{/if}}"
+               data-attribute="edge"
+               title="Roll Edge{{#if hasSharpnessII}} (Sharpness II){{else}}{{#if hasSharpness}} (Sharpness){{/if}}{{/if}}"
+               alt="{{effectiveEdgeDie}}"/>
+          <span class="sheet2-statValueOverlay {{#if edgeSkillBonus}}skill-value{{/if}} {{#if legendaryEdge}}legendary-boosted{{/if}}">{{effectiveEdge}}</span>
+        </div>
+      </div>
+
+      {{!-- GRIT --}}
+      <div class="sheet2-statItem {{#if gritSkillBonus}}skill-boosted{{/if}} {{#if hasDeterminedII}}stat-tier-gold{{else}}{{#if hasDetermined}}stat-tier-silver{{else}}stat-tier-bronze{{/if}}{{/if}}" data-attribute="grit">
+        <div class="sheet2-statHeader">
+          <span class="sheet2-statChev stat-toggle" data-attribute="grit">▶</span>
+          <span class="sheet2-statLabel">GRIT</span>
+        </div>
+        <div class="sheet2-statDieWrapper">
+          <img src="systems/conan/images/{{effectiveGritDie}}_icon.jpg"
+               class="sheet2-statDieIcon roll-attribute {{#if hasDeterminedII}}legendary-die{{else}}{{#if hasDetermined}}improved-die{{/if}}{{/if}}"
+               data-attribute="grit"
+               title="Roll Grit{{#if hasDeterminedII}} (Determined II){{else}}{{#if hasDetermined}} (Determined){{/if}}{{/if}}"
+               alt="{{effectiveGritDie}}"/>
+          <span class="sheet2-statValueOverlay {{#if gritSkillBonus}}skill-value{{/if}} {{#if legendaryGrit}}legendary-boosted{{/if}}">{{effectiveGrit}}</span>
+        </div>
+      </div>
+
+      {{!-- WITS --}}
+      <div class="sheet2-statItem {{#if witsSkillBonus}}skill-boosted{{/if}} {{#if hasWiseII}}stat-tier-gold{{else}}{{#if hasWise}}stat-tier-silver{{else}}stat-tier-bronze{{/if}}{{/if}}" data-attribute="wits">
+        <div class="sheet2-statHeader">
+          <span class="sheet2-statChev stat-toggle" data-attribute="wits">▶</span>
+          <span class="sheet2-statLabel">WITS</span>
+        </div>
+        <div class="sheet2-statDieWrapper">
+          <img src="systems/conan/images/{{effectiveWitsDie}}_icon.jpg"
+               class="sheet2-statDieIcon roll-attribute {{#if hasWiseII}}legendary-die{{else}}{{#if hasWise}}improved-die{{/if}}{{/if}}"
+               data-attribute="wits"
+               title="Roll Wits{{#if hasWiseII}} (Wise II){{else}}{{#if hasWise}} (Wise){{/if}}{{/if}}"
+               alt="{{effectiveWitsDie}}"/>
+          <span class="sheet2-statValueOverlay {{#if witsSkillBonus}}skill-value{{/if}} {{#if legendaryWits}}legendary-boosted{{/if}}">{{effectiveWits}}</span>
+        </div>
+      </div>
+    </div>
+
+    {{!-- Edit Panel - Appears below stats row when a stat is selected --}}
+    <div class="sheet2-statEditPanel">
+      {{!-- MIGHT Edit --}}
+      <div class="sheet2-statEdit" data-for="might">
+        <div class="sheet2-statEditFields">
+          <label>VALUE:</label>
+          <input type="number" name="system.attributes.might.value" value="{{system.attributes.might.value}}" data-dtype="Number"/>
+          <label>DIE:</label>
+          <select name="system.attributes.might.die">
+            {{#select system.attributes.might.die}}
+            <option value="d6">d6</option>
+            <option value="d8">d8</option>
+            <option value="d10">d10</option>
+            {{/select}}
+          </select>
+        </div>
+        <div class="sheet2-statUses">
+          <strong>Uses:</strong> Melee attacks/damage, Thrown damage, Climb, Swim, Lift, Encumbrance
+        </div>
+      </div>
+
+      {{!-- GRIT Edit --}}
+      <div class="sheet2-statEdit" data-for="grit">
+        <div class="sheet2-statEditFields">
+          <label>VALUE:</label>
+          <input type="number" name="system.attributes.grit.value" value="{{system.attributes.grit.value}}" data-dtype="Number"/>
+          <label>DIE:</label>
+          <select name="system.attributes.grit.die">
+            {{#select system.attributes.grit.die}}
+            <option value="d6">d6</option>
+            <option value="d8">d8</option>
+            <option value="d10">d10</option>
+            {{/select}}
+          </select>
+        </div>
+        <div class="sheet2-statUses">
+          <strong>Uses:</strong> Life/Stamina Points, Death checks, Resist poison/fear/elements
+        </div>
+      </div>
+
+      {{!-- EDGE Edit --}}
+      <div class="sheet2-statEdit" data-for="edge">
+        <div class="sheet2-statEditFields">
+          <label>VALUE:</label>
+          <input type="number" name="system.attributes.edge.value" value="{{system.attributes.edge.value}}" data-dtype="Number"/>
+          <label>DIE:</label>
+          <select name="system.attributes.edge.die">
+            {{#select system.attributes.edge.die}}
+            <option value="d6">d6</option>
+            <option value="d8">d8</option>
+            <option value="d10">d10</option>
+            {{/select}}
+          </select>
+        </div>
+        <div class="sheet2-statUses">
+          <strong>Uses:</strong> Ranged/Thrown attacks, Initiative, Physical Defense, Stealth, Detection
+        </div>
+      </div>
+
+      {{!-- WITS Edit --}}
+      <div class="sheet2-statEdit" data-for="wits">
+        <div class="sheet2-statEditFields">
+          <label>VALUE:</label>
+          <input type="number" name="system.attributes.wits.value" value="{{system.attributes.wits.value}}" data-dtype="Number"/>
+          <label>DIE:</label>
+          <select name="system.attributes.wits.die">
+            {{#select system.attributes.wits.die}}
+            <option value="d6">d6</option>
+            <option value="d8">d8</option>
+            <option value="d10">d10</option>
+            {{/select}}
+          </select>
+        </div>
+        <div class="sheet2-statUses">
+          <strong>Uses:</strong> Sorcery attacks, Sorcery Defense, Languages, Detect lies, Persuasion
+        </div>
+      </div>
+    </div>
+
+    {{!-- Check Skills Row - Skills that modify skill checks (spillover at bottom) --}}
+    <div class="sheet2-checkSkillsRow">
+      {{!-- === PRIORITY 1: PASSIVE (stat bonuses) === --}}
+      {{#if hasSteelThewsII}}
+      <img src="systems/conan/images/icons/steely_thews_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Steely Thews II" title="Steely Thews II (+2 Might)"/>
+      {{else if hasSteelThews}}
+      <img src="systems/conan/images/icons/steely_thews_i_icon.png" class="sheet2-checkSkillIcon active" alt="Steely Thews" title="Steely Thews (+1 Might)"/>
+      {{/if}}
+      {{#if hasSteelTrapReflexesII}}
+      <img src="systems/conan/images/icons/steel_trap_reflexes_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Steel Trap Reflexes II" title="Steel Trap Reflexes II (+2 Edge)"/>
+      {{else if hasSteelTrapReflexes}}
+      <img src="systems/conan/images/icons/steel_trap_reflexes_i_icon.png" class="sheet2-checkSkillIcon active" alt="Steel Trap Reflexes" title="Steel Trap Reflexes (+1 Edge)"/>
+      {{/if}}
+      {{#if hasStudiousII}}
+      <img src="systems/conan/images/icons/studious_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Studious II" title="Studious II (+2 Wits)"/>
+      {{else if hasStudious}}
+      <img src="systems/conan/images/icons/studious_i_icon.png" class="sheet2-checkSkillIcon active" alt="Studious" title="Studious (+1 Wits)"/>
+      {{/if}}
+      {{#if hasWhaleboneAndGristleII}}
+      <img src="systems/conan/images/icons/whalebone_and_gristle_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Whalebone and Gristle II" title="Whalebone and Gristle II (+2 Grit)"/>
+      {{else if hasWhaleboneAndGristle}}
+      <img src="systems/conan/images/icons/whalebone_and_gristle_i_icon.png" class="sheet2-checkSkillIcon active" alt="Whalebone and Gristle" title="Whalebone and Gristle (+1 Grit)"/>
+      {{/if}}
+      {{#if hasWiseII}}
+      <img src="systems/conan/images/icons/wise_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Wise II" title="Wise II (Wits die d8 → d10)"/>
+      {{else if hasWise}}
+      <img src="systems/conan/images/icons/wise_i_icon.png" class="sheet2-checkSkillIcon active" alt="Wise" title="Wise (Wits die d6 → d8)"/>
+      {{/if}}
+      {{#if hasDeterminedII}}
+      <img src="systems/conan/images/icons/determined_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Determined II" title="Determined II (Grit die d8 → d10, +5 max LP)"/>
+      {{else if hasDetermined}}
+      <img src="systems/conan/images/icons/determined_i_icon.png" class="sheet2-checkSkillIcon active" alt="Determined" title="Determined (Grit die d6 → d8)"/>
+      {{/if}}
+      {{#if hasMightyII}}
+      <img src="systems/conan/images/icons/mighty_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Mighty II" title="Mighty II (Might die d8 → d10)"/>
+      {{else if hasMighty}}
+      <img src="systems/conan/images/icons/mighty_i_icon.png" class="sheet2-checkSkillIcon active" alt="Mighty" title="Mighty (Might die d6 → d8)"/>
+      {{/if}}
+      {{#if hasSharpnessII}}
+      <img src="systems/conan/images/icons/sharpness_ii_icon.png" class="sheet2-checkSkillIcon active" alt="Sharpness II" title="Sharpness II (Edge die d8 → d10)"/>
+      {{else if hasSharpness}}
+      <img src="systems/conan/images/icons/sharpness_i_icon.png" class="sheet2-checkSkillIcon active" alt="Sharpness" title="Sharpness (Edge die d6 → d8)"/>
+      {{/if}}
+      {{!-- Legendary: +1 to chosen stat (clickable to select/change) --}}
+      {{#if hasLegendary}}
+      <img src="systems/conan/images/icons/legendary_icon.png"
+           class="sheet2-checkSkillIcon legendary-trigger active clickable usable {{#unless legendaryNeedsSelection}}legendary-set{{/unless}}"
+           alt="Legendary" title="{{#if legendaryNeedsSelection}}Legendary - Click to choose +1 stat{{else}}Legendary (+1 {{legendaryTargetStat}}) - Click to change{{/if}}"/>
+      {{/if}}
+
+      {{!-- === PRIORITY 2: SITUATIONAL (purple) === --}}
+      {{#if hasInfamy}}
+      <img src="systems/conan/images/icons/infamy_i_icon.png"
+           class="sheet2-checkSkillIcon infamy-trigger active clickable {{#if canUseInfamy}}usable{{/if}} {{#if infamyActive}}stance-active{{/if}}"
+           alt="Infamy" title="{{#if infamyActive}}Infamy READY - Next intimidate/convince check gets +2{{else}}Infamy - Click to prepare (+2 to intimidate/convince){{/if}}"/>
+      {{/if}}
+      {{#if hasOfTheShadows}}
+      <img src="systems/conan/images/icons/of_the_shadows_i_icon.png"
+           class="sheet2-checkSkillIcon of-the-shadows-trigger active clickable {{#if canUseOfTheShadows}}usable{{/if}} {{#if ofTheShadowsActive}}stance-active{{/if}}"
+           alt="Of the Shadows" title="{{#if ofTheShadowsActive}}Of the Shadows ACTIVE - Edge checks get +1{{else}}Of the Shadows - Click to activate (+1 to Edge checks){{/if}}"/>
+      {{/if}}
+      {{!-- Eyes of the Raven: only shows when sorcery is ACTIVE, click to roll Edge perception +2 --}}
+      {{#if eyesOfTheRavenActive}}
+      <img src="systems/conan/images/icons/eyes_of_the_raven_icon.png"
+           class="sheet2-checkSkillIcon eyes-of-raven-check-trigger active clickable stance-active"
+           data-attribute="edge"
+           alt="Eyes of the Raven" title="Eyes of the Raven ACTIVE — Click to roll Edge Perception (+2)"/>
+      {{/if}}
+      {{!-- Inspire spell: +2 to all Checks, green=active, purple=warning, click twice to dismiss --}}
+      {{#if inspireSpellActive}}
+      <img src="systems/conan/images/icons/inspire_icon.png"
+           class="sheet2-checkSkillIcon inspire-buff-trigger active clickable stance-active"
+           alt="Inspired" title="Inspired (+2 to all Checks) — Click to begin dismissal"/>
+      {{else if inspireSpellWarning}}
+      <img src="systems/conan/images/icons/inspire_icon.png"
+           class="sheet2-checkSkillIcon inspire-buff-trigger active clickable inspire-warning"
+           alt="Inspired (Dismissing)" title="Click again to dismiss Inspire effect"/>
+      {{/if}}
+
+      {{!-- Astral Projection: three-state (gold=ready, purple=active, gray=spent) --}}
+      {{#if astralProjectionReady}}
+      <img src="systems/conan/images/icons/astral_projection_icon.png"
+           class="sheet2-checkSkillIcon astral-projection-trigger active clickable astral-ready"
+           alt="Astral Projection" title="Astral Projection — Click to project your spirit"/>
+      {{else if astralProjectionActive}}
+      <img src="systems/conan/images/icons/astral_projection_icon.png"
+           class="sheet2-checkSkillIcon astral-projection-trigger active clickable astral-active"
+           alt="Astral Projection" title="Astral Projection ACTIVE — Click to return to your body"/>
+      {{else if astralProjectionSpent}}
+      <img src="systems/conan/images/icons/astral_projection_icon.png"
+           class="sheet2-checkSkillIcon astral-projection-trigger active astral-spent"
+           alt="Astral Projection (Spent)" title="Astral Projection — Spent (reset from spell card)"/>
+      {{/if}}
+
+      {{!-- Infernal Ward: always visible if has spell, red when demons on scene, gray when spent --}}
+      {{#if hasInfernalWard}}
+        {{#if infernalWardAlert}}
+        <img src="systems/conan/images/icons/infernal_ward_icon.png"
+             class="sheet2-checkSkillIcon infernal-ward-trigger active infernal-ward-active"
+             alt="Infernal Ward" title="Infernal Ward — Demons detected nearby"/>
+        {{else if infernalWardSpent}}
+        <img src="systems/conan/images/icons/infernal_ward_icon.png"
+             class="sheet2-checkSkillIcon infernal-ward-trigger active infernal-ward-spent"
+             alt="Infernal Ward (Broken)" title="Infernal Ward — Broken"/>
+        {{else}}
+        <img src="systems/conan/images/icons/infernal_ward_icon.png"
+             class="sheet2-checkSkillIcon infernal-ward-trigger active"
+             alt="Infernal Ward" title="Infernal Ward — Demonic protection"/>
+        {{/if}}
+      {{/if}}
+
+      {{!-- Undead Ward: always visible if has spell, green when undead on scene, gray when spent --}}
+      {{#if hasUndeadWard}}
+        {{#if undeadWardAlert}}
+        <img src="systems/conan/images/icons/undead_ward_icon.png"
+             class="sheet2-checkSkillIcon undead-ward-trigger active undead-ward-active"
+             alt="Undead Ward" title="Undead Ward — Undead detected nearby"/>
+        {{else if undeadWardSpent}}
+        <img src="systems/conan/images/icons/undead_ward_icon.png"
+             class="sheet2-checkSkillIcon undead-ward-trigger active undead-ward-spent"
+             alt="Undead Ward (Broken)" title="Undead Ward — Broken"/>
+        {{else}}
+        <img src="systems/conan/images/icons/undead_ward_icon.png"
+             class="sheet2-checkSkillIcon undead-ward-trigger active"
+             alt="Undead Ward" title="Undead Ward — Undead protection"/>
+        {{/if}}
+      {{/if}}
+
+      {{!-- Demonic Steed: mounted via sorcery, click to dismiss --}}
+      {{#if demonicSteedActive}}
+      <img src="systems/conan/images/icons/demonic_steed_icon.png"
+           class="sheet2-checkSkillIcon demonic-steed-trigger active clickable stance-active"
+           alt="Demonic Steed" title="Demonic Steed ACTIVE — Mounted (2 LP/round). Click to dismiss."/>
+      {{/if}}
+
+      {{!-- === PRIORITY 3: ACTIVE (outer) === --}}
+      {{!-- Pantherish: 1 SP to reroll a failed check --}}
+      {{#if hasPantherish}}
+      <img src="systems/conan/images/icons/pantherish_i_icon.png"
+           class="sheet2-checkSkillIcon pantherish-trigger active clickable {{#if canUsePantherish}}usable{{/if}}"
+           data-context="check"
+           alt="Pantherish" title="Pantherish - 1 SP to reroll last failed check"/>
+      {{/if}}
+      {{!-- Leader of Men: 1-2 SP to buff allies with +1 attack --}}
+      {{#if hasLeaderOfMen}}
+      <img src="systems/conan/images/icons/leader_of_men_i_icon.png"
+           class="sheet2-checkSkillIcon leader-of-men-trigger active clickable {{#if canUseLeaderOfMen}}usable{{/if}} {{#if leaderOfMenActive}}stance-active{{/if}}"
+           alt="Leader of Men" title="{{#if leaderOfMenActive}}INSPIRING {{leaderOfMenTargetCount}} allies - Click to manage{{else}}Leader of Men - 1 SP: buff 1 ally, 2 SP: buff up to 3 allies{{/if}}"/>
+      {{/if}}
+      {{!-- Protector: 1 SP to give ally 1 SP (1/round) --}}
+      {{#if hasProtector}}
+      <img src="systems/conan/images/icons/protector_icon.png"
+           class="sheet2-checkSkillIcon protector-trigger active clickable {{#if canUseProtector}}usable{{/if}}"
+           alt="Protector" title="Protector - 1 SP: Give ally 1 SP (1/round)"/>
+      {{/if}}
+    </div>
+  </div>
+
+  {{!-- Bottom Mini Cards: Recovery, Stamina, Death Saves --}}
+  <div class="sheet2-miniBottom">
+    <div class="sheet2-miniCard" title="Regain 50% Max LP">
+      <span class="sheet2-miniLabel">Recovery</span>
+      <div class="sheet2-recoverBoxes">
+        <button type="button" class="sheet2-recoveryIcon recovery-icon-btn" data-recovery-index="0" {{#if system.recovery.used1}}data-used="true"{{/if}}>
+          <img src="systems/conan/images/recovery_icon.png" alt="Recovery 1"/>
+        </button>
+        {{#if hasResilient}}
+        <img src="systems/conan/images/icons/resilient_icon.png" class="sheet2-resilientIcon" alt="Resilient" title="Resilient (+3 LP, +1 SP on Recovery)"/>
+        {{/if}}
+        <button type="button" class="sheet2-recoveryIcon recovery-icon-btn {{#if hasHeavyArmorRecoveryPenalty}}heavy-armor-blocked{{/if}}" data-recovery-index="1" {{#if system.recovery.used2}}data-used="true"{{/if}} {{#if hasHeavyArmorRecoveryPenalty}}disabled title="Heavy Armor Restricted"{{/if}}>
+          <img src="systems/conan/images/recovery_icon.png" alt="Recovery 2"/>
+          {{#if hasHeavyArmorRecoveryPenalty}}
+          <span class="sheet2-recoverySkull">💀</span>
+          {{/if}}
+        </button>
+      </div>
+    </div>
+
+    <div class="sheet2-miniCard sheet2-staminaCard" title="Stamina Points">
+      <div class="sheet2-staminaControls">
+        <button type="button" class="sheet2-staminaPlusMinus stamina-decrease" data-delta="-1" title="Decrease Stamina">−</button>
+        <div class="sheet2-staminaIconWrapper stamina-dropdown-toggle" title="Spend Stamina">
+          <img src="systems/conan/images/stamina_icon.jpg" class="sheet2-staminaIcon" alt="Stamina"/>
+          <span class="sheet2-staminaValueOverlay">{{system.stamina}}</span>
+        </div>
+        <button type="button" class="sheet2-staminaPlusMinus stamina-increase" data-delta="1" title="Increase Stamina">+</button>
+      </div>
+    </div>
+
+    <div class="sheet2-miniCard" title="Death Save">
+      <button type="button" class="sheet2-skullBtn roll-death-save">
+        <img src="systems/conan/images/deathcheck_icon.png" alt="Death Save" class="sheet2-deathIcon"/>
+      </button>
+    </div>
+  </div>
+
+  {{!-- Stamina Spend Menu (hidden, appears below when icon clicked) --}}
+  <div class="sheet2-staminaMenu">
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="move">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">Bonus Move</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="roll1">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">+1 Die Roll</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="2" data-action="roll2">
+      <span class="sheet2-staminaCost">2</span>
+      <span class="sheet2-staminaEffect">+2 Die Roll</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="damage1" data-roll="1d4">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">+1d4 Dmg</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="2" data-action="damage2" data-roll="2d4">
+      <span class="sheet2-staminaCost">2</span>
+      <span class="sheet2-staminaEffect">+2d4 Dmg</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="initiative">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">Init Tie</span>
+    </div>
+
+    {{!-- Origin-specific Stamina Spends --}}
+    {{#if originBonuses.staminaSpends.length}}
+      <div class="sheet2-staminaMenuDivider"></div>
+      {{#each originBonuses.staminaSpends}}
+        <div class="sheet2-staminaMenuItem sheet2-originStaminaItem"
+             data-cost="{{this.cost}}"
+             data-action="{{this.action}}"
+             data-origin-spend="true"
+             {{#if this.healAmount}}data-heal-amount="{{this.healAmount}}"{{/if}}
+             {{#if this.defenseBonus}}data-defense-bonus="{{this.defenseBonus}}"{{/if}}>
+          <span class="sheet2-staminaCost">{{this.cost}}</span>
+          <span class="sheet2-staminaEffect sheet2-originEffect">{{this.effect}}</span>
+        </div>
+      {{/each}}
+    {{/if}}
+  </div>
+
+</div>

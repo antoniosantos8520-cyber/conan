@@ -1,0 +1,138 @@
+{{!-- TAB: STAMINA --}}
+<div class="tab-stamina">
+
+  {{!-- Stamina Pool --}}
+  <div class="sheet2-staminaPool">
+    <div class="sheet2-sectionHead">
+      <h3>Stamina Pool</h3>
+    </div>
+    
+    <div class="sheet2-staminaDisplay">
+      <div class="sheet2-staminaBig">
+        <input type="number" name="system.stamina" value="{{system.stamina}}" data-dtype="Number" class="sheet2-staminaLarge"/>
+        <span class="sheet2-staminaLabel">Current Stamina</span>
+      </div>
+    </div>
+
+    <div class="sheet2-staminaControls">
+      <button type="button" class="sheet2-staminaBtn stamina-decrease" data-delta="-1">− 1</button>
+      <button type="button" class="sheet2-staminaBtn stamina-increase" data-delta="1">+ 1</button>
+    </div>
+  </div>
+
+  {{!-- Recovery Section --}}
+  <div class="sheet2-recoverySection">
+    <div class="sheet2-sectionHead">
+      <h3>Recovery</h3>
+    </div>
+    
+    <div class="sheet2-recoveryInfo">
+      <p class="sheet2-recoveryText">Mark recovery boxes when used. Each recovery: regain 50% of MAX Life Points (round up) + gain 1 Stamina. Limit 2 per session (1 if wearing Heavy Armor). Cannot recover under duress or danger.</p>
+    </div>
+
+    <div class="sheet2-recoveryBoxes">
+      <div class="sheet2-recoveryBox">
+        <input type="checkbox" name="system.recovery.first" {{#if system.recovery.first}}checked{{/if}} class="sheet2-recoveryTick"/>
+        <span class="sheet2-recoveryLabel">Recovery 1</span>
+      </div>
+      <div class="sheet2-recoveryBox">
+        <input type="checkbox" name="system.recovery.second" {{#if system.recovery.second}}checked{{/if}} class="sheet2-recoveryTick"/>
+        <span class="sheet2-recoveryLabel">Recovery 2</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Stamina Uses Reference --}}
+  <div class="sheet2-staminaRef">
+    <div class="sheet2-sectionHead">
+      <h3>Stamina Uses (Core Rules)</h3>
+    </div>
+
+    <div class="sheet2-refList">
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Bonus Move Action: Gain 1 additional Move Action</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Increase Roll by +1 (after seeing roll result)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">2</span>
+        <span class="sheet2-refDesc">Increase Roll by +2 (after seeing roll result)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Bonus Damage: +1d4 to damage (no Flex die on this bonus)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">2</span>
+        <span class="sheet2-refDesc">Bonus Damage: +2d4 to damage (no Flex die on this bonus)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Extend Thrown Range: +1 range zone for Thrown weapon</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Ignore Encumbrance: Ignore encumbrance penalty for 1 Round</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">Final</span>
+        <span class="sheet2-refDesc">Massive Damage: Spend your final Stamina to apply Massive Damage</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Break Initiative Tie: Go before tied Enemy in initiative</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">+1</span>
+        <span class="sheet2-refDesc">Flex Trigger: Gain 1 Stamina when Flex die triggers</span>
+      </div>
+    </div>
+
+    <div class="sheet2-sectionHead" style="margin-top: 1rem;">
+      <h3>Stamina Uses (Skills)</h3>
+    </div>
+
+    <div class="sheet2-refList">
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Pantherish: Reroll a failed Check or Attack</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Charge: 2 Move Actions + Melee Attack as 1 Action</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Hit and Run: Attack + 2 Move Actions as 1 Action</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Impaling Throw: Double thrown weapon damage</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Sacrifice Armor: Ignore all damage from one attack (once per Tale)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1</span>
+        <span class="sheet2-refDesc">Protector: Give 1 SP to an ally (once per Round)</span>
+      </div>
+      <div class="sheet2-refItem">
+        <span class="sheet2-refCost">1+</span>
+        <span class="sheet2-refDesc">Leader of Men: Ally gets +1 Attack (1 SP = 1 ally, 2 SP = 3 allies)</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Stamina Notes --}}
+  <div class="sheet2-staminaNotes">
+    <div class="sheet2-sectionHead">
+      <h3>Stamina Notes</h3>
+    </div>
+    <textarea name="system.staminaNotes" class="sheet2-notesArea" placeholder="Track stamina usage, conditions, or other notes...">{{system.staminaNotes}}</textarea>
+  </div>
+
+</div>

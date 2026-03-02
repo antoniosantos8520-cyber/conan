@@ -1,0 +1,264 @@
+{{!-- TAB: SKILLS --}}
+<div class="tab-skills">
+
+  {{!-- XP & Stamina Resource Bar --}}
+  <div class="sheet2-resourceBar">
+    {{!-- XP Display (styled like stamina) --}}
+    <div class="sheet2-resourceCard" title="Experience Points">
+      <div class="sheet2-resourceControls">
+        <button type="button" class="sheet2-resourcePlusMinus xp-decrease" data-delta="-1" title="Decrease XP">−</button>
+        <div class="sheet2-resourceIconWrapper">
+          <img src="systems/conan/images/skill_icon.png" class="sheet2-resourceIcon" alt="XP"/>
+          <span class="sheet2-resourceValueOverlay xp-value">{{xpAvailable}}</span>
+        </div>
+        <button type="button" class="sheet2-resourcePlusMinus xp-increase" data-delta="1" title="Increase XP">+</button>
+      </div>
+      <span class="sheet2-resourceLabel">XP</span>
+    </div>
+
+    {{!-- Stamina Display (duplicate from home) --}}
+    <div class="sheet2-resourceCard sheet2-staminaCard" title="Stamina Points">
+      <div class="sheet2-resourceControls">
+        <button type="button" class="sheet2-resourcePlusMinus stamina-decrease" data-delta="-1" title="Decrease Stamina">−</button>
+        <div class="sheet2-resourceIconWrapper stamina-dropdown-toggle" title="Spend Stamina">
+          <img src="systems/conan/images/stamina_icon.jpg" class="sheet2-resourceIcon" alt="Stamina"/>
+          <span class="sheet2-resourceValueOverlay stamina-value">{{system.stamina}}</span>
+        </div>
+        <button type="button" class="sheet2-resourcePlusMinus stamina-increase" data-delta="1" title="Increase Stamina">+</button>
+      </div>
+      <span class="sheet2-resourceLabel">SP</span>
+    </div>
+  </div>
+
+  {{!-- Stamina Spend Menu (for skills tab) --}}
+  <div class="sheet2-staminaMenu">
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="move">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">Bonus Move</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="roll1">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">+1 Die Roll</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="2" data-action="roll2">
+      <span class="sheet2-staminaCost">2</span>
+      <span class="sheet2-staminaEffect">+2 Die Roll</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="damage1" data-roll="1d4">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">+1d4 Dmg</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="2" data-action="damage2" data-roll="2d4">
+      <span class="sheet2-staminaCost">2</span>
+      <span class="sheet2-staminaEffect">+2d4 Dmg</span>
+    </div>
+    <div class="sheet2-staminaMenuItem" data-cost="1" data-action="initiative">
+      <span class="sheet2-staminaCost">1</span>
+      <span class="sheet2-staminaEffect">Init Tie</span>
+    </div>
+
+    {{!-- Origin-specific Stamina Spends --}}
+    {{#if originBonuses.staminaSpends.length}}
+      <div class="sheet2-staminaMenuDivider"></div>
+      {{#each originBonuses.staminaSpends}}
+        <div class="sheet2-staminaMenuItem sheet2-originStaminaItem"
+             data-cost="{{this.cost}}"
+             data-action="{{this.action}}"
+             data-origin-spend="true"
+             {{#if this.healAmount}}data-heal-amount="{{this.healAmount}}"{{/if}}
+             {{#if this.defenseBonus}}data-defense-bonus="{{this.defenseBonus}}"{{/if}}>
+          <span class="sheet2-staminaCost">{{this.cost}}</span>
+          <span class="sheet2-staminaEffect sheet2-originEffect">{{this.effect}}</span>
+        </div>
+      {{/each}}
+    {{/if}}
+  </div>
+
+  {{!-- Owned Skills List --}}
+  <div class="sheet2-skillSection">
+    <div class="sheet2-sectionHead">
+      <h3>Learned Skills</h3>
+    </div>
+
+    {{!-- Origin Skills (Full Width) --}}
+    <div class="sheet2-skillListOrigin">
+      {{#each preparedSkills as |skill idx|}}
+      {{#if skill.fromOrigin}}
+      <div class="sheet2-skillCard2 origin-skill" data-skill-id="{{skill.id}}">
+        <div class="sheet2-skill2Header skill-toggle" data-skill-id="{{skill.id}}">
+          {{#if skill.icon}}<img src="{{skill.icon}}" class="sheet2-skillIcon" alt=""/>{{/if}}
+          <span class="sheet2-skill2Name">{{skill.name}}</span>
+          <span class="sheet2-skillBadge origin">ORIGIN</span>
+          {{#if skill.xpCost}}<span class="sheet2-skillBadge cost">{{skill.xpCost}} XP</span>{{/if}}
+          <span class="sheet2-skill2Chev">▶</span>
+        </div>
+        <div class="sheet2-skill2Body">
+          <div class="sheet2-skill2Effect">{{skill.effect}}</div>
+          <div class="sheet2-skill2Actions">
+            {{#if skill.hasUseCost}}
+            <button type="button" class="sheet2-skill2Btn use use-skill" data-skill-id="{{skill.id}}" title="Use Skill">▶</button>
+            {{/if}}
+            <button type="button" class="sheet2-skill2Btn chat skill-to-chat" data-skill-id="{{skill.id}}" title="Send to Chat">💬</button>
+          </div>
+        </div>
+      </div>
+      {{/if}}
+      {{/each}}
+    </div>
+
+    {{!-- Regular Skills (2-Column Grid) --}}
+    <div class="sheet2-skillListGrid">
+      {{#each preparedSkills as |skill idx|}}
+      {{#unless skill.fromOrigin}}
+      <div class="sheet2-skillCard2" data-skill-id="{{skill.id}}">
+        <div class="sheet2-skill2Header skill-toggle" data-skill-id="{{skill.id}}">
+          {{#if skill.icon}}<img src="{{skill.icon}}" class="sheet2-skillIcon" alt=""/>{{/if}}
+          <span class="sheet2-skill2Name">{{skill.name}}</span>
+          {{#if skill.hasUseCost}}
+          <span class="sheet2-skill2Cost">
+            {{#if skill.spCost}}{{skill.spCost}} SP{{/if}}
+            {{#if skill.lpCost}}{{skill.lpCost}} LP{{/if}}
+          </span>
+          {{/if}}
+          <span class="sheet2-skill2Chev">▶</span>
+        </div>
+        <div class="sheet2-skill2Body">
+          <div class="sheet2-skill2Effect">{{skill.effect}}</div>
+          <div class="sheet2-skill2Actions">
+            {{#if skill.hasUseCost}}
+            <button type="button" class="sheet2-skill2Btn use use-skill" data-skill-id="{{skill.id}}" title="Use Skill">▶</button>
+            {{/if}}
+            <button type="button" class="sheet2-skill2Btn chat skill-to-chat" data-skill-id="{{skill.id}}" title="Send to Chat">💬</button>
+            <button type="button" class="sheet2-skill2Btn delete skill-delete" data-skill-id="{{skill.id}}" title="Forget Skill">
+              <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      {{/unless}}
+      {{/each}}
+    </div>
+
+    {{#unless preparedSkills.length}}
+    <div class="sheet2-skillEmpty">
+      <p>No skills learned yet. Click the button below to browse available skills.</p>
+    </div>
+    {{/unless}}
+
+    {{!-- Add Skill Button --}}
+    <button type="button" class="sheet2-addSkillBtn open-skill-menu">
+      <span class="btn-icon">+</span>
+      <span class="btn-text">Learn New Skill</span>
+    </button>
+  </div>
+
+  {{!-- Skill Selection Menu (Overlay) --}}
+  <div class="sheet2-skillMenu">
+    <div class="sheet2-skillMenuHeader">
+      <h3>Available Skills</h3>
+      <div class="sheet2-skillMenuXP">
+        <span class="xp-label">Available:</span>
+        <span class="xp-value menu-xp-display">{{xpAvailable}}</span>
+        <span class="xp-label">XP</span>
+      </div>
+      <button type="button" class="sheet2-skillMenuClose close-skill-menu">×</button>
+    </div>
+
+    <div class="sheet2-skillMenuBody">
+      {{!-- Starting Skills (1-3 XP) --}}
+      <div class="sheet2-skillTier">
+        <div class="sheet2-skillTierHeader">Starting Skills</div>
+        <div class="sheet2-skillTierList">
+          {{#each availableSkills.starting as |skill|}}
+          <div class="sheet2-skillOption {{#if skill.owned}}owned{{/if}} {{#if skill.unavailable}}unavailable{{/if}} {{#if skill.queued}}queued{{/if}}"
+               data-skill-def-id="{{skill.id}}"
+               data-xp-cost="{{skill.xpCost}}">
+            <div class="sheet2-skillOptionHeader skill-option-toggle">
+              <span class="sheet2-skillOptionName">{{skill.name}}</span>
+              <span class="sheet2-skillOptionCost">{{skill.xpCost}} XP</span>
+              <span class="sheet2-skillOptionChev">▶</span>
+            </div>
+            <div class="sheet2-skillOptionBody">
+              <div class="sheet2-skillOptionEffect">{{skill.effect}}</div>
+              {{#if skill.prerequisite}}
+              <div class="sheet2-skillOptionPrereq">
+                <span class="prereq-label">Requires:</span>
+                <span class="prereq-value {{#unless skill.prereqMet}}unmet{{/unless}}">{{skill.prerequisiteDisplay}}</span>
+              </div>
+              {{/if}}
+              <div class="sheet2-skillOptionActions">
+                {{#if skill.owned}}
+                <div class="sheet2-skillOptionStatus owned">Already Learned</div>
+                {{else if skill.unavailable}}
+                <div class="sheet2-skillOptionStatus unavailable">
+                  {{#if skill.cantAfford}}Cannot Afford{{/if}}
+                  {{#if skill.prereqUnmet}}Prerequisite Not Met{{/if}}
+                </div>
+                {{else}}
+                <button type="button" class="sheet2-skillAddBtn skill-queue-toggle" data-skill-def-id="{{skill.id}}">
+                  {{#if skill.queued}}QUEUED{{else}}ADD{{/if}}
+                </button>
+                {{/if}}
+                <button type="button" class="sheet2-skillChatBtn skill-def-to-chat" data-skill-def-id="{{skill.id}}" title="Send to Chat">💬</button>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+
+      {{!-- Legendary Skills (1-6 XP) --}}
+      <div class="sheet2-skillTier">
+        <div class="sheet2-skillTierHeader">Legendary Skills</div>
+        <div class="sheet2-skillTierList">
+          {{#each availableSkills.legendary as |skill|}}
+          <div class="sheet2-skillOption {{#if skill.owned}}owned{{/if}} {{#if skill.unavailable}}unavailable{{/if}} {{#if skill.queued}}queued{{/if}}"
+               data-skill-def-id="{{skill.id}}"
+               data-xp-cost="{{skill.xpCost}}">
+            <div class="sheet2-skillOptionHeader skill-option-toggle">
+              <span class="sheet2-skillOptionName">{{skill.name}}</span>
+              <span class="sheet2-skillOptionCost">{{skill.xpCost}} XP</span>
+              <span class="sheet2-skillOptionChev">▶</span>
+            </div>
+            <div class="sheet2-skillOptionBody">
+              <div class="sheet2-skillOptionEffect">{{skill.effect}}</div>
+              {{#if skill.prerequisite}}
+              <div class="sheet2-skillOptionPrereq">
+                <span class="prereq-label">Requires:</span>
+                <span class="prereq-value {{#unless skill.prereqMet}}unmet{{/unless}}">{{skill.prerequisiteDisplay}}</span>
+              </div>
+              {{/if}}
+              <div class="sheet2-skillOptionActions">
+                {{#if skill.owned}}
+                <div class="sheet2-skillOptionStatus owned">Already Learned</div>
+                {{else if skill.unavailable}}
+                <div class="sheet2-skillOptionStatus unavailable">
+                  {{#if skill.cantAfford}}Cannot Afford{{/if}}
+                  {{#if skill.prereqUnmet}}Prerequisite Not Met{{/if}}
+                </div>
+                {{else}}
+                <button type="button" class="sheet2-skillAddBtn skill-queue-toggle" data-skill-def-id="{{skill.id}}">
+                  {{#if skill.queued}}QUEUED{{else}}ADD{{/if}}
+                </button>
+                {{/if}}
+                <button type="button" class="sheet2-skillChatBtn skill-def-to-chat" data-skill-def-id="{{skill.id}}" title="Send to Chat">💬</button>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet2-skillMenuFooter">
+      <div class="sheet2-queueSummary">
+        <span class="queue-count">0</span> skills queued
+        (<span class="queue-cost">0</span> XP)
+      </div>
+      <button type="button" class="sheet2-confirmSkillsBtn confirm-skill-selection" disabled>
+        Confirm Selection
+      </button>
+    </div>
+  </div>
+
+</div>

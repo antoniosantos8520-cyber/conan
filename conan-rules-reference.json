@@ -1,0 +1,1121 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "system": "Conan: The Hyborian Age TTRPG",
+    "purpose": "Rules reference for Foundry VTT implementation",
+    "lastUpdated": "2026-01-30",
+    "notes": "Comprehensive rules document - includes all mechanics even if not reflected on actor sheet"
+  },
+
+  "_devNotes": {
+    "purpose": "Development patterns and lessons learned for future reference",
+    "patterns": {
+      "derivedValueCalculation": {
+        "issue": "Storing new/undefined schema properties via actor.update() breaks sheet rendering",
+        "solution": "Calculate derived values on-the-fly in getData() from existing data properties",
+        "example": "Shield bonus to Physical Defense - read armorEquipped.shield directly in getData(), calculate bonus there, don't store intermediate values like 'shieldBonus' or 'hasShield'",
+        "safePattern": "const shieldEquipped = context.system.armorEquipped?.shield || false; // Safe to read",
+        "unsafePattern": "updates['system.defense.shieldBonus'] = 1; // Breaks sheet - undefined schema field",
+        "dateDiscovered": "2025-01-30"
+      },
+      "dataPersistence": {
+        "issue": "Player changes revert when reopening sheet - fields not persisting",
+        "cause": "Fields being saved via actor.update() are not defined in template.json schema",
+        "solution": "Always add new persistent fields to template.json under the correct actor type (character2 for new sheet)",
+        "example": "defense.physicalLocked, defense.sorceryLocked, defense.physicalOverride, defense.sorceryOverride - must be defined in template.json",
+        "file": "template.json",
+        "dateDiscovered": "2025-01-30"
+      },
+      "skillDetectionHelpers": {
+        "issue": "Need to check if character has specific skills from multiple sources (origin-granted or purchased)",
+        "solution": "Create private helper methods like _hasWaterfrontFists() that check both origin bonuses and skills object",
+        "example": "_hasWaterfrontFists() { const originBonuses = this._getActiveOriginBonuses(); if (originBonuses.grantedSkills.includes('waterfront-fists')) return true; for (const skill of Object.values(this.actor.system.skills || {})) { if (skill.name === 'Waterfront Fists' || skill.defId === 'waterfront-fists') return true; } return false; }",
+        "pattern": "Check origin grantedSkills array first, then iterate skills object checking name, defId, and id properties",
+        "dateDiscovered": "2025-01-30"
+      },
+      "skillTriggeredValueUpdates": {
+        "issue": "Some skills should automatically modify actor values when learned/removed (e.g., Improved Flex changes flex die)",
+        "solution": "Create async helper method like _updateFlexDieFromSkills() that recalculates and applies changes via actor.update()",
+        "callSites": "Call from both _onSkillPurchase (after adding skill) and _onSkillDelete (after removing skill)",
+        "example": "Improved Flex sets flex die to d8, Improved Flex II sets to d6, removing both reverts to d10",
+        "sync": "actor.update() automatically syncs to all connected clients (GM and players)",
+        "dateDiscovered": "2025-01-30"
+      },
+      "weaponModificationBySkills": {
+        "issue": "Skills like Waterfront Fists need to upgrade weapon stats at render time",
+        "solution": "In getData() weapon preparation loop, detect applicable skills and modify weapon properties on-the-fly",
+        "example": "if (isUnarmed && hasWaterfrontFists) { weapon.damage = '1d4'; weapon.waterfrontFistsUpgrade = true; weapon.effectiveCategory = 'One-Handed Light'; }",
+        "chainedSkills": "Some skills enable other skills - Waterfront Fists makes unarmed qualify as Light One-Handed, which enables Assassin skill",
+        "displayFlags": "Add boolean flags (waterfrontFistsUpgrade, assassinApplies) for templates to show indicators",
+        "dateDiscovered": "2025-01-30"
+      },
+      "combatSkillBonusDisplay": {
+        "issue": "Need to show skill bonuses in weapon dropdown panel with skill names",
+        "solution": "_getWeaponSkillBonuses() returns { attackBonuses: [{skill, value}], damageBonuses: [{skill, value}] } grouped by category",
+        "templateDisplay": "In tab-attacks.hbs, iterate attackBonuses/damageBonuses arrays and display skill name + value",
+        "chatIntegration": "Pass skill flags (waterfrontFists, assassin) through to damage roll handler in conan.js for chat indicators",
+        "styling": "Use .skill-indicator CSS class with colored backgrounds to highlight active skill bonuses",
+        "dateDiscovered": "2025-01-30"
+      },
+      "flexDieAutoProgression": {
+        "issue": "Improved Flex and Improved Flex II should auto-set flex die and show visual indicators",
+        "solution": "Calculate in getData(): check skills for Improved Flex/II, set effectiveFlexDie, expose hasImprovedFlex/hasImprovedFlexII flags",
+        "templateHints": "Show 'IMPROVED' or 'IMPROVED II' note under flex die dropdown in BTS section",
+        "styling": "Add .skill-improved CSS class for green border highlight, .sheet2-skillNote for green text labels",
+        "reversion": "When skills removed, _updateFlexDieFromSkills() reverts die to appropriate level (d10 base, d8 with Improved, d6 with II)",
+        "dateDiscovered": "2025-01-30"
+      },
+      "skillIconStandards": {
+        "issue": "Need consistent sizing and styling for skill indicator icons across the sheet",
+        "standardSize": "25px x 25px for all skill icons (matches shield icon)",
+        "cssPattern": "position: absolute; top: -2px; left/right: -2px; width: 25px; height: 25px; opacity: 1; background: transparent; border: none; outline: none; box-shadow: none; filter: drop-shadow(0 0 3px rgba(R,G,B,0.6-0.8)); z-index: 10;",
+        "iconPlacement": "Overlay on relevant display element (defense displays, initiative button, stat dice)",
+        "colorCoding": {
+          "defense": "rgba(218, 165, 32, 0.6) - gold glow (Tough-Souled, shields)",
+          "initiative": "rgba(100, 149, 237, 0.8) - cornflower blue glow (Combat Readiness)",
+          "stats": "Use CSS borders/badges instead of icons (.improved-die, .skill-boosted classes)"
+        },
+        "whenToUseIcons": "Reserve icons for: 1) Passive bonuses that affect combat rolls (initiative, defense) 2) Equipment-like effects (shields) 3) Maximum 2-3 icons visible at once on any display",
+        "whenNotToUseIcons": "Avoid icons for: 1) Stat value bonuses (use +X badges instead) 2) Die upgrades (use CSS glow borders instead) 3) Skills that only trigger situationally (Backstab, Pack Tactics) 4) Combat bonuses shown in attack panels",
+        "rationale": "Players have 6-8 skills max. Icons everywhere becomes visual clutter. Use badges/borders for stat mods, icons only for 'always active' defensive/initiative bonuses",
+        "dateDiscovered": "2025-01-30"
+      },
+      "portraitLayeringSystem": {
+        "issue": "Character portrait needs to be dramatic but not obstruct UI elements",
+        "solution": "Use CSS z-index layering with portrait as background layer, UI elements above",
+        "implementation": {
+          "portraitBg": "z-index: 1 - Half-screen background image, right-justified, top-anchored",
+          "nameBox": "z-index: 0 - Appears behind portrait for dramatic effect",
+          "uiElements": "z-index: 2 - Skill cards, weapon cards, spell cards, resource bars appear above portrait"
+        },
+        "cssClass": ".sheet2-portraitBg with position: absolute, background-size: contain, background-position: top right",
+        "bleedEffect": "right: -15px allows portrait to bleed 15px into tabs area for dramatic effect",
+        "pointerEvents": "pointer-events: none on portrait so clicks pass through to UI below",
+        "dateDiscovered": "2025-01-30"
+      },
+      "compactSheetDesign": {
+        "philosophy": "Sheet designed to resemble phone/tablet form factor - compact, vertical, tuckable",
+        "rationale": "Saves screen real estate during gameplay compared to traditional full-width sheets like D&D 5e",
+        "keyPrinciples": [
+          "Vertical layout with tab navigation instead of horizontal sections",
+          "Portrait as dramatic background rather than dedicated space",
+          "Compact stat displays with expandable dropdowns for details",
+          "Quick-tap interactions for common combat actions"
+        ],
+        "dateDiscovered": "2025-01-30"
+      },
+      "orphanedTooltipPrevention": {
+        "issue": "Tooltips get orphaned (stuck on screen) when sheet re-renders while hovering over elements with title attributes",
+        "cause": "HTML title attribute triggers browser/Foundry tooltip on hover delay. If user clicks before tooltip shows, the click triggers actor.update() which re-renders sheet, destroying the DOM element. But the tooltip timer is still running - when it fires, the tooltip appears with no element to anchor to, becoming orphaned.",
+        "symptoms": "Floating tooltips showing weapon stats remain visible after attacking, especially on thrown weapons with Impaling Throw active",
+        "misleadingDebug": "game.tooltip.deactivate() and game.tooltip.active checks don't help because the orphan comes from the HTML title attribute, not Foundry's JS tooltip system",
+        "actualSolution": "Remove the title attribute from clickable elements in the template when tooltip isn't needed. For Impaling Throw: {{#if weapon.impalingThrowReady}}<img without title>{{else}}<img with title>{{/if}}",
+        "defensiveMeasures": [
+          "Remove title attribute on mousedown (before click processes)",
+          "Call game.tooltip.deactivate() in handlers (helps with Foundry tooltips)",
+          "Blur clicked element to cancel pending browser tooltips"
+        ],
+        "lessonsLearned": "Browser-native title tooltips operate independently from JavaScript - you cannot dismiss them programmatically. The only reliable fix is to not have the title attribute present when the element will be clicked.",
+        "dateDiscovered": "2025-01-31",
+        "debugSessionDuration": "Extensive - required MutationObserver, polling, and process of elimination to identify that game.tooltip wasn't the culprit"
+      },
+      "tooltipStylingAndSpeed": {
+        "issue": "Default Foundry tooltips are small and slow to appear, making them hard to read quickly during gameplay",
+        "solution": "Override #tooltip styles in conan2.css with larger font, padding, and faster activation",
+        "cssOverrides": {
+          "fontSize": "18px (up from 16px)",
+          "padding": "10px 14px",
+          "maxWidth": "350px for longer weapon rules text",
+          "lineHeight": "1.4 for readability",
+          "background": "#222 with 0.7 shadow opacity for better contrast"
+        },
+        "speedOverrides": {
+          "foundryVar": "--tooltip-activation-speed: 0ms in :root",
+          "titleAttr": "--tooltip-delay: 0ms on [title] elements",
+          "limitation": "Browser-native title tooltips have built-in delay that cannot be overridden via CSS - only Foundry's JS tooltips respect these variables"
+        },
+        "relatedIssue": "See orphanedTooltipPrevention for tooltip lifecycle problems",
+        "dateDiscovered": "2026-02-06"
+      }
+    },
+    "debugTips": {
+      "sheetNotRendering": "Add console.log statements in getData() to identify which property access causes the break. Wrap in try-catch to catch silent errors.",
+      "dataNotPersisting": "Check template.json to ensure the field path exists in the schema. FoundryVTT may silently ignore updates to undefined schema fields.",
+      "skillNotApplying": "Check _hasSkillName helper - verify it checks all three properties: skill.name, skill.defId, skill.id",
+      "syncIssues": "actor.update() should auto-sync to all clients. If not syncing, check if update is being called or if value is already same",
+      "elementsBehindPortrait": "If UI elements appear behind the portrait background, add 'position: relative; z-index: 2;' to the element's CSS class",
+      "cssFileModified": "If CSS edits fail with 'file modified since read', always re-read the file section before editing - the file may have been auto-formatted"
+    },
+    "skillImplementationChecklist": {
+      "passive": "Skills that modify stats/values: 1) Add detection helper _hasSkillName() 2) Apply in getData() calculation 3) Add template indicator flags 4) Style with CSS",
+      "triggered": "Skills that auto-update values: 1) Add detection in _updateXFromSkills() helper 2) Call helper from _onSkillPurchase and _onSkillDelete 3) Use actor.update() for persistence",
+      "combat": "Skills affecting attacks/damage: 1) Add to skillBonusConfig in _getWeaponSkillBonuses() 2) Check weapon type requirements 3) Pass flags to damage handler 4) Add chat indicators",
+      "chained": "Skills that enable other skills: Check prerequisite skill effects first (e.g., Waterfront Fists enables Assassin for unarmed)"
+    },
+    "complexSkillPatterns": {
+      "poisonerImplementation": {
+        "dateImplemented": "2025-01-31",
+        "description": "Multi-system skill with auto-created inventory, per-weapon state, and damage triggers",
+        "lessonsLearned": {
+          "handlebarsEachContext": {
+            "problem": "Variables like ichorQuantity weren't accessible inside {{#each system.armedWeapons}} loops using {{../ichorQuantity}}",
+            "solution": "Store data directly on iterated objects in getData(): weapon.ichorQty = context.ichorQuantity; then access via {{weapon.ichorQty}}"
+          },
+          "separateCanDoVsIsDoingFlags": {
+            "problem": "Poison toggle disappeared when Ichor ran out or poison was removed, making it impossible to re-poison weapons",
+            "solution": "Use separate flags: canBePoisoned (always true for melee + Poisoner skill), showIchor (poisoned AND has Ichor), isPoisoned (actual state)"
+          },
+          "multiSystemStateCleanup": {
+            "problem": "Deleting Poisoner skill left orphaned state (weapons still named 'Poison X')",
+            "solution": "In _onSkillDelete(), clean up ALL related systems: delete Ichor item, clear isPoisoned from all weapons, clear active combat flags"
+          },
+          "resourceDepletionEdgeCases": {
+            "problem": "Didn't initially consider what happens when Ichor = 0",
+            "checks": ["Can still see poison toggle for future use", "Counter overlay hidden when no Ichor", "Damage handler checks Ichor > 0 before consuming"]
+          },
+          "tooltipRedundancy": {
+            "problem": "Same information (Ichor count) shown in 3 different tooltips",
+            "solution": "One source of truth - show count on overlay element itself, remove from tooltips"
+          },
+          "protectedInventoryItems": {
+            "pattern": "Items auto-created by skills should have a protection flag (isPoisonerItem: true) and deletion blocked while skill exists"
+          }
+        },
+        "systemsInvolved": ["skills detection", "inventory creation", "weapon state", "damage handler", "chat output", "skill deletion cleanup"]
+      },
+      "protectorImplementation": {
+        "dateImplemented": "2026-02-02",
+        "description": "Ally-targeting skill that transfers SP to another player character",
+        "pattern": "allySelection",
+        "effect": "1 SP: Give ally 1 SP (1/round)",
+        "implementation": {
+          "contextFlags": ["hasProtector", "canUseProtector (hasProtector && currentSP >= 1)"],
+          "uiLocation": "Home tab check skills row (PRIORITY 3: ACTIVE)",
+          "dialog": "sheet2-protectorDialog - floating draggable dialog listing allies in scene",
+          "allyDetection": "currentScene.tokens.contents → filter by (type === 'character2' || type === 'character') && hasPlayerOwner && id !== self",
+          "handler": "_onProtectorOpen (show dialog), _onProtectorClose, _onProtectorGiveSP (transfer SP)",
+          "resourceTransfer": "Deduct 1 SP from self via actor.update(), add 1 SP to ally via ally.update()"
+        },
+        "lessonsLearned": {
+          "reuseAllyDetectionPattern": {
+            "insight": "Same ally detection logic as Leader of Men - could be extracted to helper method _getSceneAllies()",
+            "currentState": "Duplicated for clarity, consider refactoring if more ally-targeting skills added"
+          },
+          "simpleVsComplexDialog": {
+            "leaderOfMen": "Complex - checkboxes, cost selection (1 or 2 SP), multi-target, persistent buff state",
+            "protector": "Simple - click ally directly to transfer, single target, instant effect, no state"
+          },
+          "colorSchemeForSkillType": {
+            "pattern": "Use thematic colors for dialog borders/accents",
+            "leaderOfMen": "Gold (#ffd700) - leadership/command theme",
+            "protector": "Blue (#4a9eff) - support/stamina theme"
+          }
+        },
+        "filesModified": [
+          "actor-sheet2.js: skillIcons mapping, context flags, click handlers, dialog methods",
+          "actor-sheet2.hbs: protectorDialog HTML structure",
+          "tab-home.hbs: icon in check skills section",
+          "conan2.css: protectorDialog styling"
+        ]
+      }
+    },
+    "iconNamingConvention": {
+      "description": "Standard naming convention for skill icons in images/icons/ folder",
+      "format": "{skill_name}_{version}_{variant}_icon.png",
+      "components": {
+        "skill_name": "Lowercase, underscores for spaces (fierce_strokes, iron_hide)",
+        "version": "i = base skill, ii = upgraded version",
+        "variant": "Optional: t = transparent overlay version for vital displays",
+        "extension": "Always _icon.png"
+      },
+      "examples": {
+        "baseSkill": "fierce_strokes_i_icon.png",
+        "upgradedSkill": "iron_hide_ii_icon.png",
+        "transparentOverlay": "combat_readiness_i_t_icon.png"
+      },
+      "transparentVersionsNeededFor": ["LP display (iron_hide)", "Initiative (combat_readiness)", "Sorcery Defense (uncanny_warding)", "Flex Die (improved_flex)", "Physical Defense (blocker)"],
+      "displayRule": "When character has both I and II, show only II icon (highest version only)",
+      "documentationFile": "images/icons/README.md",
+      "dateEstablished": "2025-02-01"
+    },
+    "crossClientCommunication": {
+      "issue": "Need to trigger events (flex celebrations, camera pans) on all connected clients, not just the one executing the action",
+      "trialAndError": {
+        "attempt1_socketEmit": {
+          "method": "game.socket.emit('system.conan', { action: 'flexCelebration', ... })",
+          "result": "FAILED - Socket listener registered on all clients but messages never received",
+          "diagnosis": "Foundry VTT requires 'socket: true' declaration in system.json manifest to enable socket communication"
+        },
+        "attempt2_socketWithManifest": {
+          "method": "Added 'socket: true' to system.json, restarted Foundry",
+          "result": "FAILED - Caused unknown issue preventing secondary browser windows from connecting to Foundry",
+          "diagnosis": "Unclear what caused the connection issue, but reverting the manifest change fixed it"
+        },
+        "attempt3_chatMessageFlags": {
+          "method": "Create hidden ChatMessage with event data stored in flags, listen via 'createChatMessage' hook",
+          "result": "SUCCESS - All clients receive chat messages automatically (Foundry's core messaging system)",
+          "diagnosis": "ChatMessage.create() goes through Foundry server and broadcasts to all clients without any manifest declarations"
+        }
+      },
+      "solution": {
+        "pattern": "Use ChatMessage with flags instead of game.socket.emit for cross-client events",
+        "emit": "ChatMessage.create({ content: '<div style=\"display:none;\"></div>', speaker: ChatMessage.getSpeaker({ alias: 'System' }), flags: { conan: { eventType: true, data1: value1, data2: value2 } } })",
+        "receive": "Hooks.on('createChatMessage', (message) => { const eventData = message.getFlag('conan', 'eventType'); if (eventData) { /* handle event */ } })",
+        "gmOnlyExecution": "For events where GM already executed locally, check: if (!game.user.isGM) { /* execute for non-GM clients */ }"
+      },
+      "useCases": [
+        "Flex celebrations - play animation on all clients when a player triggers flex",
+        "Travel camera pan - sync camera position/zoom across all clients when GM uses Travel Master"
+      ],
+      "dateDiscovered": "2026-02-01"
+    },
+    "preActivatedSkillPattern": {
+      "description": "Pattern for skills with bonuses that require player pre-activation before attack (like surprise attacks)",
+      "rationale": "Similar to Impaling Throw - player clicks icon to 'prepare' the skill before the attack. Cleaner than prompting every attack; player proactively activates when they know the condition is met.",
+      "flow": [
+        "1. Combat begins, GM/players determine if surprise attack opportunity exists",
+        "2. Player clicks skill icon in Arms tab to 'prepare' the attack",
+        "3. Chat announces skill is ready",
+        "4. Player clicks any weapon attack - bonuses automatically apply",
+        "5. Skill flag clears after attack (consumed)",
+        "6. Chat shows skill indicator and bonuses in attack result"
+      ],
+      "implementation": {
+        "unseenStrike": {
+          "id": "unseen-strike",
+          "name": "Unseen Strike",
+          "flag": "system.unseenStrikeActive",
+          "attackBonus": 2,
+          "damageBonus": 1,
+          "weaponTypes": ["melee", "ranged", "thrown"],
+          "spCost": 0,
+          "indicator": "🗡️ SURPRISE ATTACK!",
+          "tooltip": "Click to prepare surprise attack - next attack gets +2 Atk, +1 Dmg"
+        }
+      },
+      "addingNewPreActivatedSkills": [
+        "1. Add context flags in getData(): hasSkill, canUseSkill, skillActive",
+        "2. Add icon to tab-attacks.hbs with usable/stance-active classes",
+        "3. Add click handler binding in activateListeners",
+        "4. Add _onSkillToggle handler (toggle flag, post to chat)",
+        "5. Add skill check in _executeWeaponAttack (apply bonus, clear flag)",
+        "6. Add cleanup in _onSkillDelete"
+      ],
+      "dateImplemented": "2025-02-01"
+    }
+  },
+
+  "coreRolls": {
+    "check": {
+      "formula": "1[StatDie] + StatValue + Modifiers",
+      "comparison": ">=",
+      "target": "Difficulty (set by GM)",
+      "notes": "Used for non-combat actions where outcome is in doubt"
+    },
+    "attack": {
+      "formula": "1[StatDie] + StatValue + Modifiers",
+      "comparison": ">=",
+      "target": "Defense (Physical or Sorcery)",
+      "notes": "Checks and Attacks are separate - bonuses to one don't apply to other"
+    },
+    "contest": {
+      "formula": "Both sides roll Check, highest wins",
+      "tiebreaker": "Higher relevant Stat wins; if still tied, reroll",
+      "notes": "Used when two characters struggle against each other",
+      "onSheet": false
+    },
+    "cruelFate": {
+      "trigger": "Rolling 1 on Stat Die",
+      "effect": "Automatic failure, even if total would meet Difficulty",
+      "mitigation": "Spend Stamina to increase roll from 1 to 2+, or use Flex Success"
+    }
+  },
+
+  "difficulty": {
+    "mundane": { "value": null, "description": "No check needed" },
+    "easy": { "min": 4, "max": 6, "example": "Catch a tossed object" },
+    "moderate": { "min": 7, "max": 9, "example": "Cross rope bridge, pick lock" },
+    "tough": { "min": 10, "max": 12, "example": "Climb cliffside in rain" },
+    "legendary": { "min": 13, "max": null, "example": "Split taut rope with arrow" }
+  },
+
+  "ruleOfThrees": {
+    "description": "GM applies +1 to +3 for advantages, -1 to -3 for disadvantages",
+    "notes": "Even +1 has notable impact, +3 is significant",
+    "onSheet": false
+  },
+
+  "stats": {
+    "might": {
+      "label": "Might",
+      "description": "Physical strength",
+      "usedFor": ["Melee attacks", "Melee damage", "Thrown damage", "Climbing", "Swimming", "Lifting", "Encumbrance capacity"],
+      "defaultDie": "d6",
+      "defaultValue": 1,
+      "maxValue": 8,
+      "maxDie": "d10"
+    },
+    "edge": {
+      "label": "Edge",
+      "description": "Deftness, alertness, dexterity, hand-eye coordination",
+      "usedFor": ["Ranged attacks", "Thrown attacks", "Initiative", "Physical Defense base", "Stealth", "Detection"],
+      "defaultDie": "d6",
+      "defaultValue": 1,
+      "maxValue": 8,
+      "maxDie": "d10"
+    },
+    "grit": {
+      "label": "Grit",
+      "description": "Pain tolerance, stamina, constitution",
+      "usedFor": ["Life Points calculation", "Stamina Points", "Death checks", "Resist poison/fear/elements"],
+      "defaultDie": "d6",
+      "defaultValue": 1,
+      "maxValue": 8,
+      "maxDie": "d10"
+    },
+    "wits": {
+      "label": "Wits",
+      "description": "Eloquence, knowledge, deduction",
+      "usedFor": ["Sorcery attacks", "Sorcery Defense base", "Decipher languages", "Detect lies", "Persuasion"],
+      "defaultDie": "d6",
+      "defaultValue": 1,
+      "maxValue": 8,
+      "maxDie": "d10"
+    }
+  },
+
+  "derivedValues": {
+    "physicalDefense": {
+      "formula": "Edge + 2 + bonuses",
+      "minimum": 5,
+      "notes": "Target number for Melee, Ranged, Thrown attacks"
+    },
+    "sorceryDefense": {
+      "formula": "Wits + 2 + bonuses",
+      "minimum": 5,
+      "notes": "Target number for Sorcery attacks"
+    },
+    "lifePoints": {
+      "formula": "(Grit × 2) + OriginBase + SkillBonuses",
+      "notes": "When Grit increases by 1 via skill, LP max also increases by 2"
+    },
+    "staminaPoints": {
+      "startingValue": "= Grit Stat",
+      "maximum": "No upper limit",
+      "reset": "Resets to Grit value at start of each Tale"
+    },
+    "armorRating": {
+      "formula": "Based on armor type worn",
+      "effect": "Subtract AR from incoming damage",
+      "minimumDamage": 1,
+      "notes": "If attack hits, always deal at least 1 damage regardless of AR"
+    }
+  },
+
+  "flexDie": {
+    "description": "Additional die rolled with every PC roll (unless stated otherwise)",
+    "progression": ["d10", "d8", "d6"],
+    "trigger": "Rolling maximum value on the die",
+    "npcUse": false,
+    "triggerOnFailedRoll": true,
+    "spends": {
+      "stamina": {
+        "name": "Stamina",
+        "effect": "Gain 1 Stamina Point",
+        "availableOn": "Any roll"
+      },
+      "success": {
+        "name": "Success",
+        "effect": "Turn failed Check or Attack into automatic pass",
+        "availableOn": "Failed Check or Attack",
+        "notes": "If degrees of success used, counts as minimum success"
+      },
+      "sorcery": {
+        "name": "Sorcery",
+        "effect": "Regain all Life Point and/or Stamina Point cost of the spell",
+        "availableOn": "Wits Check for Sorcery Skill or Sorcery Damage roll"
+      },
+      "massiveDamage": {
+        "name": "Massive Damage",
+        "effect": "Add maximum value of weapon's damage die to total damage",
+        "availableOn": "Damage roll",
+        "notes": "If weapon has static damage instead of die, double the damage"
+      }
+    }
+  },
+
+  "combat": {
+    "rounds": {
+      "description": "One round includes all Actions of all Characters",
+      "turnOrder": "Descending Initiative order"
+    },
+    "initiative": {
+      "formula": "1[EdgeDie] + EdgeValue + bonuses",
+      "flexDie": false,
+      "order": "Descending (highest first)",
+      "ties": {
+        "allies": "Choose who acts first each turn",
+        "pcVsEnemy": "PC may spend 1 Stamina to go first, otherwise enemy goes first"
+      },
+      "npcInitiative": "GM rolls once using lowest Edge among all enemies (optional: highest, or per-enemy)"
+    },
+    "actions": {
+      "perTurn": 2,
+      "mustUseOrLose": true,
+      "canRepeatSameAction": true,
+      "types": {
+        "move": {
+          "cost": 1,
+          "effect": "Move to new position (1 Area)",
+          "notes": "Also used to go prone or stand up"
+        },
+        "attack": {
+          "cost": 1,
+          "effect": "Make Melee, Thrown, or Ranged Attack"
+        },
+        "focusedAttack": {
+          "cost": 2,
+          "effect": "Make Attack with +2 modifier"
+        },
+        "defend": {
+          "cost": 1,
+          "effect": "+2 Physical Defense until next turn",
+          "limit": "Once per round",
+          "restriction": "Cannot gain bonus actions from Stamina or Skills while Defending"
+        },
+        "castSpell": {
+          "cost": "1 or 2 (per spell)",
+          "effect": "Cast spell or make Sorcery Attack"
+        },
+        "manipulate": {
+          "cost": 1,
+          "effect": "Pick up/interact with object, ready weapon (can sheath and draw as single action)"
+        },
+        "freeAction": {
+          "cost": 0,
+          "examples": ["Receive passed object", "Simple command", "Answer question", "Look around", "Drop object"]
+        }
+      }
+    },
+    "mounted": {
+      "bonusMoveActions": 3,
+      "meleeBonus": "+1 to Melee Attacks vs non-Mounted",
+      "rangedPenalty": "-2 to Thrown and Ranged Attacks (unless Born in Saddle skill)",
+      "noExtraMoves": "Cannot use Stamina or Skills for additional Move Actions",
+      "onSheet": "wishlist - horse icon toggle on weapons tab"
+    },
+    "surpriseAttack": {
+      "detection": "Edge Contest between PCs and Enemies",
+      "ifSurprised": "Each enemy gets 1 Move + 1 Attack before Initiative is rolled",
+      "onSheet": false
+    }
+  },
+
+  "attacks": {
+    "melee": {
+      "attackStat": "might",
+      "attackFormula": "1[MightDie] + MightValue",
+      "targetDefense": "physicalDefense",
+      "damageFormula": "WeaponDie + MightValue + bonuses",
+      "range": "Touch (same Area)"
+    },
+    "thrown": {
+      "attackStat": "edge",
+      "attackFormula": "1[EdgeDie] + EdgeValue",
+      "targetDefense": "physicalDefense",
+      "damageFormula": "WeaponDie + MightValue + bonuses",
+      "range": "Medium (3 Areas) typically"
+    },
+    "ranged": {
+      "attackStat": "edge",
+      "attackFormula": "1[EdgeDie] + EdgeValue",
+      "targetDefense": "physicalDefense",
+      "damageFormula": "WeaponDie + bonuses (NO stat added)",
+      "range": "Long to Distant"
+    },
+    "sorcery": {
+      "attackStat": "wits",
+      "attackFormula": "1[WitsDie] + WitsValue",
+      "targetDefense": "sorceryDefense",
+      "damageFormula": "Per spell (NO stat added)",
+      "range": "Per spell"
+    }
+  },
+
+  "modifiers": {
+    "focusedAttack": { "value": 2, "type": "attack" },
+    "mounted": {
+      "melee": { "value": 1, "condition": "vs non-Mounted" },
+      "ranged": { "value": -2, "condition": "unless Born in Saddle" }
+    },
+    "defend": { "value": 2, "type": "physicalDefense", "duration": "until next turn" },
+    "prone": {
+      "vsMelee": { "value": -1, "type": "physicalDefense" },
+      "vsRanged": { "value": 1, "type": "physicalDefense" }
+    },
+    "immobilized": {
+      "physicalDefense": 0,
+      "cannotAct": true
+    }
+  },
+
+  "armor": {
+    "unarmored": {
+      "name": "Unarmored",
+      "ar": 0,
+      "encumbrance": 0,
+      "sorceryPenalty": 0,
+      "stealthPenalty": 0,
+      "moveLimit": null,
+      "recoveryLimit": null
+    },
+    "light": {
+      "name": "Light Armor",
+      "specificMake": "Hide, Leather, Bone",
+      "ar": 3,
+      "encumbrance": 1,
+      "sorceryPenalty": -1,
+      "stealthPenalty": -1,
+      "moveLimit": null,
+      "recoveryLimit": null
+    },
+    "medium": {
+      "name": "Medium Armor",
+      "specificMake": "Breastplate, Cuirass, Hauberk",
+      "ar": 5,
+      "encumbrance": 3,
+      "sorceryPenalty": -2,
+      "stealthPenalty": -2,
+      "moveLimit": 2,
+      "recoveryLimit": null
+    },
+    "heavy": {
+      "name": "Heavy Armor",
+      "specificMake": "Full Plate, Knight's Armor",
+      "ar": 8,
+      "encumbrance": 5,
+      "sorceryPenalty": -3,
+      "stealthPenalty": -3,
+      "moveLimit": 1,
+      "recoveryLimit": 1
+    },
+    "shield": {
+      "name": "Shield",
+      "specificMake": "Wood, Metal, Makeshift",
+      "ar": 0,
+      "physicalDefenseBonus": 1,
+      "encumbrance": 3,
+      "requiresFreeHand": true
+    }
+  },
+
+  "weapons": {
+    "melee": {
+      "unarmed": {
+        "examples": ["Punch", "Kick", "Headbutt"],
+        "type": "Unarmed",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "2",
+        "rules": "Does not count as Melee weapon for bonus purposes"
+      },
+      "oneHandedLight": {
+        "examples": ["Improvised Weapon", "Club", "Dagger", "Knife", "Stiletto", "Poniard", "Rapier", "Staff", "Whip", "Shield"],
+        "type": "Melee; One-Handed; Light",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "1d4"
+      },
+      "oneHandedMedium": {
+        "examples": ["Short Sword", "Ghanata Knife", "Tulwar", "Hatchet", "Hand Axe", "Hunting Spear"],
+        "type": "Melee; One-Handed; Medium",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "1d6"
+      },
+      "oneHandedHeavyBlunt": {
+        "examples": ["Mace", "Warhammer"],
+        "type": "Melee; One-Handed; Heavy",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "1d6"
+      },
+      "oneHandedHeavyBlade": {
+        "examples": ["Broadsword", "Long Sword", "Cutlass", "Saber", "Battle-Axe", "Scimitar"],
+        "type": "Melee; One-Handed; Heavy",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "1d8"
+      },
+      "twoHandedMedium": {
+        "examples": ["War Spear", "Halberd", "Pollaxe", "Bill", "Lance"],
+        "type": "Melee; Two-Handed; Medium",
+        "range": "Close",
+        "areas": 1,
+        "damage": "1d10",
+        "rules": "Enemy AR considered 2 lower"
+      },
+      "twoHandedHeavy": {
+        "examples": ["Great Sword", "Great Axe", "Maul"],
+        "type": "Melee; Two-Handed; Heavy",
+        "range": "Touch",
+        "areas": 0,
+        "damage": "1d12"
+      }
+    },
+    "thrown": {
+      "improvisedLight": {
+        "examples": ["Rock", "Tankard", "Branch"],
+        "type": "Thrown; Improvised; Light",
+        "range": "Medium",
+        "areas": 3,
+        "damage": "2"
+      },
+      "improvisedMelee": {
+        "examples": ["Any throwable Melee weapon not designed for throwing"],
+        "type": "Thrown; Improvised; Various",
+        "range": "Close",
+        "areas": 1,
+        "damage": "As Melee Weapon",
+        "rules": "-3 to Attack. Might 5+ increases range to Medium (3 Areas)"
+      },
+      "thrownLight": {
+        "examples": ["Dagger", "Knife", "Throwing Star"],
+        "type": "Thrown; Light",
+        "range": "Medium",
+        "areas": 3,
+        "damage": "1d4"
+      },
+      "thrownMedium": {
+        "examples": ["Javelin", "Hunting Spear", "Throwing Axe"],
+        "type": "Thrown; Medium",
+        "range": "Medium",
+        "areas": 3,
+        "damage": "1d6"
+      }
+    },
+    "ranged": {
+      "sling": {
+        "examples": ["Sling"],
+        "type": "Ranged; Light",
+        "range": "Medium",
+        "areas": 3,
+        "damage": "1d4",
+        "rules": "-1 to Attack. May be used One-Handed"
+      },
+      "primitiveBow": {
+        "examples": ["Primitive Bow"],
+        "type": "Ranged; Light",
+        "range": "Long",
+        "areas": 4,
+        "damage": "1d4+1"
+      },
+      "shortBow": {
+        "examples": ["Short Bow"],
+        "type": "Ranged; Medium",
+        "range": "Long",
+        "areas": 6,
+        "damage": "1d6+1"
+      },
+      "lightCrossbow": {
+        "examples": ["Light Crossbow"],
+        "type": "Ranged; Medium",
+        "range": "Medium",
+        "areas": 3,
+        "damage": "1d8+1",
+        "rules": "1 Action reload. +2 Damage at Close. Might 5+ one-handed"
+      },
+      "longBow": {
+        "examples": ["Long Bow"],
+        "type": "Ranged; Heavy",
+        "range": "Distant",
+        "areas": 8,
+        "damage": "1d8+1",
+        "rules": "Cannot use at Touch Range"
+      },
+      "heavyCrossbow": {
+        "examples": ["Heavy Crossbow"],
+        "type": "Ranged; Heavy",
+        "range": "Distant",
+        "areas": 7,
+        "damage": "1d10+1",
+        "rules": "1 Action reload. +2 Damage at Close"
+      }
+    }
+  },
+
+  "range": {
+    "touch": { "description": "Within arm's reach", "areas": 0, "moveActions": 0 },
+    "close": { "description": "Just beyond arm's reach", "areas": 1, "moveActions": 1 },
+    "medium": { "description": "Across large room/street", "areas": 3, "moveActions": 2 },
+    "long": { "description": "Can see but not throw to", "areas": "4-6", "moveActions": 4 },
+    "distant": { "description": "Boundary of battlefield", "areas": "7-8+", "moveActions": 8 }
+  },
+
+  "lifeAndDeath": {
+    "atZeroLP": {
+      "state": "Heavily wounded, unconscious or barely clinging to life",
+      "check": { "stat": "grit", "difficulty": 8, "flexAllowed": true },
+      "onFail": "Character dies",
+      "onPass": "Immobile until combat ends, return to 1 LP",
+      "escalation": "Optional: +1 difficulty each time passed"
+    },
+    "allAlliesDown": "All PCs die unless Fateful Intervention"
+  },
+
+  "recovery": {
+    "limit": 2,
+    "limitWithHeavyArmor": 1,
+    "effect": { "lifePoints": "Regain 50% of maximum (round up)", "stamina": "Gain 1 SP" },
+    "requirement": "Not under duress or danger",
+    "notes": "Regain 50% of MAX, not return to 50%"
+  },
+
+  "staminaSpends": {
+    "bonusMoveAction": { "cost": 1, "effect": "Additional Move Action" },
+    "increaseRoll1": { "cost": 1, "effect": "+1 to Stat die roll (after roll)" },
+    "increaseRoll2": { "cost": 2, "effect": "+2 to Stat die roll (after roll)" },
+    "bonusDamage1d4": { "cost": 1, "effect": "+1d4 damage (no Flex)" },
+    "bonusDamage2d4": { "cost": 2, "effect": "+2d4 damage (no Flex)" },
+    "extendThrownRange": { "cost": 1, "effect": "+1 range zone for Thrown" },
+    "ignoreEncumbrance": { "cost": 1, "effect": "Ignore Encumbrance 1 Round" },
+    "finalStaminaMassiveDamage": { "cost": "Final SP", "effect": "Apply Massive Damage" },
+    "breakInitiativeTie": { "cost": 1, "effect": "Go before tied Enemy" }
+  },
+
+  "encumbrance": {
+    "equipmentSlots": 3,
+    "slotDefinition": "1 Melee weapon OR 1 Ranged+ammo OR bundle of Thrown OR 1 Shield",
+    "armorEncumbrance": "Min Might to wear without penalty",
+    "encumberedEffect": "Max 1 Move Action per turn",
+    "onSheet": false
+  },
+
+  "poison": {
+    "commonEffects": ["-1 to Checks/Attacks", "Lose 1 LP/Round", "No Stamina spends", "No Flex die"],
+    "neutralizedBy": ["Recovery", "Sorcery LP regain"],
+    "onSheet": false
+  },
+
+  "minions": {
+    "healthType": "Threshold",
+    "hasAR": false,
+    "defeat": { "oneShot": "Damage >= Threshold", "twoShot": "Any damage after first hit" }
+  },
+
+  "antagonists": { "healthType": "Life Points", "hasAR": true },
+
+  "sorcery": {
+    "attackStat": "wits",
+    "armorPenalties": { "light": -1, "medium": -2, "heavy": -3 },
+    "failedAttack": "Spell fails but cost still spent",
+    "steppedCosts": "Multiple cost/outcome options",
+    "duration": { "description": "Pay cost at turn start to maintain", "endCondition": "Ends if not paid" },
+    "disciplines": ["Alchemy", "Black Magic", "Demonic Magic", "Necromantic Magic", "White Magic"]
+  },
+
+  "spellTemplate": {
+    "id": "spell-id",
+    "name": "Spell Name",
+    "discipline": "Discipline",
+    "xpCost": 1,
+    "type": "attack|cast|reaction",
+    "cost": { "lifePoints": 0, "staminaPoints": 0, "stepped": false },
+    "actions": 1,
+    "range": "Touch|Close|Medium|Long|Distant",
+    "damage": null,
+    "effect": "Description",
+    "duration": { "hasDuration": false, "maintainCost": null },
+    "limit": "none|once per combat|once per Tale"
+  },
+
+  "spells": {
+    "alchemy": [
+      { "id": "lotus-flash", "name": "Lotus Flash", "xpCost": 1, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 1, "range": "Medium", "effect": "All enemies reduce Initiative to 1 until end of next Turn" },
+      { "id": "body-of-living-iron", "name": "Body of Living Iron", "xpCost": 2, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 0, "effect": "+3 AR until end of combat", "limit": "once per combat" },
+      { "id": "craft-seal", "name": "Craft Seal", "xpCost": 2, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": "1-2", "effect": "Lock/unlock or place/remove seal" },
+      { "id": "tide-of-stone", "name": "Tide of Stone", "xpCost": 3, "type": "attack", "cost": { "lifePoints": 6 }, "actions": 1, "range": "Medium", "damage": "1d8+2", "effect": "Target -1 Phys Def if damaged" },
+      { "id": "create-bane-weapon", "name": "Create Bane Weapon", "xpCost": 4, "type": "cast", "cost": { "lifePoints": "4/6/8" }, "actions": 1, "effect": "Weapon +1d6/1d8/1d10 and knocks Prone", "duration": { "hasDuration": true, "maintainCost": "3 LP + 1 Action" } },
+      { "id": "animate-living-statue", "name": "Animate Living Statue", "xpCost": 5, "type": "cast", "cost": { "staminaPoints": 1, "lifePoints": 10 }, "actions": 2, "effect": "Summon Living Statue as ally" },
+      { "id": "lotus-miasma", "name": "Lotus Miasma", "xpCost": 6, "type": "attack", "cost": { "staminaPoints": 1 }, "actions": 2, "range": "Close", "damage": "WitsDie+3", "effect": "Hits all non-Undead, ignores AR, 5+ causes Poison", "duration": { "hasDuration": true, "maintainCost": "1 LP + 2 Actions" } }
+    ],
+    "blackMagic": [
+      { "id": "snake-arrow", "name": "Snake Arrow", "xpCost": 1, "type": "cast", "cost": { "lifePoints": 3 }, "actions": 1, "effect": "Next Ranged Attack +1d6 and Poisons" },
+      { "id": "astral-projection", "name": "Astral Projection", "xpCost": 2, "type": "cast", "actions": 2, "effect": "Wits Check 8: appear as ghost anywhere", "limit": "once per Tale" },
+      { "id": "frightful-aura", "name": "Frightful Aura", "xpCost": 2, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 1, "effect": "Enemies in Close -2 Wits/Grit Checks", "limit": "once per combat" },
+      { "id": "fearsome-ward", "name": "Fearsome Ward", "xpCost": 3, "type": "cast", "cost": { "lifePoints": "2/5/8" }, "actions": 0, "effect": "Attackers must pass Wits Check or -2 Attack", "limit": "once per combat" },
+      { "id": "wave-of-darkness", "name": "Wave of Darkness", "xpCost": 3, "type": "attack", "cost": { "lifePoints": 6 }, "actions": 1, "range": "Medium", "damage": "1d8+2", "effect": "Target cannot Move next Turn" },
+      { "id": "beast-form", "name": "Beast Form", "xpCost": 4, "type": "cast", "cost": { "staminaPoints": 2 }, "actions": 1, "effect": "+2 Might/Edge/Phys Def, +1 AR, unarmed 1d10", "duration": { "hasDuration": true, "maintainCost": "3 LP" }, "limit": "once per Tale" },
+      { "id": "mesmerism", "name": "Mesmerism", "xpCost": 6, "type": "attack", "cost": { "staminaPoints": 1 }, "actions": 2, "range": "Close", "effect": "Control target's Actions", "duration": { "hasDuration": true, "maintainCost": "2 Actions" } }
+    ],
+    "demonicMagic": [
+      { "id": "bloody-talons", "name": "Bloody Talons", "xpCost": 1, "type": "cast", "cost": { "lifePoints": 4 }, "actions": 1, "effect": "Unarmed +1d6 until end combat", "limit": "once per combat" },
+      { "id": "demonic-ward", "name": "Demonic Ward", "xpCost": 2, "type": "cast", "actions": 1, "effect": "Wits 8: halve non-Sorcery damage", "duration": { "hasDuration": true, "maintainCost": "1 Action" } },
+      { "id": "uncanny-reach", "name": "Uncanny Reach", "xpCost": 2, "type": "cast", "cost": { "lifePoints": 2 }, "actions": 0, "effect": "Touch becomes Close, +1 damage", "duration": { "hasDuration": true, "maintainCost": "1 LP" } },
+      { "id": "demonic-steed", "name": "Demonic Steed", "xpCost": 3, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 1, "effect": "Count as Mounted", "duration": { "hasDuration": true, "maintainCost": "2 LP" } },
+      { "id": "hellfire", "name": "Hellfire", "xpCost": 3, "type": "attack", "cost": { "lifePoints": 6 }, "actions": 1, "range": "Medium", "damage": "10", "effect": "Target -1 Checks/Attacks next Turn" },
+      { "id": "summon-fiend", "name": "Summon Fiend", "xpCost": 4, "type": "cast", "cost": { "staminaPoints": 1, "lifePoints": 8 }, "actions": 2, "effect": "Summon Fiend ally" },
+      { "id": "summon-horror", "name": "Summon Horror", "xpCost": 6, "type": "cast", "cost": { "staminaPoints": 2, "lifePoints": 12 }, "actions": 2, "effect": "Summon Horror ally" }
+    ],
+    "necromanticMagic": [
+      { "id": "life-leech", "name": "Life Leech", "xpCost": 1, "type": "attack", "cost": { "staminaPoints": 1 }, "actions": 1, "range": "Touch", "damage": "WitsDie", "effect": "Regain LP equal to damage dealt" },
+      { "id": "chilling-touch", "name": "Chilling Touch", "xpCost": 2, "type": "attack", "cost": { "staminaPoints": 1 }, "actions": 1, "range": "Touch", "damage": "WitsDie+1", "effect": "Target cannot Defend rest of combat" },
+      { "id": "stamina-leech", "name": "Stamina Leech", "xpCost": 2, "type": "cast", "cost": { "lifePoints": 6 }, "actions": 1, "effect": "Gain 1 Stamina Point" },
+      { "id": "capture-soul", "name": "Capture Soul", "xpCost": 3, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 1, "range": "Touch", "effect": "Capture soul for +2 bonus later" },
+      { "id": "summon-ghost", "name": "Summon Ghost", "xpCost": 3, "type": "cast", "cost": { "lifePoints": 4 }, "actions": 2, "effect": "Summon Ghost ally" },
+      { "id": "death-scream", "name": "Death Scream", "xpCost": 5, "type": "attack", "cost": { "lifePoints": 6 }, "actions": 2, "range": "Medium", "damage": "WitsDie+2", "effect": "Hits all who can hear, ignores AR" },
+      { "id": "raise-dead", "name": "Raise Dead", "xpCost": 6, "type": "cast", "cost": { "lifePoints": 10 }, "actions": 2, "effect": "Raise 4 Skeleton Warriors" }
+    ],
+    "whiteMagic": [
+      { "id": "talons-of-jhil", "name": "Talons of Jhil", "xpCost": 1, "type": "attack", "cost": { "lifePoints": 3 }, "actions": 1, "range": "Long", "damage": "1d6+1" },
+      { "id": "eyes-of-the-raven", "name": "Eyes of the Raven", "xpCost": 2, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 0, "effect": "+2 Edge perception Checks", "limit": "once per combat" },
+      { "id": "healing", "name": "Healing", "xpCost": 2, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 2, "range": "Touch", "effect": "Target regains WitsDie LP" },
+      { "id": "call-beast", "name": "Call Beast", "xpCost": 3, "type": "cast", "cost": { "lifePoints": "3-10 by beast" }, "actions": 2, "effect": "Summon beast ally" },
+      { "id": "favor-of-four-winds", "name": "Favor of the Four Winds", "xpCost": 3, "type": "cast", "cost": { "lifePoints": 4 }, "actions": 1, "effect": "Target gets 3 bonus Move Actions next Turn" },
+      { "id": "inspire", "name": "Inspire", "xpCost": 4, "type": "cast", "cost": { "staminaPoints": 1 }, "actions": 1, "range": "Medium", "effect": "Ally +1 SP, +2 Checks", "limit": "once per Tale per target" },
+      { "id": "counter-ward", "name": "Counter Ward", "xpCost": 6, "type": "reaction", "cost": { "staminaPoints": 1 }, "effect": "Wits Contest to cancel enemy spell" }
+    ]
+  },
+
+  "skills": {
+    "starting": [
+      { "id": "born-in-saddle", "name": "Born in the Saddle", "xpCost": 1, "effect": "Ignore the penalty for Ranged Attacks while Mounted. +1 to Attacks when Mounted and targeting an un-Mounted foe." },
+      { "id": "charge", "name": "Charge", "xpCost": 1, "effect": "Spend 1 Stamina Point: Make two Move Actions followed by a Melee Attack Action. This only counts as 1 Action.", "spCost": 1 },
+      { "id": "defender", "name": "Defender", "xpCost": 1, "effect": "Choose a Friendly Character within Touch Range. Become the target of a single Attack made against that character. May only be used once per Round." },
+      { "id": "fleet-footed", "name": "Fleet Footed", "xpCost": 1, "effect": "When making 2 Move Actions in the same Turn, take an additional bonus Move Action." },
+      { "id": "hit-and-run", "name": "Hit and Run", "xpCost": 1, "effect": "Spend 1 Stamina Point: Make an Attack Action followed by two Move Actions. This only counts as 1 Action.", "spCost": 1 },
+      { "id": "iron-hide", "name": "Iron Hide", "xpCost": 1, "effect": "Increase maximum Life Points by 3.", "lpBonus": 3 },
+      { "id": "of-the-shadows", "name": "Of the Shadows", "xpCost": 1, "effect": "+1 to all Edge Checks involving stealth (hiding, moving quietly, passing unseen) or to detect others." },
+      { "id": "uncanny-warding", "name": "Uncanny Warding", "xpCost": 1, "effect": "Increase Sorcery Defense by 1." },
+      { "id": "assassin", "name": "Assassin", "xpCost": 2, "effect": "When using a One-Handed Light or Medium Melee weapon, apply Edge to the Melee Attack instead of Might. Still add Might to the Damage roll." },
+      { "id": "brawler", "name": "Brawler", "xpCost": 2, "effect": "Increase the Damage of all Melee Attacks by +1." },
+      { "id": "eagle-eyed", "name": "Eagle-Eyed", "xpCost": 2, "effect": "Increase the Damage of all Ranged Attacks by +1." },
+      { "id": "pantherish", "name": "Pantherish", "xpCost": 2, "effect": "Spend 1 Stamina Point: Reroll a failed Check or Attack roll.", "spCost": 1 },
+      { "id": "resilient", "name": "Resilient", "xpCost": 2, "effect": "During a Recovery, regain 3 additional Life Points and gain 1 additional Stamina Point.", "lpRecoveryBonus": { "type": "recovery", "lpBonus": 3, "spBonus": 1 } },
+      { "id": "waterfront-fists", "name": "Waterfront Fists", "xpCost": 2, "effect": "While unarmed, Melee Attacks count as Improvised Weapons (Light, One-Handed)." },
+      { "id": "improved-flex", "name": "Improved Flex", "xpCost": 3, "effect": "Improve Flex die from D10 to D8." }
+    ],
+    "legendary": [
+      { "id": "combat-readiness", "name": "Combat Readiness", "xpCost": 1, "effect": "+1 Initiative." },
+      { "id": "impaling-throw", "name": "Impaling Throw", "xpCost": 1, "effect": "1 SP: Double Thrown damage." },
+      { "id": "infamy", "name": "Infamy", "xpCost": 1, "effect": "+2 intimidate/convince Contests." },
+      { "id": "hardy", "name": "Hardy", "xpCost": 1, "effect": "+2 LP whenever regaining LP.", "lpRecoveryBonus": { "type": "on-regain", "lpBonus": 2 } },
+      { "id": "sacrifice-armor", "name": "Sacrifice Armor", "xpCost": 1, "effect": "1 SP: Negate all damage, AR→0. 1/Tale." },
+      { "id": "unseen-strike", "name": "Unseen Strike", "xpCost": 1, "effect": "Surprise: +2 Attack, +1 Damage.", "preActivated": true },
+      { "id": "blocker", "name": "Blocker", "xpCost": 2, "effect": "Shield +1 Phys Def if no Move." },
+      { "id": "lotus-blood", "name": "Lotus Blood", "xpCost": 2, "effect": "Sorcery SP cost -1 (min 1)." },
+      { "id": "murderous-frenzy", "name": "Murderous Frenzy", "xpCost": 2, "effect": "Kill Minion = kill 2nd same type. 2H Heavy req." },
+      { "id": "poisoner", "name": "Poisoner", "xpCost": 2, "effect": "3+ Melee damage = Poison. Req substances." },
+      { "id": "protector", "name": "Protector", "xpCost": 2, "effect": "1 SP: Give ally 1 SP. 1/Round." },
+      { "id": "soldiers-endurance", "name": "Soldier's Endurance", "xpCost": 2, "effect": "Ignore armor encumbrance. Heavy=Medium stipulations." },
+      { "id": "sorcerous-vigor", "name": "Sorcerous Vigor", "xpCost": 2, "effect": "Sorcery LP cost -2 (min 1)." },
+      { "id": "combat-readiness-ii", "name": "Combat Readiness II", "xpCost": 2, "prerequisite": "combat-readiness", "effect": "+1 Initiative (stacks)." },
+      { "id": "eagle-eyed-ii", "name": "Eagle-Eyed II", "xpCost": 2, "prerequisite": "eagle-eyed", "effect": "+1 Ranged Damage (stacks)." },
+      { "id": "iron-hide-ii", "name": "Iron Hide II", "xpCost": 2, "prerequisite": "iron-hide", "effect": "+Grit max LP.", "lpBonus": "grit" },
+      { "id": "uncanny-warding-ii", "name": "Uncanny Warding II", "xpCost": 2, "prerequisite": "uncanny-warding", "effect": "+1 Sorcery Defense (stacks)." },
+      { "id": "fierce-mind", "name": "Fierce Mind", "xpCost": 3, "effect": "Sorcery Attack: roll 2, take best." },
+      { "id": "fierce-shots", "name": "Fierce Shots", "xpCost": 3, "effect": "Ranged Attack: roll 2, take best." },
+      { "id": "fierce-strokes", "name": "Fierce Strokes", "xpCost": 3, "effect": "Melee Attack: roll 2, take best." },
+      { "id": "steel-trap-reflexes", "name": "Steel Trap Reflexes", "xpCost": 3, "effect": "+1 Edge Stat." },
+      { "id": "steely-thews", "name": "Steely Thews", "xpCost": 3, "effect": "+1 Might Stat." },
+      { "id": "studious", "name": "Studious", "xpCost": 3, "effect": "+1 Wits Stat." },
+      { "id": "whalebone-and-gristle", "name": "Whalebone and Gristle", "xpCost": 3, "effect": "+1 Grit Stat." },
+      { "id": "determined", "name": "Determined", "xpCost": 4, "effect": "Grit die d6 → d8." },
+      { "id": "leader-of-men", "name": "Leader of Men", "xpCost": 4, "effect": "1 SP + Action: ally +1 Attacks. 2 SP = 3 allies." },
+      { "id": "mighty", "name": "Mighty", "xpCost": 4, "effect": "Might die d6 → d8." },
+      { "id": "sharpness", "name": "Sharpness", "xpCost": 4, "effect": "Edge die d6 → d8." },
+      { "id": "wide-arc", "name": "Wide Arc", "xpCost": 4, "effect": "Melee hits 2 in Touch. Use higher Def. 1/Round." },
+      { "id": "wise", "name": "Wise", "xpCost": 4, "effect": "Wits die d6 → d8." },
+      { "id": "improved-flex-ii", "name": "Improved Flex II", "xpCost": 5, "prerequisite": "improved-flex", "effect": "Flex die d8 → d6." },
+      { "id": "steel-trap-reflexes-ii", "name": "Steel Trap Reflexes II", "xpCost": 5, "prerequisite": "steel-trap-reflexes", "effect": "+1 Edge (stacks)." },
+      { "id": "steely-thews-ii", "name": "Steely Thews II", "xpCost": 5, "prerequisite": "steely-thews", "effect": "+1 Might (stacks)." },
+      { "id": "studious-ii", "name": "Studious II", "xpCost": 5, "prerequisite": "studious", "effect": "+1 Wits (stacks)." },
+      { "id": "tough-souled", "name": "Tough-Souled", "xpCost": 5, "effect": "+1 Physical & Sorcery Defense." },
+      { "id": "whalebone-and-gristle-ii", "name": "Whalebone and Gristle II", "xpCost": 5, "prerequisite": "whalebone-and-gristle", "effect": "+1 Grit (stacks)." },
+      { "id": "adept-sorcerer", "name": "Adept Sorcerer", "xpCost": 6, "prerequisite": "4+ skills", "effect": "The Character may perform 1 bonus Sorcery Attack Action per Turn, in addition to their Actions. This may only be used to make a Sorcery Attack that requires 1 Action to cast. (The character must already possess at least four other Skills.)" },
+      { "id": "determined-ii", "name": "Determined II", "xpCost": 6, "prerequisite": "determined", "effect": "Grit die d8 → d10. +5 max LP.", "lpBonus": 5 },
+      { "id": "legendary", "name": "Legendary", "xpCost": 6, "effect": "+1 any Stat." },
+      { "id": "legendary-sword-arm", "name": "Legendary Sword Arm", "xpCost": 6, "prerequisite": "4+ skills", "effect": "Bonus Melee Attack/Turn." },
+      { "id": "mighty-ii", "name": "Mighty II", "xpCost": 6, "prerequisite": "mighty", "effect": "Might die d8 → d10." },
+      { "id": "sharpness-ii", "name": "Sharpness II", "xpCost": 6, "prerequisite": "sharpness", "effect": "Edge die d8 → d10." },
+      { "id": "sharpshooter", "name": "Sharpshooter", "xpCost": 6, "prerequisite": "4+ skills", "effect": "Bonus Ranged Attack/Turn." },
+      { "id": "wise-ii", "name": "Wise II", "xpCost": 6, "prerequisite": "wise", "effect": "Wits die d8 → d10." }
+    ]
+  },
+
+  "origins": {
+    "_implementation": {
+      "lpFormula": "originBaseLP + (grit.value × 2) + skillBonuses",
+      "lpBonusSkills": ["iron-hide", "iron-hide-ii", "determined-ii"],
+      "lpRecoverySkills": ["resilient", "hardy"],
+      "originLpRecoveryBonuses": ["from-the-wilds", "from-the-blood-of-jhebbal-sag"],
+      "notes": "When character selects origin, set lifePoints.base to origin's baseLP. LP max auto-calculates from formula. Skills on sheet should check for lpBonus property and add to calculation."
+    },
+    "from-the-hills": {
+      "id": "from-the-hills",
+      "name": "From the Hills",
+      "baseLP": 30,
+      "sorcery": null,
+      "bonuses": [
+        "At the start of each Tale, choose Might, Edge, or Grit. For the duration of that Tale, apply +1 to all Checks and Attacks related to the chosen Stat."
+      ],
+      "startingSkills": [],
+      "flavorQuote": "He came of a race of hillmen, accustomed to scaling forbidding crags, and he was a man of unusual strength and agility.",
+      "quoteSource": "Robert E. Howard, \"Jewels of Gwahlur\"",
+      "description": "You grew up beyond the frontiers of civilization. Beyond the Border Kingdoms, beyond the perfumed fops calling themselves knights in Aquilonia. You grew up in a land where blood and danger always lay just beyond the nearest hilltop, where the air itself froze in the lungs, where snow made every forward step a struggle. The hills breed hardy people, and you're the hardiest of them. Since you could lift a sword, you've been embroiled in blood feuds and tribal combat. Since you could walk, you've negotiated the forests and the hilltops. Since you could talk, your throat has been hoarse with war cries.\n\nYou're a warrior-born. It's the only way you've managed to survive. Those native to the harsh, unyielding terrain of the north are born with sword in hand. You learned to stab in the cradle, your food withheld from you unless you could claim it like a warrior, and in place of the wooden toys given to most infants, you clutched a wooden shield. Battle is your life. You came of age in the shield wall; you earned your tribe's respect in the duels fought between rivals in the heart of your village, watched over by the carved stone faces of the gods. War, bloodshed, the clash of blades and the screams of the dying; these make up your life. Blood-hardened, iron-strong, hill-born... this is you.\n\nBut it's not all you are. Even as you swarmed over the walls of the civilized outposts of the southern kingdoms, you wanted more. The gray hills of your homeland might have inculcated the skills of the sword, made you granite-tough and tiger-fast in the melee, but where was the joy of battle you felt? Where were the sword songs? Where the quaffing of ale, and the celebration of a battle won? No. The hills of the north may have made you, but you wanted more than grim faces and gray skies. So you've taken up your sword once more, but now you head out into the broader world, ready to write a legend for yourself, in blood and gold."
+    },
+    "from-the-streets": {
+      "id": "from-the-streets",
+      "name": "From the Streets",
+      "baseLP": 22,
+      "sorcery": null,
+      "bonuses": [
+        "+1 to all Edge Checks and Attacks."
+      ],
+      "startingSkills": ["fleet-footed", "of-the-shadows"],
+      "startingSkillChoice": "one",
+      "flavorQuote": "In one of these dens merriment thundered to the low smoke-stained roof, where rascals gathered in every stage of rags and tatters.",
+      "quoteSource": "Robert E. Howard, \"The Tower of the Elephant\"",
+      "description": "Every city has one. A place you don't tread if you aren't good with a knife and able to pick a pocket so deftly even the pocket doesn't realize it's empty. In Zamora, the place is called the Maul. Elsewhere, the Maze. The specifics might differ, but the essence remains the same. Knotted tangles of avenues and passageways. Drinking dens populated by the harshest and cruelest. Hovels where the old wither and the hunted hide. And you were born here. Born in the hidden underside of civilization. Heir only to muck and larceny. It wasn't an auspicious start, but you don't care about auspices (indeed, you're not quite sure what they are; you had a different sort of education to those book-learning brats in the better parts of the city).\n\nIt started with filching things from unwatched windowsills. Just some food, maybe, nothing anyone would miss too much, even in a place as penurious as the Maul. But soon you realized this was the way to make your life count for something. They—those fancy fools in the palaces who pretended not to see you as you scampered through the markets—won't give you anything. But that was okay; you preferred taking it from them anyway.\n\nIn places like the Maul, or whichever version of it you hail from, you don't go long as a young thief before you get shown how things work. It's never just a case of taking what you can. There's always a bigger rat in the sewer, and soon you were working for the bigger rats, giving them a share of your hauls, and learning as fast as you could. You learned about finding the right mark and how to tell the truly rich from the merely flashy; you learned about the treasures you could take and those you should avoid because they carried the otherworldly touch; and you learned how to cut a throat and drive the knife into the guts of your opponent and leave them to bleed out.\n\nYou learned it all, you learned it well. Now it's time to take your talents out into the wide world. There are much richer pickings than this city, and you're going to take them for every penny."
+    },
+    "from-the-steppes": {
+      "id": "from-the-steppes",
+      "name": "From the Steppes",
+      "baseLP": 26,
+      "sorcery": null,
+      "bonuses": [
+        "+1 to all Ranged Damage."
+      ],
+      "startingSkills": ["born-in-saddle"],
+      "flavorQuote": "Shaking the sweat and blood from his eyes, Conan saw four horsemen sitting their steeds in the twilight and staring up at him.",
+      "quoteSource": "Robert E. Howard, \"A Witch Shall Be Born\"",
+      "description": "So vast they used to tell you your homeland was a reflection of heaven itself, the steppes stretch on endlessly beneath the sky. Here, the horse tribes of the Hyrkanians rule. Here, the rider rules. Here, you were born in the saddle. You could ride before you could walk, before you knew the names of the sky spirits or the stars watching over you. You rode with the tribe as they followed the seasons across the infinite steppe.\n\nYou bonded with your mount, trusting them as you trusted no other living soul. You learned to wield a sword, but most importantly, you learned to use the bow. The bow is the true weapon of your people. Made from the wood of the hardy trees growing along the riverbanks, layered with the horn of the cattle you herded, and strung with the guts of the wild cats and lions ranging the plains, it can drive an arrow through the throat of an armored Bossonian knight at two-hundred yards. And you can fire it with the same speed and accuracy from the back of your charging horse as any fool standing steady on their feet.\n\nEventually, even the horizons of the steppes began to feel like a constraint to you. You heard the tales of the civilized cities of the west from the merchants and the mercenaries accompanying them. You heard of the treasures waiting to be claimed from hands grown soft and clumsy from complacency, hands long unused to the strain of the reins against fingers, to the pressure of the taut bowstring. So you bid farewell to your tribe, to the steppes, to the spirits of your homeland. A different destiny waits for you. You know you'll return one day soon, though. The steppes are a part of you, and you intend to bring them to the soft, decadent world beyond their borders, and make those of that world quake in fear."
+    },
+    "from-the-north": {
+      "id": "from-the-north",
+      "name": "From the North",
+      "baseLP": 32,
+      "sorcery": null,
+      "bonuses": [
+        "+1 to all Melee Damage."
+      ],
+      "startingSkills": ["iron-hide", "charge"],
+      "startingSkillChoice": "one",
+      "flavorQuote": "Man of the raven locks, tell me your name, so that my brothers in Vanaheim may know who was the last of Wulfhere's band to fall before the sword of Heimdul.",
+      "quoteSource": "Robert E. Howard, \"Gods of the North\"",
+      "description": "Where the icebergs, calved from the great glaciers of the north, drift. Where the skalds intone strange songs of the frost giant, Ymir, and his beautiful daughter. Where the mead is drunk, and the old gods toast as though they sit at one's right hand... that is where you first drew breath, breath which fogged in the air and hung above your small, frail form like a mighty doom waiting to be embraced.\n\nSuch is the way of things in the remote regions of the north. Here the ice crystals form in your beard in seconds, and falling into the water is a death sentence—provided the fall is hard enough to breach the thick ice crusting over it. Fortunately, you were strong enough to survive, to grow to adulthood in the brutal cultures of your homeland. Your people are ship builders, sailors, reavers. You pillaged the shores of those nations to the south, dragging back gold and captives and tales of your own heroism, to become the great sagas you dreamed of having sung in your name.\n\nYou'd done this since you were a child. You knew the whims of the sea almost as well as you did the tempers of your crewmates, the cold anger of your monarch. You knew how to make a ship skip over and through the waves, you knew how to catch the wind, how to break the storm. And you knew how to find those secret coves, the hidden rivers, leading you into the fatted, verdant lands of the south. There, those unexpecting fools also discovered you knew the way of the sword and the spear; that you knew how to feed the ravens, as well as to follow them to the richest outposts.\n\nBut too often your ship turned for home before you were done exploring. Too often the mead hall summoned you back before you'd gathered enough loot, or performed enough heroic feats, to earn your place in the skald's songs. Not this time, however. This time, you decided to stay. To strike out into the lands of the south, to claim your destiny, and to find the mightiest doom ever heard of in the whole of the freezing north."
+    },
+    "from-the-wilds": {
+      "id": "from-the-wilds",
+      "name": "From the Wilds",
+      "baseLP": 30,
+      "sorcery": null,
+      "bonuses": [
+        "+1 to all Grit Checks.",
+        "Spend 1 Stamina Point to regain 2 Life Points."
+      ],
+      "lpRecoveryBonus": {
+        "type": "stamina-spend",
+        "cost": 1,
+        "effect": "Regain 2 LP"
+      },
+      "startingSkills": [],
+      "flavorQuote": "As he talked he was leading the way deeper and deeper into the ancient wilderness.",
+      "quoteSource": "Robert E. Howard, \"Beyond the Black River\"",
+      "description": "They call you many things. Few sound kind to your ear. The markings of your homeland—the tattoos or scarification, the woad coloring your skin, or the necklace of ears and animal teeth dangling around your neck—all draw their attention, leading to the sudden fear you see in their eyes, the hostile whispers. But you're long used to it. You've always known those from the so-called \"civilized\" lands feared those like you. They fear all things lying beyond the narrow limits of their cultured expectations; they do not understand the surge of life, of primal joy, felt by those who were born in the wilderness.\n\nYou know only the hardness of earth beneath your feet, the rush of the river's uncorrected course, and you are as comfortable in the branches of a tree as on the ground. The wild made you as much as any other human beings have. Of course, you weren't born alone. You have family: you might belong to those clans of humans dwelling in the forests beyond the Border Kingdoms or deep in the jungles where the encroachment of \"civilization\" is limited to the occasional boat full of fools trying to claim new land for their ruler or themselves. There was a village where you grew and ate and occasionally slept. There were friends, teachers, guides to the ways of the wild. But they didn't coddle you, didn't make you sit and learn the names of dozens of dead aristocrats.\n\nInstead, you ventured out into the wilds alone. You hunted the deer, you tracked the auroch, you shot down the eagle. You fought through the crocodile-infested swamps, and you harvested the venom from the vipers on the jungle floor. You are the wilderness. When men call you names, they do so because they see you do not need them and their goods, their endless fripperies, to survive. You can survive because it is what you were shaped for, shaped for by the wilderness itself. And now you will survive any adventure, any danger you encounter. Surviving, after all, is what you have always done."
+    },
+    "from-a-civilized-land": {
+      "id": "from-a-civilized-land",
+      "name": "From a Civilized Land",
+      "baseLP": 22,
+      "sorcery": ["alchemy"],
+      "bonuses": [
+        "+2 to all Wits Checks."
+      ],
+      "startingSkills": ["uncanny-warding"],
+      "flavorQuote": "Once, limned against a purple sunless horizon, he saw the mighty walls and towers of a great city such as rose nowhere on the waking earth he knew.",
+      "quoteSource": "Robert E. Howard, \"Hour of the Dragon\"",
+      "description": "The cities of Aquilonia, Nemedia, Corinthia, and Stygia are many things. Decadent, perhaps. But not safe. Never safe. So, when you hear the claims of your homeland being soft, effete, or incapable of preparing a person for the dangers of a life exploring the darkest corners of the Thurian continent, it's almost enough to laugh. It's true, you'll admit, that civilized people do not have their heads split in two by a sword as a regular thing. Civilized people tend to be poisoned, or garrotted in their beds. Or have their heads removed by the executioner as a result of the political machinations of various rivals. It's a quieter form of slaughter, perhaps, but no less effective.\n\nYou grew up amongst this, learned to navigate politics and intrigue, sometimes delivered at the point of a knife. Perhaps you were the child of a minor aristocrat, raised to fulfill some function in court. Perhaps you were born into a merchant family, given some education as a result of your parent's wealth. Maybe you were a servant in the house of a noble, made to study with the children of your master.\n\nWhatever your past, it left you with some skill in scheming and stabbing, and enough education to read, to write, to think... and it left you with so many questions. Questions people didn't want to answer. About the past, perhaps. Or about things you weren't meant to talk about. Like the demons in those stories you were told. Were they real? You know you weren't meant to ask those questions; you could see their faces went still when you spoke.\n\nBeing smart enough to stop asking didn't mean you stopped wanting the answers. And now you're old enough to venture into the world and find them for yourself. There are so many mysteries in the world, so many ancient and forgotten places, so much waiting to be rediscovered. And you're the one to do so. You've spent hours in the libraries of the great palaces, masquerading as a curator. You've examined the maps of long-dead scholars, hunting for the lost temples of the wise. Now you're ready. Ready to discover the truth of this world. And if you need to get your hands bloody to do so... so be it."
+    },
+    "from-parts-unknown": {
+      "id": "from-parts-unknown",
+      "name": "From Parts Unknown",
+      "baseLP": 26,
+      "sorcery": ["any-two"],
+      "sorceryChoice": 2,
+      "bonuses": [
+        "+1 to all Checks made as part of a Contest.",
+        "Spend 1 Stamina Point to gain +2 Sorcery Defense for the duration of the current combat."
+      ],
+      "startingSkills": [],
+      "flavorQuote": "Men said he spent much time in the hills, in curious conclaves with surviving remnants of an old race.",
+      "quoteSource": "Robert E. Howard, \"Hour of the Dragon\"",
+      "description": "Your homeland isn't on any maps. Or at least so you tell people. You keep your past to yourself, and only you know why. Perhaps it is so soaked in blood even the most stout-hearted soldier would start running if they heard a part of it. Maybe your name is cursed by those you once called friends. Maybe, where you once dwelled, there were statues erected to your name and temples sanctified to your worship—until they realized you were no god. Just a person with a quick tongue and an eye for opportunity. And then the statues got pulled down, and you needed to run.\n\nYou could be hunted by people not looking for your blood. You might be royalty, chafing against the constraints of your role or the expectations of your family. Heirs to the throne are known to run away; are you one of them? Perhaps you truly are from some land uncharted by even the most assiduous scholars. One of the remnant peoples of ancient Valusia, or ocean-drunk Atlantis. The world is vast and strange, and it holds to its secrets even more tightly than you.\n\nOnly you know the truth, and for now at least, you're keeping it to yourself. There are some truths you can't conceal, despite your best efforts. You know how to handle yourself—few survive long in this world if they can't, after all. Whether it's with the blade or an ability to call upon the dark elemental forces of magic, you can protect yourself against the depredations of those who'd do you harm. And, as those who greet you in inns and taverns loudly announce, you aren't from around here. You might hide where you're from, but you can't quite conceal that it isn't from here. There's a lilt to your accent, a style to your hair, a habit you can't quite shake. Other than this, you're a mystery. Just how you like it."
+    },
+    "from-the-blood-of-jhebbal-sag": {
+      "id": "from-the-blood-of-jhebbal-sag",
+      "name": "From the Blood of Jhebbal Sag",
+      "baseLP": 28,
+      "sorcery": ["alchemy", "whiteMagic"],
+      "bonuses": [
+        "Whenever you regain Life Points, regain 2 additional Life Points."
+      ],
+      "lpRecoveryBonus": {
+        "type": "on-regain",
+        "effect": "+2 LP whenever regaining LP"
+      },
+      "startingSkills": ["healing"],
+      "startingSpells": ["healing"],
+      "flavorQuote": "Once all living things worshipped him. That was long ago, when beasts and men spoke one language.",
+      "quoteSource": "Robert E. Howard, \"Beyond the Black River\"",
+      "description": "In the dense forests of the north, amidst the endless ranks of trees, in the heart of the wild itself... there dwells the old god. Humanity knows him as Jhebbal Sag. Once, so the tales tell, all humans and beasts spoke with the same tongue. Even now, some of the animals stalking the woods and jungles and plains of the earth visit the forgotten places, the ancient groves where Jhebbal Sag once ruled. And perhaps, just perhaps, a few people do too.\n\nYou knew you were different almost before you knew anything else. You could sense it. Sense how people felt before they felt it themselves. Smell their apprehension, detect the anger before it tore itself free from their throats, understand their desires forming in their minds. But it was in the way animals treated you that you truly recognized your growing power. They knew you, somehow. No dog ever howled at you in panic, or yapped in uncertain excitement at your coming. Even when you ventured out into the deep dark spaces, where the big game waited to be taken—even then, you never feared the wrath of the bear as your kin did. You knew the bear would know you, and you were right. Even the deadliest beasts in the forests saw you as being one of them in some way you couldn't explain.\n\nAt least until you heard of Jhebbal Sag. Of the ancient bonds between humans, and animals, and the god. Of those women who slept in his groves and were rendered miraculously pregnant, or those men who returned to their wives with a strange light in their eyes, having wandered into a forsaken part of the woods. You knew then where your gifts came from. As though the god whispered in your ear. The old, wild blood of Jhebbal Sag ran in your veins.\n\nAnd now you venture forth to use your powers for some greater end. What it is, you do not know. Not yet. But nature is alive with signs, signs you can read. You will find your way; you know it."
+    },
+    "from-the-blood-of-acheron": {
+      "id": "from-the-blood-of-acheron",
+      "name": "From the Blood of Acheron",
+      "baseLP": 20,
+      "sorcery": ["all"],
+      "bonuses": [
+        "+1 to all Wits Checks.",
+        "Spend 1 Stamina Point to reduce the Life Point cost of casting a spell by half (rounding up)."
+      ],
+      "startingSkills": [],
+      "flavorQuote": "Aye. And when the day of reckoning came, the sword was not spared. So Acheron ceased to be.",
+      "quoteSource": "Robert E. Howard, \"Hour of the Dragon\"",
+      "description": "Nothing is ever truly lost, or truly forgotten. No matter how thoroughly the blade is cleaned, the residue of blood clings to its steel. No matter how careful the scholar's effacement, the previous manuscript can be detected beneath their new text. Such is the nature of things. The world itself is such a palimpsest; each great empire brought low, erased from memory, and its remains either crushed beneath the rampaging boots of its conquerors, or else claimed by them and reshaped. Such is what happened to the great empire of Acheron. At its height, it dominated the Thurian continent, ruling over almost all, save for archaic Stygia itself.\n\nAcheron was a society ruled over by mighty sorcerers, prepared to spill the blood of their own subjects in order to procure the impossible powers they wielded. Long ago toppled by the barbarians of the north, their greatest sorcerers—those like the infamous Xaltotun—long since slain or otherwise consigned to their tombs. Acheron is dead. Except, of course, nothing truly dies; it is merely covered over. It still dwells below. Waiting.\n\nWaiting to emerge in you. For you possess powers you cannot explain. You can hear the dread whispers of long-dead things, resting in the earth. You can hear the voice of those ancient priest-kings, hear their rage at being brought low, hear the exultation as they talk of the many sacrifices they offered up in pursuit of their own dark goals, hear the cruelty bestowed by ultimate power. And you hear it over a gulf of three thousand years. For it has been three thousand years since Acheron was brought low, and the blood of those mighty sorcerers is long thought spent. Except now it is awake in you.\n\nWhat does this call to sorcery mean for you? It has dragged you away from the lands of your birth, away from the security of home and hearth and family. It thrusts you into danger, into the inexplicable, always in search of something else. Your powers grow stronger, grow stranger, and the voices of ancient Acheron sing more loudly in your ears. But how far dare you follow them?"
+    },
+    "from-the-blood-of-a-demon": {
+      "id": "from-the-blood-of-a-demon",
+      "name": "From the Blood of a Demon",
+      "baseLP": 26,
+      "sorcery": ["blackMagic", "demonicMagic"],
+      "bonuses": [
+        "+1 to all Sorcery Attacks.",
+        "+2 to all Sorcery Damage."
+      ],
+      "startingSkills": [],
+      "flavorQuote": "I am of human origin, but I rule demons. You have seen the Lords of the Black Circle.",
+      "quoteSource": "Robert E. Howard, \"People of the Black Circle\"",
+      "description": "You heard the stories, of course. You couldn't not. Even if you'd been able to ignore the whispers, the speculative gazes, the pointed fingers, they wouldn't have let you. The ones who wanted to use the stories of your parentage as an excuse to hurt or bully or belittle you. They never did anything in hushed voices if they could shout it in front of half a street. You know what is said of you, and so does everyone else: at least one of your parents was a demon. You are the bastard child of a creature summoned up from hell itself.\n\nPerhaps your mother confirmed the story. Perhaps she swore it was nonsense. Perhaps she died long ago, leaving you with only the curse of your heritage. But is it a curse? Certainly it feels like it sometimes, or did when you were a youth. But now... now you feel the power stirring inside you. Gradually unfurling itself like a serpent, coiled about a branch. You're more than human, though the thought terrifies you as much as it thrills you. You possess capacities those around you can barely dream of, able to call upon powers you know are impossible for all but the most powerful of sorcerers—and those exist only in fables. Or so you used to think.\n\nSo, now you'll head out into the world. To Nemedia, perhaps, to seek fame. To seek gold. To seek life. Or to Stygia, where the serpent cults hold traffic with demons—might you try to find your father, to ask him your purpose, to make him explain your existence? Or will you do what demons are meant to do: bring slaughter and death to those who caused you pain? And there are oh so many of them to choose from. So your existence is balanced between the human and the inhuman, between good and evil, between civilization and savagery. You've known this struggle all your life. On which side will you fall?"
+    }
+  },
+
+  "characterCreation": {
+    "statPoints": 16,
+    "statMinimum": 1,
+    "statMaximumAtCreation": 6,
+    "statMaximumOverall": 8,
+    "defaultStatDie": "d6",
+    "startingXP": 3,
+    "xpMustBeSpent": true,
+    "oneSkillPerRespite": true
+  },
+
+  "inherentSpells": {
+    "alchemy": ["Create Food", "Radium Gem", "Artifact Spirit"],
+    "blackMagic": ["Whispers in the Darkness", "Illusory Shadow", "Night's Gift"],
+    "demonicMagic": ["Bloodhound", "Demonic Vessel", "Infernal Ward"],
+    "necromanticMagic": ["Death Sight", "Chilling Presence", "Undead Ward"],
+    "whiteMagic": ["The Signs of Jhebbal Sag", "Sense Sorcery", "Life Sight"]
+  }
+}

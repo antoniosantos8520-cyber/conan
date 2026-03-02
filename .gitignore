@@ -1,0 +1,40 @@
+# ===== Dev-only files (not shipped in releases) =====
+# Design docs & session notes (all markdown, everywhere)
+*.md
+
+# Mockup HTML files
+mockup-*.html
+
+# Dev directories
+memory/
+docs/
+chat-design/
+Issues/
+H2/
+
+# Campaign-specific content (not distributed)
+images/Tales/
+
+# Dev tools & misc
+scripts/capture-roll.js
+css/Readme
+style-guide-BPM.json
+nul
+
+# ===== OS & editor junk =====
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# ===== Claude Code / Git & CI =====
+.claude/
+.github/
+release.sh
+conan.zip
+
+# ===== Node (if ever needed) =====
+node_modules/
+package-lock.json

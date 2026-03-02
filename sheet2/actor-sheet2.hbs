@@ -1,0 +1,460 @@
+<form class="{{cssClass}} sheet2 flexcol" autocomplete="off">
+
+  {{!-- Header --}}
+  <header class="sheet2-header">
+    <span class="sheet2-title">{{actor.name}}</span>
+  </header>
+
+  {{!-- Main Layout: Content Left, Tabs Right --}}
+  <div class="sheet2-layout">
+
+    {{!-- Main Content Area --}}
+    <div class="sheet2-main" style="background-image: url('{{sheetBackground}}');">
+
+      {{!-- Portrait Background Layer (half-screen, right-justified) --}}
+      <div class="sheet2-portraitBg" style="background-image: url('{{actor.img}}');"></div>
+
+      {{!-- Character Top Block (always visible) --}}
+      <div class="sheet2-charTop">
+        {{!-- Settings Cog Toggle --}}
+        <button type="button" class="sheet2-cogBtn toggle-char-info" title="Toggle Character Settings">
+          <svg viewBox="0 0 24 24">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.488.488 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+          </svg>
+        </button>
+
+        {{!-- Front View (Display Mode) --}}
+        <div class="sheet2-charView sheet2-charView-front active">
+          <div class="sheet2-leftInfo">
+
+            {{!-- Vitals Row: LP, AR, Initiative --}}
+            <div class="sheet2-vitalsRow">
+              <div class="sheet2-vitalDisplay sheet2-lpDisplay" style="background-image: url('systems/conan/images/lp_heart.png');" title="Life Points{{#if hasIronHide}} (+{{ironHideLpBonus}} Iron Hide){{/if}}">
+                {{#if hasIronHideII}}
+                <img src="systems/conan/images/icons/iron_hide_ii_t_icon.png" class="sheet2-lpBonusIcon" alt="Iron Hide II" title="Iron Hide II (+{{ironHideLpBonus}} Max LP)"/>
+                {{else if hasIronHide}}
+                <img src="systems/conan/images/icons/iron_hide_i_t_icon.png" class="sheet2-lpBonusIcon" alt="Iron Hide" title="Iron Hide (+{{ironHideLpBonus}} Max LP)"/>
+                {{/if}}
+                <span class="sheet2-vitalNumber">{{system.lifePoints.value}}</span>
+              </div>
+
+              <div class="sheet2-vitalDisplay sheet2-arDisplay" style="background-image: url('systems/conan/images/ar_shield.png');" title="Armor Rating{{#if hasARBuff}} (+{{arBuffBonus}} buffs){{/if}}">
+                {{#if hasActiveARBuffs}}
+                <div class="sheet2-arBuffIcons">
+                  {{#if hasArmorUp}}
+                  <img src="systems/conan/images/icons/armor_up_t_icon.png" class="sheet2-arBonusIcon" alt="Armor Up" title="Body of Living Iron (+3 AR)"/>
+                  {{/if}}
+                  {{#if hasDemonicWard}}
+                  <img src="systems/conan/images/icons/demonic_ward_t_icon.png" class="sheet2-arBonusIcon" alt="Demonic Ward" title="Demonic Ward (damage reduction)"/>
+                  {{/if}}
+                </div>
+                {{/if}}
+                <span class="sheet2-vitalNumber">{{effectiveAR}}</span>
+              </div>
+
+              <div class="sheet2-vitalDisplay sheet2-initDisplay" style="background-image: url('systems/conan/images/initiative_roll.png');" title="Roll Initiative{{#if hasCombatReadiness}} (+{{initiativeSkillBonus}} Combat Readiness){{/if}}">
+                {{#if hasCombatReadinessII}}
+                <img src="systems/conan/images/icons/combat_readiness_ii_t_icon.png" class="sheet2-initBonusIcon" alt="Combat Readiness II" title="Combat Readiness II (+{{initiativeSkillBonus}} Initiative)"/>
+                {{else if hasCombatReadiness}}
+                <img src="systems/conan/images/icons/combat_readiness_i_t_icon.png" class="sheet2-initBonusIcon" alt="Combat Readiness" title="Combat Readiness (+{{initiativeSkillBonus}} Initiative)"/>
+                {{/if}}
+                <span class="sheet2-vitalNumber">{{system.initiative.value}}</span>
+              </div>
+
+              {{!-- Conditions Grid: 3x3 layout --}}
+              {{#if hasActiveConditions}}
+              <div class="sheet2-conditionsGrid">
+                {{!-- Row 1: Encumbered spans all 3 columns --}}
+                {{#if system.isEncumbered}}
+                <div class="sheet2-conditionBadge condition-encumbered" title="ENCUMBERED: {{#if system.isWeaponEncumbered}}Too many weapons!{{/if}}{{#if system.isInventoryEncumbered}}{{#if system.isWeaponEncumbered}} + {{/if}}Too many items ({{system.inventoryCount}}/5)!{{/if}} Max 1 Move Action per turn.">
+                  ENCUMBERED
+                </div>
+                {{/if}}
+
+                {{!-- Rows 2-3: Icon-based conditions (left to right, top to bottom) --}}
+                {{#if system.isMounted}}
+                <div class="sheet2-conditionIcon condition-mounted" title="MOUNTED: Currently riding a steed.">
+                  <img src="systems/conan/images/icons/mounted_icon.png" alt="Mounted"/>
+                </div>
+                {{/if}}
+                {{#if system.isPoisoned}}
+                <div class="sheet2-conditionIcon condition-poisoned" title="POISONED: Suffering from poison effects.">
+                  <img src="systems/conan/images/icons/poisoned_icon.png" alt="Poisoned"/>
+                </div>
+                {{/if}}
+                {{#if system.isUnconscious}}
+                <div class="sheet2-conditionIcon condition-unconscious" title="UNCONSCIOUS: Knocked out cold.">
+                  <img src="systems/conan/images/icons/unconscious_icon.png" alt="Unconscious"/>
+                </div>
+                {{/if}}
+                {{#if system.isStunned}}
+                <div class="sheet2-conditionIcon condition-stunned" title="STUNNED: Unable to act.">
+                  <img src="systems/conan/images/icons/stunned_icon.png" alt="Stunned"/>
+                </div>
+                {{/if}}
+                {{#if system.isBound}}
+                <div class="sheet2-conditionIcon condition-bound" title="BOUND: Restrained by ropes or chains.">
+                  <img src="systems/conan/images/icons/bound_icon.png" alt="Bound"/>
+                </div>
+                {{/if}}
+                {{#if system.isFrightened}}
+                <div class="sheet2-conditionIcon condition-frightened" title="FRIGHTENED: Overcome with fear.">
+                  <img src="systems/conan/images/icons/frightened_icon.png" alt="Frightened"/>
+                </div>
+                {{/if}}
+                {{#if system.isBlinded}}
+                <div class="sheet2-conditionIcon condition-blinded" title="BLINDED: Cannot see.">
+                  <img src="systems/conan/images/icons/blinded_icon.png" alt="Blinded"/>
+                </div>
+                {{/if}}
+                {{#if system.isProne}}
+                <div class="sheet2-conditionIcon condition-prone" title="PRONE: Knocked to the ground.">
+                  <img src="systems/conan/images/icons/prone_icon.png" alt="Prone"/>
+                </div>
+                {{/if}}
+                {{#if system.isGrappled}}
+                <div class="sheet2-conditionIcon condition-grappled" title="GRAPPLED: Held by an enemy.">
+                  <img src="systems/conan/images/icons/grappled_icon.png" alt="Grappled"/>
+                </div>
+                {{/if}}
+                {{#if system.isBleeding}}
+                <div class="sheet2-conditionIcon condition-bleeding" title="BLEEDING: Losing blood from wounds.">
+                  <img src="systems/conan/images/icons/bleeding_icon.png" alt="Bleeding"/>
+                </div>
+                {{/if}}
+              </div>
+              {{/if}}
+            </div>
+
+            {{!-- Name / Origin Box (Display Only) --}}
+            <div class="sheet2-nameBox">
+              <div class="sheet2-nameDisplay">{{actor.name}}</div>
+              <div class="sheet2-originDisplay">{{system.origin.name}}</div>
+            </div>
+
+          </div>
+
+        </div>
+
+        {{!-- Behind the Scenes View (Edit Mode) --}}
+        <div class="sheet2-charView sheet2-charView-bts">
+          <div class="sheet2-btsGrid2Col">
+
+            {{!-- Row 1: Character Name | Origin --}}
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">Character Name</label>
+              <input type="text" name="name" value="{{actor.name}}" class="sheet2-btsInput" placeholder="NAME"/>
+            </div>
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">
+                Origin
+                <input type="checkbox" name="system.useOriginBackground" class="sheet2-originBgToggle" {{#if system.useOriginBackground}}checked{{/if}} title="Use Origin Background Image"/>
+              </label>
+              <select name="system.origin.id" class="sheet2-btsInput origin-select">
+                <option value="">-- Select Origin --</option>
+                <option value="from-the-hills" {{#if (eq system.origin.id "from-the-hills")}}selected{{/if}}>From the Hills</option>
+                <option value="from-the-streets" {{#if (eq system.origin.id "from-the-streets")}}selected{{/if}}>From the Streets</option>
+                <option value="from-the-steppes" {{#if (eq system.origin.id "from-the-steppes")}}selected{{/if}}>From the Steppes</option>
+                <option value="from-the-north" {{#if (eq system.origin.id "from-the-north")}}selected{{/if}}>From the North</option>
+                <option value="from-the-wilds" {{#if (eq system.origin.id "from-the-wilds")}}selected{{/if}}>From the Wilds</option>
+                <option value="from-a-civilized-land" {{#if (eq system.origin.id "from-a-civilized-land")}}selected{{/if}}>From a Civilized Land</option>
+                <option value="from-parts-unknown" {{#if (eq system.origin.id "from-parts-unknown")}}selected{{/if}}>From Parts Unknown</option>
+                <option value="from-the-blood-of-jhebbal-sag" {{#if (eq system.origin.id "from-the-blood-of-jhebbal-sag")}}selected{{/if}}>Blood of Jhebbal Sag</option>
+                <option value="from-the-blood-of-acheron" {{#if (eq system.origin.id "from-the-blood-of-acheron")}}selected{{/if}}>Blood of Acheron</option>
+                <option value="from-the-blood-of-a-demon" {{#if (eq system.origin.id "from-the-blood-of-a-demon")}}selected{{/if}}>Blood of a Demon</option>
+              </select>
+            </div>
+
+            {{!-- Row 2: Life Points | Armor Rating --}}
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">Life Points</label>
+              <div class="sheet2-btsInputGroup">
+                <input type="number" name="system.lifePoints.value" value="{{system.lifePoints.value}}" data-dtype="Number" class="sheet2-btsInput" placeholder="Current"/>
+                <span class="sheet2-btsSep">/</span>
+                <input type="number" class="sheet2-btsInput sheet2-lpMax" value="{{system.lifePoints.max}}" readonly title="Auto-calculated"/>
+              </div>
+            </div>
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">
+                Armor Rating (AR)
+                <input type="checkbox" name="system.defense.arLocked" class="sheet2-fieldLock" {{#if system.defense.arLocked}}checked{{/if}} title="Lock field (keep automation)"/>
+              </label>
+              <input type="number" name="system.defense.ar" value="{{system.defense.ar}}" data-dtype="Number" class="sheet2-btsInput {{#if system.defense.arLocked}}locked{{/if}}" placeholder="AR" {{#if system.defense.arLocked}}readonly{{/if}}/>
+            </div>
+
+            {{!-- Row 3: LP Formula | Initiative Override --}}
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">LP Formula</label>
+              <div class="sheet2-lpFormulaBox">
+                <div class="sheet2-lpFormulaRow">
+                  <span class="sheet2-lpFormulaLabel">Origin:</span>
+                  <span class="sheet2-lpFormulaValue">{{system.origin.baseLP}}</span>
+                </div>
+                <div class="sheet2-lpFormulaRow">
+                  <span class="sheet2-lpFormulaLabel">Grit × 2:</span>
+                  <span class="sheet2-lpFormulaValue">{{system.lpGritBonus}}</span>
+                </div>
+                {{#if system.lifePoints.originSkillBonus}}
+                <div class="sheet2-lpFormulaRow sheet2-lpOriginSkill">
+                  <span class="sheet2-lpFormulaLabel">{{system.lifePoints.originSkillSources}}:</span>
+                  <span class="sheet2-lpFormulaValue" style="color: #90EE90;">+{{system.lifePoints.originSkillBonus}}</span>
+                </div>
+                {{/if}}
+                {{#if system.lifePoints.purchasedSkillBonus}}
+                <div class="sheet2-lpFormulaRow sheet2-lpPurchasedSkill">
+                  <span class="sheet2-lpFormulaLabel">{{system.lifePoints.purchasedSkillSources}}:</span>
+                  <span class="sheet2-lpFormulaValue" style="color: #87CEEB;">+{{system.lifePoints.purchasedSkillBonus}}</span>
+                </div>
+                {{/if}}
+                <div class="sheet2-lpFormulaTotal">
+                  <span class="sheet2-lpFormulaLabel">Total:</span>
+                  <span class="sheet2-lpFormulaTotalValue">{{system.lifePoints.max}}</span>
+                </div>
+              </div>
+            </div>
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">
+                Initiative Override
+                <input type="checkbox" name="system.initiative.locked" class="sheet2-fieldLock" {{#if system.initiative.locked}}checked{{/if}} title="Lock field (keep automation)"/>
+              </label>
+              <input type="number" name="system.initiative.value" value="{{system.initiative.value}}" data-dtype="Number" class="sheet2-btsInput {{#if system.initiative.locked}}locked{{/if}}" placeholder="Auto (Edge)" {{#if system.initiative.locked}}readonly{{/if}}/>
+              <small class="sheet2-btsHint">Leave blank for auto-calculate</small>
+              <label class="sheet2-btsLabel">Conditions</label>
+              <div class="sheet2-btsConditions">
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-mounted {{#if system.isMounted}}active{{/if}}" title="Mounted">
+                  <img src="systems/conan/images/icons/mounted_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-poisoned {{#if system.isPoisoned}}active{{/if}}" title="Poisoned">
+                  <img src="systems/conan/images/icons/poisoned_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-unconscious {{#if system.isUnconscious}}active{{/if}}" title="Unconscious">
+                  <img src="systems/conan/images/icons/unconscious_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-stunned {{#if system.isStunned}}active{{/if}}" title="Stunned">
+                  <img src="systems/conan/images/icons/stunned_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-bound {{#if system.isBound}}active{{/if}}" title="Bound">
+                  <img src="systems/conan/images/icons/bound_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-frightened {{#if system.isFrightened}}active{{/if}}" title="Frightened">
+                  <img src="systems/conan/images/icons/frightened_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-blinded {{#if system.isBlinded}}active{{/if}}" title="Blinded">
+                  <img src="systems/conan/images/icons/blinded_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-prone {{#if system.isProne}}active{{/if}}" title="Prone">
+                  <img src="systems/conan/images/icons/prone_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-grappled {{#if system.isGrappled}}active{{/if}}" title="Grappled">
+                  <img src="systems/conan/images/icons/grappled_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-bleeding {{#if system.isBleeding}}active{{/if}}" title="Bleeding">
+                  <img src="systems/conan/images/icons/bleeding_icon.png" alt=""/>
+                </button>
+              </div>
+              <label class="sheet2-btsLabel" style="margin-top: 6px;">Pronouns</label>
+              <div class="sheet2-btsConditions" style="grid-template-columns: repeat(3, 28px);">
+                <button type="button" class="sheet2-btsConditionBtn gender-toggle-f {{#if (eq system.gender 'f')}}active{{/if}}" title="She/Her">
+                  <span class="condition-abbrev">SHE</span>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn gender-toggle-m {{#if (eq system.gender 'm')}}active{{/if}}" title="He/Him">
+                  <span class="condition-abbrev">HE</span>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn gender-toggle-off {{#unless system.gender}}active{{/unless}}" title="They/Them (Default)">
+                  <span class="condition-abbrev">THEY</span>
+                </button>
+              </div>
+            </div>
+
+            {{!-- Row 4: Origin Notes (full width) --}}
+            <div class="sheet2-btsField sheet2-btsFullWidth">
+              <label class="sheet2-btsLabel">Origin Notes</label>
+              <div class="sheet2-originNotes">
+                <div class="sheet2-originNotesContent">{{system.originNotes}}</div>
+              </div>
+            </div>
+
+            {{!-- Row 5: Character Portrait | Map Token --}}
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">Character Portrait</label>
+              <div class="sheet2-btsImageBox">
+                <img src="{{actor.img}}" data-edit="img" title="Character Portrait" class="sheet2-btsImage"/>
+              </div>
+              <span class="sheet2-btsHint">Canvas 512 × 1075 Recommended</span>
+            </div>
+            <div class="sheet2-btsField">
+              <label class="sheet2-btsLabel">Map Token</label>
+              <div class="sheet2-btsImageBox">
+                <img src="{{actor.prototypeToken.texture.src}}" data-edit="prototypeToken.texture.src" title="Map Token" class="sheet2-btsImage"/>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {{!-- Swap Area (Tab Content) --}}
+      <div class="sheet2-swapArea">
+        {{!-- Tab Panels - only one visible at a time, activeTab prevents flash on re-render --}}
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'home')}}active{{/if}}" data-tab="home">
+          {{> "systems/conan/sheet2/parts/tab-home.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'attacks')}}active{{/if}}" data-tab="attacks">
+          {{> "systems/conan/sheet2/parts/tab-attacks.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'spells')}}active{{/if}}" data-tab="spells">
+          {{> "systems/conan/sheet2/parts/tab-spells.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'skills')}}active{{/if}}" data-tab="skills">
+          {{> "systems/conan/sheet2/parts/tab-skills.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'equip')}}active{{/if}}" data-tab="equip">
+          {{> "systems/conan/sheet2/parts/tab-equip.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'journal')}}active{{/if}}" data-tab="journal">
+          {{> "systems/conan/sheet2/parts/tab-journal.hbs"}}
+        </section>
+
+        <section class="sheet2-tabPanel {{#if (eq activeTab 'origin')}}active{{/if}}" data-tab="origin">
+          {{> "systems/conan/sheet2/parts/tab-stamina.hbs"}}
+        </section>
+
+      </div>
+
+    </div>
+
+    {{!-- Vertical Tab Buttons (Right Side) - activeTab prevents flash on re-render --}}
+    <nav class="sheet2-tabs">
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'home')}}active{{/if}}" data-tab="home" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg>
+        <span class="sheet2-tabLabel">Home</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'attacks')}}active{{/if}}" data-tab="attacks" title="Arms">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3l3 3-8.4 8.4H6.3v-3L14.7 6.3zM16.1 4.9l1.4-1.4a1 1 0 011.4 0l1.6 1.6a1 1 0 010 1.4l-1.4 1.4-3-3z"/></svg>
+        <span class="sheet2-tabLabel">Arms</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'equip')}}active{{/if}}" data-tab="equip" title="Pack">
+        <svg viewBox="0 0 24 24"><path d="M9 10L7 3l4 5 1-2 1 2 4-5-2 7c2 1 4 4 4 7 0 3-3 5.5-7 5.5S5 20 5 17c0-3 2-6 4-7z"/></svg>
+        <span class="sheet2-tabLabel">Pack</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'spells')}}active{{/if}}" data-tab="spells" title="Sorcery">
+        <svg viewBox="0 0 24 24"><path d="M12 2l1.4 4.2L18 8l-4.6 1.8L12 14l-1.4-4.2L6 8l4.6-1.8L12 2zm7 11l.9 2.7L23 17l-3.1 1.3L19 21l-.9-2.7L15 17l3.1-1.3L19 13z"/></svg>
+        <span class="sheet2-tabLabel">Sorcery</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'skills')}}active{{/if}}" data-tab="skills" title="Skills">
+        <svg viewBox="0 0 24 24"><path d="M16 2H8a2 2 0 00-2 2v16a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2zm-6 17l-3-3 1.4-1.4L10 16.2l5.6-5.6L17 12l-7 7z"/></svg>
+        <span class="sheet2-tabLabel">Skills</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'journal')}}active{{/if}}" data-tab="journal" title="Journal">
+        <svg viewBox="0 0 24 24"><path d="M6 2h11a2 2 0 012 2v16a2 2 0 01-2 2H6a3 3 0 01-3-3V5a3 3 0 013-3zm0 2a1 1 0 00-1 1v14a1 1 0 001 1h11V4H6zm2 3h7v2H8V7zm0 4h7v2H8v-2z"/></svg>
+        <span class="sheet2-tabLabel">Journal</span>
+      </button>
+
+      <button type="button" class="sheet2-tabBtn {{#if (eq activeTab 'origin')}}active{{/if}}" data-tab="origin" title="Origin">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span class="sheet2-tabLabel">Origin</span>
+      </button>
+
+      {{!-- Spacer to push guide button to bottom --}}
+      <div class="sheet2-tabSpacer"></div>
+
+      {{!-- Character Creator Guide - Pinned to Bottom --}}
+      <button type="button" class="sheet2-tabBtn sheet2-tabBtn-guide" data-action="open-guide" title="Character Creator Guide">
+        <img src="systems/conan/images/icons/character_creation_icon.png" alt="Guide" class="sheet2-guideIcon"/>
+        <span class="sheet2-tabLabel">Guide</span>
+      </button>
+    </nav>
+
+  </div>
+
+  {{!-- Leader of Men Dialog (Sheet-Level Overlay - Draggable) --}}
+  <div class="sheet2-leaderOfMenDialog">
+    <div class="sheet2-leaderDialogHeader leader-dialog-drag-handle">
+      <h3>LEADER OF MEN</h3>
+      <button type="button" class="sheet2-closeLeaderMenu close-leader-menu" title="Close">&#215;</button>
+    </div>
+
+    <div class="sheet2-leaderDialogBody">
+      {{!-- Cost Selection --}}
+      <div class="sheet2-leaderCostSection">
+        <label class="sheet2-leaderCostOption">
+          <input type="radio" name="leaderCost" value="1" checked class="leader-cost-radio"/>
+          <span class="sheet2-leaderCostLabel">1 SP</span>
+          <span class="sheet2-leaderCostDesc">Inspire 1 ally</span>
+        </label>
+        <label class="sheet2-leaderCostOption">
+          <input type="radio" name="leaderCost" value="2" class="leader-cost-radio"/>
+          <span class="sheet2-leaderCostLabel">2 SP</span>
+          <span class="sheet2-leaderCostDesc">Inspire up to 3 allies</span>
+        </label>
+      </div>
+
+      {{!-- Ally Selection List (populated by JS) --}}
+      <div class="sheet2-leaderAllyList">
+        <div class="sheet2-leaderAllyPlaceholder">
+          No allies in scene
+        </div>
+      </div>
+
+      {{!-- Selection Summary --}}
+      <div class="sheet2-leaderSummary">
+        <span class="sheet2-leaderSelected">Selected: <span class="leader-selected-count">0</span></span>
+        <span class="sheet2-leaderMax">Max: <span class="leader-max-count">1</span></span>
+      </div>
+
+      {{!-- Action Buttons --}}
+      <div class="sheet2-leaderActions">
+        {{#if leaderOfMenActive}}
+        <button type="button" class="sheet2-leaderInspireBtn leader-stand-down" title="Remove inspiration from all allies">
+          STAND DOWN
+        </button>
+        {{else}}
+        <button type="button" class="sheet2-leaderInspireBtn leader-inspire" disabled title="Inspire selected allies">
+          INSPIRE
+        </button>
+        {{/if}}
+        <button type="button" class="sheet2-cancelBtn close-leader-menu" title="Cancel">
+          CANCEL
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Protector Dialog (Sheet-Level Overlay - Draggable) --}}
+  <div class="sheet2-protectorDialog">
+    <div class="sheet2-protectorDialogHeader protector-dialog-drag-handle">
+      <h3>PROTECTOR</h3>
+      <button type="button" class="sheet2-closeProtectorMenu close-protector-menu" title="Close">&#215;</button>
+    </div>
+
+    <div class="sheet2-protectorDialogBody">
+      <div class="sheet2-protectorCost">Cost: 1 SP → Give ally 1 SP</div>
+
+      {{!-- Ally Selection List (populated by JS) --}}
+      <div class="sheet2-protectorAllyList">
+        <div class="sheet2-protectorAllyPlaceholder">
+          No allies in scene
+        </div>
+      </div>
+
+      {{!-- Action Buttons --}}
+      <div class="sheet2-protectorActions">
+        <button type="button" class="sheet2-cancelBtn close-protector-menu" title="Cancel">
+          CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+</form>

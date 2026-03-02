@@ -1,0 +1,1049 @@
+<form class="{{cssClass}}" autocomplete="off">
+
+  <!-- HEADER -->
+  <header class="tools-header">
+    <h1><span>GM</span> Tools</h1>
+    <button type="button" class="winds-of-fate-btn" title="Winds of Fate">
+      <img src="systems/conan/images/icons/winds_of_fate_icon.png" alt="Winds of Fate" />
+    </button>
+    <span class="tools-version">v2.0</span>
+  </header>
+
+  <!-- TAB NAVIGATION - Notebook style: icon when inactive, name when active -->
+  <nav class="tools-tabs">
+    <button type="button" class="tools-tab {{#if (eq activeTab 'enemies')}}active{{/if}}" data-tab="enemies">
+      <i class="fas fa-skull"></i><span>Enemies</span>
+    </button>
+    <button type="button" class="tools-tab {{#if (eq activeTab 'areas')}}active{{/if}}" data-tab="areas">
+      <i class="fas fa-map-marked-alt"></i><span>Areas</span>
+    </button>
+    <button type="button" class="tools-tab {{#if (eq activeTab 'travel')}}active{{/if}}" data-tab="travel">
+      <i class="fas fa-route"></i><span>Travel</span>
+    </button>
+    <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'conditions')}}active{{/if}}" data-tab="conditions">
+      <i class="fas fa-heartbeat"></i><span>Conditions</span>
+    </button>
+    <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'lifepoints')}}active{{/if}}" data-tab="lifepoints">
+      <i class="fas fa-heart"></i><span>Life Points</span>
+    </button>
+    <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'flex')}}active{{/if}}" data-tab="flex">
+      <i class="fas fa-star"></i><span>Flex</span>
+    </button>
+    <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'chat')}}active{{/if}}" data-tab="chat">
+      <i class="fas fa-comment"></i><span>Chat</span>
+    </button>
+  </nav>
+
+  <!-- TAB CONTENT -->
+  <div class="tools-content">
+
+    <!-- ============================================================
+         ENEMIES TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'enemies')}}active{{/if}}" data-panel="enemies">
+
+      <!-- Summon Enemy Button -->
+      <section class="tools-section enemy-create-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Enemy Compendium</h3>
+          </div>
+          <button type="button" class="tools-btn small add-enemy-btn" title="Summon Custom Enemy">
+            <i class="fas fa-skull"></i> Summon
+          </button>
+        </div>
+        <p class="tools-muted-text">
+          Drag enemies onto the canvas to place them. Defenses are randomized when placed. Each token is independent.
+        </p>
+      </section>
+
+      <!-- Enemy Categories -->
+      {{#each enemyCategories}}
+      <section class="tools-section enemy-category-section {{#if collapsed}}collapsed{{/if}}" data-section-id="enemy-{{key}}" data-category="{{key}}"
+               style="--cat-primary: {{theme.primary}}; --cat-secondary: {{theme.secondary}}; --cat-accent: {{theme.accent}}; --cat-border: {{theme.border}}; --cat-glow: {{theme.glow}};">
+        <div class="tools-section-header" style="background: linear-gradient(90deg, {{theme.secondary}} 0%, transparent 100%); border-left: 3px solid {{theme.primary}};">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <i class="fas {{icon}}" style="color: {{theme.accent}};"></i>
+            <h3 style="color: {{theme.accent}};">{{name}}</h3>
+            <span class="enemy-category-count" style="background: {{theme.primary}}; color: #fff;">{{enemyCount}}</span>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          {{#each groups}}
+          <div class="enemy-group" data-category="{{../key}}" data-group="{{key}}">
+            <div class="enemy-group-header">
+              <span class="enemy-group-name">{{name}}</span>
+              <span class="enemy-group-count">({{enemies.length}})</span>
+              <button type="button" class="enemy-group-settings-btn" data-category="{{../key}}" data-group="{{key}}" title="Set group background">
+                <i class="fas fa-cog"></i>
+              </button>
+            </div>
+            <div class="enemy-card-grid">
+              {{#each enemies}}
+              <div class="enemy-card"
+                   data-enemy-id="{{id}}"
+                   data-category="{{../../key}}"
+                   data-group="{{../key}}"
+                   style="border-color: {{theme.border}}; --card-primary: {{theme.primary}}; --card-secondary: {{theme.secondary}}; --card-accent: {{theme.accent}}; --card-border: {{theme.border}}; --card-glow: {{theme.glow}};"
+                   {{#if theme.isSuper}}data-supernatural="true"{{/if}}>
+                <!-- Top Corner Buttons -->
+                <button type="button" class="enemy-expand-btn" title="Show/hide details">
+                  <i class="fas fa-chevron-down"></i>
+                </button>
+                <button type="button" class="enemy-settings-btn" title="Set images">
+                  <i class="fas fa-cog"></i>
+                </button>
+                {{#if isCustom}}
+                <button type="button" class="enemy-edit-btn" title="Edit custom enemy">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="enemy-delete-btn" title="Delete custom enemy">
+                  <i class="fas fa-trash"></i>
+                </button>
+                {{/if}}
+                <!-- Token Image - Draggable -->
+                <div class="enemy-token"
+                     draggable="true"
+                     title="Drag to canvas to place {{name}}">
+                  <img src="{{#if tokenImg}}{{tokenImg}}{{else}}icons/svg/mystery-man.svg{{/if}}" alt="{{name}}">
+                </div>
+                <!-- Name and Type -->
+                <span class="enemy-card-name">{{name}}</span>
+                <span class="enemy-card-type {{#if (eq type 'Minion')}}minion{{else}}antagonist{{/if}}">{{type}}</span>
+                <span class="enemy-card-category">{{../../name}} {{#if subtype}}- {{subtype}}{{/if}}</span>
+                <!-- Collapsible Stats Panel -->
+                <div class="enemy-stats-panel">
+                  <div class="enemy-card-stats">
+                    <div class="enemy-stat" title="Might">
+                      <span class="enemy-stat-label">M</span>
+                      <span class="enemy-stat-value">{{stats.might.value}}</span>
+                      <span class="enemy-stat-die">{{stats.might.die}}</span>
+                    </div>
+                    <div class="enemy-stat" title="Edge">
+                      <span class="enemy-stat-label">E</span>
+                      <span class="enemy-stat-value">{{stats.edge.value}}</span>
+                      <span class="enemy-stat-die">{{stats.edge.die}}</span>
+                    </div>
+                    <div class="enemy-stat" title="Grit">
+                      <span class="enemy-stat-label">G</span>
+                      <span class="enemy-stat-value">{{stats.grit.value}}</span>
+                      <span class="enemy-stat-die">{{stats.grit.die}}</span>
+                    </div>
+                    <div class="enemy-stat" title="Wits">
+                      <span class="enemy-stat-label">W</span>
+                      <span class="enemy-stat-value">{{stats.wits.value}}</span>
+                      <span class="enemy-stat-die">{{stats.wits.die}}</span>
+                    </div>
+                  </div>
+                  <div class="enemy-card-defenses">
+                    <div class="enemy-defense" title="Physical Defense">
+                      <span class="enemy-defense-label">Phys</span>
+                      <span class="enemy-defense-value">{{defenses.physical.min}}-{{defenses.physical.max}}</span>
+                    </div>
+                    <div class="enemy-defense" title="Sorcery Defense">
+                      <span class="enemy-defense-label">Sorc</span>
+                      <span class="enemy-defense-value">{{defenses.sorcery.min}}-{{defenses.sorcery.max}}</span>
+                    </div>
+                    {{#if threshold}}
+                    <div class="enemy-defense threshold" title="Threshold (Minion)">
+                      <span class="enemy-defense-label">TH</span>
+                      <span class="enemy-defense-value">{{threshold}}</span>
+                    </div>
+                    {{/if}}
+                    {{#if lifePoints}}
+                    <div class="enemy-defense lifepoints" title="Life Points (Antagonist)">
+                      <span class="enemy-defense-label">LP</span>
+                      <span class="enemy-defense-value">{{lifePoints}}</span>
+                    </div>
+                    {{/if}}
+                  </div>
+                  <button type="button" class="enemy-details-btn tools-btn small" style="background: linear-gradient(180deg, {{theme.primary}} 0%, {{theme.secondary}} 100%); border-color: {{theme.border}};">View Full Details</button>
+                </div>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+      {{/each}}
+
+      {{#unless enemyCategories.length}}
+      <section class="tools-section">
+        <div class="tools-empty-state">
+          <p>No enemy data loaded. Check that enemies.json exists in the data folder.</p>
+        </div>
+      </section>
+      {{/unless}}
+
+    </div>
+
+    <!-- ============================================================
+         CONDITIONS TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'conditions')}}active{{/if}}" data-panel="conditions">
+      <div class="tools-construction-overlay">
+        <i class="fas fa-hard-hat"></i>
+        <div class="tools-construction-banner">Under Construction</div>
+      </div>
+
+      <!-- Token Selection Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Scene Tokens</h3>
+          </div>
+          <div class="tools-header-controls">
+            <div class="cond-filter-group">
+              <label class="cond-filter-radio">
+                <input type="radio" name="tokenFilter" value="all" {{#if (eq conditionFilter 'all')}}checked{{/if}}>
+                <span>All</span>
+              </label>
+              <label class="cond-filter-radio">
+                <input type="radio" name="tokenFilter" value="pc" {{#if (eq conditionFilter 'pc')}}checked{{/if}}>
+                <span>PC</span>
+              </label>
+              <label class="cond-filter-radio">
+                <input type="radio" name="tokenFilter" value="npc" {{#if (eq conditionFilter 'npc')}}checked{{/if}}>
+                <span>NPC</span>
+              </label>
+            </div>
+            <button type="button" class="tools-btn small colorize-npcs-btn" title="Assign color markers to NPCs">
+              <i class="fas fa-palette"></i>
+            </button>
+            <button type="button" class="tools-btn small refresh-tokens-btn" title="Refresh token list">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="cond-token-grid">
+          {{#each sceneTokens}}
+          <div class="cond-token-btn {{#if selected}}selected{{/if}} {{#unless canToggle}}no-toggle{{/unless}}"
+               data-token-id="{{tokenId}}"
+               data-actor-id="{{actorId}}"
+               title="{{name}}{{#unless canToggle}} (No conditions support){{/unless}}">
+            <div class="cond-token-portrait">
+              <img src="{{img}}" alt="{{name}}">
+              <div class="cond-token-indicators">
+                {{#each activeConditions}}
+                <img src="{{icon}}" alt="{{name}}" class="cond-mini-icon" data-condition="{{key}}" title="{{name}}">
+                {{/each}}
+              </div>
+            </div>
+            <span class="cond-token-name">{{name}}</span>
+          </div>
+          {{/each}}
+
+          {{#unless sceneTokens.length}}
+          <div class="tools-empty-state small">
+            <p>No tokens in the active scene.</p>
+          </div>
+          {{/unless}}
+        </div>
+      </section>
+
+      <!-- Conditions/Buffs Tabbed Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>{{#if selectedTokenName}}{{selectedTokenName}}{{else}}Select a Token{{/if}}</h3>
+          </div>
+          <!-- Subtabs -->
+          <div class="cond-subtabs">
+            <button type="button" class="cond-subtab {{#if (eq conditionSubtab 'status')}}active{{/if}}" data-subtab="status">
+              Status
+            </button>
+            <button type="button" class="cond-subtab {{#if (eq conditionSubtab 'buffs')}}active{{/if}}" data-subtab="buffs">
+              Buffs
+            </button>
+            <button type="button" class="cond-subtab {{#if (eq conditionSubtab 'debuffs')}}active{{/if}}" data-subtab="debuffs">
+              Debuffs
+            </button>
+          </div>
+        </div>
+
+        {{#if selectedTokenId}}
+
+        <!-- Status Conditions Panel -->
+        <div class="cond-subtab-panel {{#if (eq conditionSubtab 'status')}}active{{/if}}" data-subtab-panel="status">
+          <div class="cond-grid">
+            {{#each conditions}}
+            <button type="button" class="cond-btn {{#if active}}active{{/if}} {{#if displayOnly}}display-only{{/if}}"
+                    data-condition="{{key}}"
+                    style="--cond-color: {{color}};"
+                    {{#if displayOnly}}disabled title="{{name}} - Display only"{{else}}title="Toggle {{name}}"{{/if}}>
+              <img src="{{icon}}" alt="{{name}}" class="cond-icon">
+              <span class="cond-name">{{name}}</span>
+              {{#if active}}
+              <span class="cond-check">✓</span>
+              {{/if}}
+            </button>
+            {{/each}}
+          </div>
+        </div>
+
+        <!-- Buffs Panel -->
+        <div class="cond-subtab-panel {{#if (eq conditionSubtab 'buffs')}}active{{/if}}" data-subtab-panel="buffs">
+          <div class="cond-grid buffs-grid">
+            {{#each buffs}}
+            <button type="button" class="cond-btn buff-btn buff {{#if active}}active{{/if}}"
+                    data-buff-debuff="{{key}}"
+                    style="--cond-color: {{color}};"
+                    title="{{name}} ({{source}})">
+              <img src="{{icon}}" alt="{{name}}" class="cond-icon buff-icon">
+              <span class="cond-name">{{name}}</span>
+              {{#if active}}
+              <span class="cond-check">✓</span>
+              {{/if}}
+            </button>
+            {{/each}}
+          </div>
+        </div>
+
+        <!-- Debuffs Panel -->
+        <div class="cond-subtab-panel {{#if (eq conditionSubtab 'debuffs')}}active{{/if}}" data-subtab-panel="debuffs">
+          <div class="cond-grid debuffs-grid">
+            {{#each debuffs}}
+            <button type="button" class="cond-btn buff-btn debuff {{#if active}}active{{/if}}"
+                    data-buff-debuff="{{key}}"
+                    style="--cond-color: {{color}};"
+                    title="{{name}} ({{source}})">
+              <img src="{{icon}}" alt="{{name}}" class="cond-icon debuff-icon">
+              <span class="cond-name">{{name}}</span>
+              {{#if active}}
+              <span class="cond-check">✓</span>
+              {{/if}}
+            </button>
+            {{/each}}
+          </div>
+        </div>
+
+        {{else}}
+        <div class="tools-empty-state">
+          <p>Select a token above to manage their conditions.</p>
+        </div>
+        {{/if}}
+      </section>
+
+    </div>
+
+    <!-- ============================================================
+         LIFE POINTS TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'lifepoints')}}active{{/if}}" data-panel="lifepoints">
+      <div class="tools-construction-overlay">
+        <i class="fas fa-hard-hat"></i>
+        <div class="tools-construction-banner">Under Construction</div>
+      </div>
+
+      <!-- Token LP Badges Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Life Points Management</h3>
+          </div>
+          <div class="tools-header-controls">
+            <div class="cond-filter-group">
+              <label class="cond-filter-radio">
+                <input type="radio" name="lpTokenFilter" value="all" {{#if (eq lpFilter 'all')}}checked{{/if}}>
+                <span>All</span>
+              </label>
+              <label class="cond-filter-radio">
+                <input type="radio" name="lpTokenFilter" value="pc" {{#if (eq lpFilter 'pc')}}checked{{/if}}>
+                <span>PC</span>
+              </label>
+              <label class="cond-filter-radio">
+                <input type="radio" name="lpTokenFilter" value="npc" {{#if (eq lpFilter 'npc')}}checked{{/if}}>
+                <span>NPC</span>
+              </label>
+            </div>
+            <button type="button" class="tools-btn small refresh-lp-btn" title="Refresh token list">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="lp-token-grid">
+          {{#each lpTokens}}
+          <div class="lp-token-badge" data-token-id="{{tokenId}}" data-actor-id="{{actorId}}">
+            <!-- Top row: - portrait + -->
+            <div class="lp-top-row">
+              <button type="button" class="lp-btn lp-minus" data-delta="-1" title="Remove 1 LP">−</button>
+              <div class="lp-token-portrait">
+                <img src="{{img}}" alt="{{name}}">
+              </div>
+              <button type="button" class="lp-btn lp-plus" data-delta="1" title="Add 1 LP">+</button>
+            </div>
+
+            <!-- Token Name -->
+            <span class="lp-token-name">{{name}}</span>
+
+            <!-- LP Bar -->
+            <div class="lp-bar-container">
+              <div class="lp-bar-fill" style="width: {{lpPercent}}%;"></div>
+            </div>
+
+            <!-- Bottom row: -5, LP value, -10 -->
+            <div class="lp-bottom-row">
+              <button type="button" class="lp-btn lp-damage" data-delta="-5" title="Remove 5 LP">−5</button>
+              <input type="number" class="lp-input" value="{{lp.value}}" min="0" max="{{lp.max}}" title="Type to set LP directly">
+              <button type="button" class="lp-btn lp-damage" data-delta="-10" title="Remove 10 LP">−10</button>
+            </div>
+          </div>
+          {{/each}}
+
+          {{#unless lpTokens.length}}
+          <div class="tools-empty-state small">
+            <p>No tokens with life points in the active scene.</p>
+          </div>
+          {{/unless}}
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============================================================
+         FLEX CELEBRATIONS TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'flex')}}active{{/if}}" data-panel="flex">
+      <div class="tools-construction-overlay">
+        <i class="fas fa-hard-hat"></i>
+        <div class="tools-construction-banner">Under Construction</div>
+      </div>
+
+      <!-- Master Toggle -->
+      <section class="tools-section {{#if isCollapsed.flexMaster}}collapsed{{/if}}" data-collapsible data-section-id="flex-master">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <h3>Flex Celebrations</h3>
+          </div>
+          <div class="tools-toggle {{#if flexCelebrationEnabled}}active{{/if}}"
+               data-field="flexCelebration.enabled"
+               data-use-flag="true"
+               title="Enable/Disable Flex Celebrations"></div>
+        </div>
+        <div class="tools-section-body">
+          <p class="tools-muted-text">
+            When enabled, celebratory animations will play when a Flex die triggers during rolls.
+          </p>
+        </div>
+      </section>
+
+      <!-- Players Section -->
+      <section class="tools-section {{#if isCollapsed.flexPlayers}}collapsed{{/if}}" data-collapsible data-section-id="flex-players">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <h3>Players</h3>
+          </div>
+          <div class="flex-player-controls">
+            <button type="button" class="flex-player-btn add-player-btn" title="Add Character">
+              <i class="fas fa-plus"></i>
+            </button>
+            <button type="button" class="flex-player-btn remove-player-btn" title="Remove Selected">
+              <i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="flex-players-grid">
+            {{#each flexPlayers}}
+            <div class="flex-player-badge {{#if selected}}selected{{/if}}" data-player-id="{{id}}">
+              <div class="flex-player-token">
+                <img src="{{img}}" alt="{{name}}">
+              </div>
+              <div class="flex-player-name">{{name}}</div>
+            </div>
+            {{else}}
+            <p class="tools-muted-text flex-players-empty">No characters added. Click + to add characters.</p>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      <!-- Celebrations Section (for selected player) -->
+      <section class="tools-section {{#if isCollapsed.flexCelebrations}}collapsed{{/if}}" data-collapsible data-section-id="flex-celebrations">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <h3>Celebrations{{#if selectedFlexPlayer}} - {{selectedFlexPlayer.name}}{{/if}}</h3>
+          </div>
+          {{#if selectedFlexPlayer}}
+          <div class="flex-player-controls">
+            <button type="button" class="flex-player-btn edit-celebration-btn" title="Add Celebration">
+              <span class="celebration-icon">🎉</span>
+            </button>
+          </div>
+          {{/if}}
+        </div>
+        <div class="tools-section-body">
+          {{#if selectedFlexPlayer}}
+          <div class="flex-celeb-badges">
+            {{#each selectedFlexCelebrations}}
+            <div class="flex-celeb-badge {{#if hasImages}}configured{{/if}} {{#unless enabled}}disabled{{/unless}}" data-type="{{type}}" data-player-id="{{../selectedFlexPlayer.id}}">
+              <div class="flex-celeb-badge-play {{#unless hasImages}}hidden{{/unless}}" data-type="{{type}}" data-player-id="{{../selectedFlexPlayer.id}}" title="Play Celebration"><i class="fas fa-play"></i></div>
+              <div class="flex-celeb-badge-toggle {{#if enabled}}active{{/if}}" data-type="{{type}}" data-player-id="{{../selectedFlexPlayer.id}}" title="Enable/Disable"></div>
+              <div class="flex-celeb-badge-icon">
+                <i class="fas {{typeIcon}}"></i>
+              </div>
+              <div class="flex-celeb-badge-name">{{typeLabel}}</div>
+            </div>
+            {{else}}
+            <p class="tools-muted-text flex-celebs-empty">No celebrations configured. Click 🎉 to add one.</p>
+            {{/each}}
+          </div>
+          {{else}}
+          <p class="tools-muted-text flex-celebs-empty">Select a character above to view their celebrations.</p>
+          {{/if}}
+        </div>
+      </section>
+
+      <!-- Instructions Section -->
+      <section class="tools-section collapsed" data-collapsible data-section-id="flex-instructions">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <h3>Instructions</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="flex-instructions">
+
+            <div class="instruction-warning">
+              <i class="fas fa-flask"></i>
+              <span><strong>Experimental Feature!</strong> This system is a bit finicky and still a Work in Progress. Patience required - results may vary. Not responsible for any table-flipping incidents.</span>
+            </div>
+
+            <div class="instruction-block">
+              <h4>How to Use Celebrations</h4>
+              <ol class="instruction-steps">
+                <li>Click <strong>+</strong> in the Characters header to add player characters</li>
+                <li>Select a character by clicking their portrait</li>
+                <li>Click <strong>🎉</strong> to add a celebration type (Attack Roll, Damage Roll, etc.)</li>
+                <li>Click the celebration badge to open the animation editor</li>
+                <li>Add up to 4 image layers with enter/exit animations</li>
+                <li>Set frame timing for each layer's appearance</li>
+                <li>Use the <strong>Test</strong> button to preview</li>
+                <li>Toggle celebrations on/off with the circle button (top-right)</li>
+                <li>Quick-play with the play button (top-left)</li>
+              </ol>
+            </div>
+
+            <div class="instruction-block">
+              <h4>Image Requirements</h4>
+              <ul class="instruction-list">
+                <li><strong>Size:</strong> 1024 x 768 pixels (landscape)</li>
+                <li><strong>Format:</strong> PNG with transparent background</li>
+                <li><strong>Style:</strong> Dramatic, centered, no ground/shadows</li>
+                <li><strong>Layers:</strong> Battlecry, Effect, Attack, Impact</li>
+              </ul>
+            </div>
+
+            <div class="instruction-block">
+              <h4>AI Image Generation Prompts</h4>
+              <p class="instruction-note">Copy these prompts for AI image generators. Use 4:3 landscape aspect ratio (wider than tall).</p>
+
+              <div class="ai-prompt-block">
+                <label>Battlecry Layer (comic SFX text)</label>
+                <div class="ai-prompt-text" onclick="navigator.clipboard.writeText(this.innerText); ui.notifications.info('Copied to clipboard!')">Comic book onomatopoeia text, bold stylized lettering with explosive burst background, comic SFX style, dynamic action word art, orange and yellow explosion behind text, halftone dots, speed lines, isolated on solid black background, centered composition, vintage comic book style</div>
+              </div>
+
+              <div class="ai-prompt-block">
+                <label>Effect Layer (magic/auras)</label>
+                <div class="ai-prompt-text" onclick="navigator.clipboard.writeText(this.innerText); ui.notifications.info('Copied to clipboard!')">Swirling magical energy vortex, arcane particles and sparks, blue and gold magic aura, fantasy spell effect, isolated on solid black background, no ground, no shadows on background, centered composition, digital art, dramatic ethereal glow</div>
+              </div>
+
+              <div class="ai-prompt-block">
+                <label>Attack Layer (weapon/strike)</label>
+                <div class="ai-prompt-text" onclick="navigator.clipboard.writeText(this.innerText); ui.notifications.info('Copied to clipboard!')">Barbarian sword slash with energy trail, dynamic motion blur, steel and fire, fantasy weapon strike effect, isolated on solid black background, no ground, no shadows on background, centered composition, digital art, dramatic action lighting</div>
+              </div>
+
+              <div class="ai-prompt-block">
+                <label>Impact Layer (hit/explosion)</label>
+                <div class="ai-prompt-text" onclick="navigator.clipboard.writeText(this.innerText); ui.notifications.info('Copied to clipboard!')">Explosive impact burst, shattered energy and sparks flying outward, dramatic shockwave effect, fantasy combat hit, isolated on solid black background, no ground, no shadows on background, centered composition, digital art, intense dramatic lighting</div>
+              </div>
+
+              <p class="instruction-note">Click any prompt to copy. Remove black background in image editor before use.</p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============================================================
+         CHAT CAPTURE TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'chat')}}active{{/if}}" data-panel="chat">
+      <div class="tools-construction-overlay">
+        <i class="fas fa-hard-hat"></i>
+        <div class="tools-construction-banner">Under Construction</div>
+      </div>
+
+      <!-- Capture Controls -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Roll Capture</h3>
+          </div>
+          <div class="tools-header-controls">
+            <button type="button" class="tools-btn small chat-capture-toggle {{#if chatCapture.listening}}active{{/if}}" title="{{#if chatCapture.listening}}Stop Listening{{else}}Start Listening{{/if}}">
+              <i class="fas {{#if chatCapture.listening}}fa-stop{{else}}fa-play{{/if}}"></i>
+              <span>{{#if chatCapture.listening}}Stop{{else}}Listen{{/if}}</span>
+            </button>
+            <button type="button" class="tools-btn small chat-capture-clear" title="Clear captured rolls">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <p class="tools-muted-text">
+            {{#if chatCapture.listening}}
+            <i class="fas fa-circle" style="color: #E10600; animation: pulse 1s infinite;"></i>
+            Listening for rolls... Make attacks, damage, or skill rolls to capture them.
+            {{else}}
+            Click <strong>Listen</strong> to start capturing rolls from chat.
+            {{/if}}
+          </p>
+        </div>
+      </section>
+
+      <!-- Captured Rolls List -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Captured Rolls</h3>
+            <span class="chat-capture-count">{{chatCapture.rolls.length}}</span>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="chat-capture-list">
+            {{#each chatCapture.rolls}}
+            <div class="chat-capture-item {{#if selected}}selected{{/if}}" data-capture-index="{{@index}}">
+              <div class="chat-capture-item-icon">
+                {{#if (eq rollType 'attack')}}<i class="fas fa-sword" style="color: #E10600;"></i>
+                {{else if (eq rollType 'damage')}}<i class="fas fa-burst" style="color: #FF6600;"></i>
+                {{else if (eq rollType 'skill')}}<i class="fas fa-dice-d20" style="color: #4CAF50;"></i>
+                {{else if (eq rollType 'flex')}}<i class="fas fa-star" style="color: #FFD700;"></i>
+                {{else if (eq rollType 'spell')}}<i class="fas fa-wand-sparkles" style="color: #9B59B6;"></i>
+                {{else}}<i class="fas fa-dice"></i>
+                {{/if}}
+              </div>
+              <div class="chat-capture-item-info">
+                <span class="chat-capture-item-title">{{title}}</span>
+                <span class="chat-capture-item-actor">{{actorName}}</span>
+              </div>
+              <div class="chat-capture-item-time">{{time}}</div>
+            </div>
+            {{else}}
+            <div class="tools-empty-state small">
+              <p>No rolls captured yet.</p>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      <!-- Export Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Export</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          {{#if chatCapture.selectedRoll}}
+          <div class="chat-capture-preview">
+            <div class="chat-capture-preview-label">Selected: {{chatCapture.selectedRoll.title}}</div>
+            <div class="chat-capture-preview-box">
+              {{{chatCapture.selectedRoll.html}}}
+            </div>
+          </div>
+          <div class="chat-capture-export-actions">
+            <button type="button" class="tools-btn chat-capture-export" title="Copy to clipboard for Layout Designer">
+              <i class="fas fa-copy"></i> Export for Designer
+            </button>
+          </div>
+          {{else}}
+          <div class="tools-empty-state small">
+            <p>Select a captured roll above to export it.</p>
+          </div>
+          {{/if}}
+        </div>
+      </section>
+
+      <!-- Instructions -->
+      <section class="tools-section collapsed" data-collapsible data-section-id="chat-instructions">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <span class="tools-section-chevron">▼</span>
+            <h3>How to Use</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <ol class="instruction-steps" style="color: #aaa; font-size: 12px; line-height: 1.6;">
+            <li>Click <strong>Listen</strong> to start capturing</li>
+            <li>Make rolls in the game (attacks, damage, skills, etc.)</li>
+            <li>Captured rolls appear in the list above</li>
+            <li>Click a roll to select it</li>
+            <li>Click <strong>Export for Designer</strong> to copy</li>
+            <li>Open <code>chat-design/chat-designer.html</code> in browser</li>
+            <li>Click <strong>Import</strong> and paste</li>
+            <li>Adjust styles, then <strong>Export</strong> for Claude</li>
+          </ol>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============================================================
+         TRAVEL TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'travel')}}active{{/if}}" data-panel="travel">
+
+      <!-- Save/Load Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Journey</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="travel-save-row">
+            <input type="text" class="travel-journey-name-input" value="{{travel.journeyName}}" placeholder="Journey name...">
+            <div class="travel-save-controls">
+              <button type="button" class="tools-btn small travel-save-btn" title="Save Journey">
+                <i class="fas fa-save"></i>
+              </button>
+              <select class="travel-load-select">
+                <option value="">Load...</option>
+                {{#each travel.savedJourneys}}
+                <option value="{{slug}}">{{name}}</option>
+                {{/each}}
+              </select>
+              <button type="button" class="tools-btn small travel-load-btn" title="Load Journey">
+                <i class="fas fa-folder-open"></i>
+              </button>
+              <button type="button" class="tools-btn small travel-delete-btn" title="Delete Saved Journey">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Waypoints Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Waypoints</h3>
+          </div>
+          <div class="waypoint-controls">
+            <span class="waypoint-counter">{{travel.waypoints.length}} waypoints</span>
+            <button type="button" class="tools-btn small travel-add-waypoint-btn" title="Add Waypoint">
+              <i class="fas fa-plus"></i>
+            </button>
+            <button type="button" class="tools-btn small travel-clear-waypoints-btn" title="Clear All">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <p class="tools-muted-text">Click + then click on the map to place waypoints. The red line will trace your journey.</p>
+
+          {{#if travel.waypoints.length}}
+          <div class="travel-progress-bar">
+            <div class="travel-progress-fill" style="width: {{travel.progressPercent}}%"></div>
+            <div class="travel-progress-text">
+              <i class="fas fa-route"></i>
+              <span>{{travel.traveledDistance}} / {{travel.totalDistance}} {{travel.units}}</span>
+            </div>
+          </div>
+          {{/if}}
+
+          <div class="travel-waypoint-grid">
+            {{#each travel.waypoints}}
+            <div class="travel-waypoint-card {{#if isLast}}destination{{/if}} {{#if visited}}visited{{/if}}" data-index="{{index}}">
+              <div class="travel-waypoint-card-row">
+                <span class="travel-waypoint-num">{{number}}</span>
+                <input type="text" class="travel-waypoint-name" data-index="{{index}}"
+                       value="{{name}}" placeholder="Waypoint {{number}}" title="Click to rename">
+                <button type="button" class="travel-reposition-btn" data-index="{{index}}" title="Reposition on map">
+                  <i class="fas fa-crosshairs"></i>
+                </button>
+                <button type="button" class="travel-remove-waypoint-btn" data-index="{{index}}" title="Delete waypoint">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="travel-waypoint-card-label">
+                {{#if isFirst}}
+                <span class="travel-label start">START</span>
+                {{else if isLast}}
+                <span class="travel-label destination">DESTINATION</span>
+                {{else}}
+                <span class="travel-label miles">+{{legDistance}} {{../travel.units}}</span>
+                {{/if}}
+              </div>
+            </div>
+            {{else}}
+            <p class="tools-muted-text no-waypoints">No waypoints yet. Click + to add one.</p>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      <!-- Travel Context Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Travel Context</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <!-- Location -->
+          <div class="tools-form-row">
+            <span class="tools-label">Location</span>
+            <select class="travel-location-select">
+              {{#each travel.locations}}
+              <option value="{{key}}" {{#if (eq key ../travel.location)}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <!-- Travel Mode -->
+          <div class="travel-selector-row">
+            <span class="tools-label">Mode</span>
+            <div class="travel-tile-row">
+              {{#each travel.modes}}
+              <div class="travel-mode-tile {{#if (eq key ../travel.mode)}}selected{{/if}}" data-mode="{{key}}" title="{{label}} ({{milesPerDay}} mi/day)">
+                <img src="{{img}}" alt="{{label}}">
+                <span class="travel-tile-label">{{label}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+
+          <!-- Terrain -->
+          <div class="travel-selector-row">
+            <span class="tools-label">Terrain</span>
+            <div class="travel-tile-row">
+              {{#each travel.terrains}}
+              <div class="travel-terrain-tile {{#if (eq key ../travel.terrain)}}selected{{/if}}" data-terrain="{{key}}" title="{{label}} (&times;{{mult}})">
+                <img src="{{img}}" alt="{{label}}">
+                <span class="travel-tile-label">{{label}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+
+          <!-- Weather -->
+          <div class="travel-selector-row">
+            <span class="tools-label">Weather</span>
+            <div class="travel-tile-row">
+              {{#each travel.weathers}}
+              <div class="travel-weather-tile {{#if (eq key ../travel.weather)}}selected{{/if}}" data-weather="{{key}}" title="{{label}} (&times;{{mult}})">
+                <img src="{{img}}" alt="{{label}}">
+                <span class="travel-tile-label">{{label}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+
+          <!-- Time of Day -->
+          <div class="travel-selector-row">
+            <span class="tools-label">Time</span>
+            <div class="travel-tile-row">
+              {{#each travel.times}}
+              <button type="button" class="travel-time-btn {{#if (eq this ../travel.timeOfDay)}}selected{{/if}}" data-time="{{this}}">{{this}}</button>
+              {{/each}}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Encounter Settings Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Encounters</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="travel-encounter-controls">
+            <!-- Die Type Toggle -->
+            <div class="travel-toggle-group">
+              <button type="button" class="travel-die-toggle {{#if (eq travel.dieType 'd100')}}active{{/if}}" data-die="d100">d100</button>
+              <button type="button" class="travel-die-toggle {{#if (eq travel.dieType 'd200')}}active{{/if}}" data-die="d200">d200</button>
+            </div>
+
+            <!-- +50 Toggle -->
+            <button type="button" class="travel-toggle-btn travel-bonus-toggle {{#if travel.bonusMiles}}active{{/if}}" title="+50 miles to encounter distance">
+              <img src="systems/conan/images/bonus_miles.png" alt="+50">
+              <span>+50</span>
+            </button>
+
+            <!-- Forced March Toggle -->
+            <button type="button" class="travel-toggle-btn travel-forced-march-toggle {{#if travel.forcedMarch}}active{{/if}}" title="Forced March: 1 SP per character, doubles miles per day">
+              <img src="systems/conan/images/forced_march.png" alt="March">
+              <span>March</span>
+            </button>
+          </div>
+
+          <!-- Pace Display -->
+          <div class="travel-pace-display">
+            <span><strong>{{travel.effectiveMPD}}</strong> mi/day</span>
+            {{#if travel.journeyStarted}}
+            <span class="travel-pace-sep">|</span>
+            <span>Day <strong>{{travel.currentDay}}</strong></span>
+            {{/if}}
+          </div>
+
+          <!-- Encounter Status -->
+          <div class="travel-encounter-status">
+            {{#if travel.encounterPending}}
+            <span class="encounter-alert">ENCOUNTER! &mdash; Day {{travel.currentDay}}</span>
+            {{else if travel.encounterMilesLeft}}
+            <span>Next encounter in: <strong>{{travel.encounterMilesLeft}}</strong> miles</span>
+            {{else if travel.journeyStarted}}
+            <span class="tools-muted-text">Roll pending — click Travel</span>
+            {{else}}
+            <span class="tools-muted-text">Start a journey to begin</span>
+            {{/if}}
+          </div>
+
+          <!-- Encounter Category Picker (visible only when encounter pending) -->
+          {{#if travel.encounterPending}}
+          <div class="travel-encounter-picker">
+            <p class="tools-muted-text">Choose encounter type:</p>
+            <div class="travel-enc-btn-row">
+              <button type="button" class="travel-enc-btn" data-type="Threat" title="Threat">&#x1F5E1;&#xFE0F; Threat</button>
+              <button type="button" class="travel-enc-btn" data-type="Hardship" title="Hardship">&#x1F9F1; Hardship</button>
+              <button type="button" class="travel-enc-btn" data-type="Opportunity" title="Opportunity">&#x1F3FA; Opportunity</button>
+              <button type="button" class="travel-enc-btn" data-type="Strangeness" title="Strangeness">&#x1F56E; Strangeness</button>
+              <button type="button" class="travel-enc-btn" data-type="Social" title="Social">&#x1F9CD; Social</button>
+              <button type="button" class="travel-enc-btn random" data-type="random" title="Random category">&#x1F3B2; Random</button>
+            </div>
+          </div>
+          {{/if}}
+        </div>
+      </section>
+
+      <!-- Animation Settings Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Animation</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="tools-form-row">
+            <span class="tools-label">Line Speed</span>
+            <input type="range" class="travel-speed-slider" min="1" max="100" value="{{travel.lineSpeed}}">
+            <span class="travel-speed-value">{{travel.lineSpeed}}%</span>
+          </div>
+          <div class="tools-form-row">
+            <span class="tools-label">Travel Zoom</span>
+            <input type="range" class="travel-zoom-slider" min="10" max="100" value="{{travel.travelZoom}}">
+            <span class="travel-zoom-value">{{travel.travelZoom}}%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Journey Controls Section -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Controls</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="travel-journey-controls">
+            <button type="button" class="tools-btn travel-start-btn" {{#unless travel.canStart}}disabled{{/unless}}>
+              <i class="fas fa-flag"></i> Start Journey
+            </button>
+            <button type="button" class="tools-btn travel-btn" {{#if travel.encounterPending}}disabled{{else}}{{#unless travel.journeyStarted}}disabled{{/unless}}{{/if}}>
+              <i class="fas fa-hiking"></i> Travel
+            </button>
+            <button type="button" class="tools-btn travel-reset-btn">
+              <i class="fas fa-undo"></i> Reset
+            </button>
+          </div>
+          {{#if travel.journeyStarted}}
+          <div class="travel-progress-info">
+            <span>{{travel.milesTraveled}} miles traveled ({{travel.progressPercent}}%)</span>
+          </div>
+          {{/if}}
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============================================================
+         AREAS TAB
+         ============================================================ -->
+    <div class="tools-panel {{#if (eq activeTab 'areas')}}active{{/if}}" data-panel="areas">
+
+      <!-- Area Letter Palette -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Area Markers</h3>
+          </div>
+          <div class="tools-header-controls">
+            <button type="button" class="tools-btn small area-torch-btn" title="Coming Soon" disabled style="opacity: 0.4; cursor: not-allowed;">
+              <i class="fas fa-fire"></i> Coming Soon
+            </button>
+            <button type="button" class="tools-btn small area-lock-btn" title="Lock/unlock area markers">
+              <i class="fas fa-lock-open"></i> Unlocked
+            </button>
+            <button type="button" class="tools-btn small area-reset-btn" title="Reset all area data for this scene">
+              <i class="fas fa-undo"></i> Reset
+            </button>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="area-palette"></div>
+        </div>
+      </section>
+
+      <!-- Connection Matrix -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Connections</h3>
+          </div>
+          <div class="tools-header-controls">
+            <button type="button" class="tools-btn small area-connect-btn">
+              <i class="fas fa-project-diagram"></i> Connect
+            </button>
+            <button type="button" class="tools-btn small area-clear-lines-btn">
+              <i class="fas fa-eraser"></i> Clear Lines
+            </button>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="area-matrix-container"></div>
+        </div>
+      </section>
+
+      <!-- Area Settings -->
+      <section class="tools-section">
+        <div class="tools-section-header">
+          <div class="tools-section-title">
+            <h3>Area Settings</h3>
+          </div>
+        </div>
+        <div class="tools-section-body">
+          <div class="area-settings-container"></div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+</form>

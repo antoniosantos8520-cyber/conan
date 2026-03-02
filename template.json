@@ -1,0 +1,231 @@
+{
+  "_comment": "Actor types: character2 (player sheet), npc2 (enemy card shell — auto-created by GM Tools, not user-creatable), tools (GM Tools singleton), howard (Howard the Chronicler). Legacy types 'character' and 'npc' were removed — see CLEANUP_SHEET.md Phase 1.",
+  "Actor": {
+    "types": ["character2", "npc2", "tools", "howard"],
+    "character2": {
+      "origin": {
+        "id": "",
+        "name": "",
+        "baseLP": 0
+      },
+      "useOriginBackground": false,
+      "flex": {
+        "die": "d10"
+      },
+      "stamina": 0,
+      "staminaNotes": "",
+      "initiative": {
+        "value": null,
+        "locked": true
+      },
+      "attributes": {
+        "might": {
+          "label": "MIGHT",
+          "value": 0,
+          "die": "d6"
+        },
+        "edge": {
+          "label": "EDGE",
+          "value": 0,
+          "die": "d6"
+        },
+        "grit": {
+          "label": "GRIT",
+          "value": 0,
+          "die": "d6"
+        },
+        "wits": {
+          "label": "WITS",
+          "value": 0,
+          "die": "d6"
+        }
+      },
+      "lifePoints": {
+        "value": 0,
+        "max": 0,
+        "skillBonus": 0,
+        "maxOverride": null
+      },
+      "recovery": {
+        "used1": false,
+        "used2": false
+      },
+      "defense": {
+        "physical": 10,
+        "sorcery": 10,
+        "ar": 0,
+        "arLocked": true,
+        "physicalLocked": true,
+        "sorceryLocked": true,
+        "physicalOverride": null,
+        "sorceryOverride": null
+      },
+      "meleeAttacks": {},
+      "rangedAttacks": {},
+      "spells": {},
+      "skills": {},
+      "xp": {
+        "available": [true, true, true, false, false, false, false, false, false, false]
+      },
+      "weapons": {},
+      "armorEquipped": {
+        "type": "unarmored",
+        "shield": false,
+        "description": "No armor equipped.  |  AR: 0  |  No penalties."
+      },
+      "notes": "",
+      "originNotes": "",
+      "originBonuses": {
+        "statChoice": "",
+        "skillChoice": ""
+      },
+      "originBonusesNotes": "",
+      "conditions": {
+        "mounted": false,
+        "poisoned": false,
+        "unconscious": false,
+        "stunned": false,
+        "bound": false,
+        "frightened": false,
+        "blinded": false,
+        "prone": false,
+        "grappled": false,
+        "bleeding": false
+      },
+      "inventory": {},
+      "mount": {
+        "type": null,
+        "name": "",
+        "saddlebag": {}
+      },
+      "journal": {
+        "activePage": 1,
+        "pages": {
+          "1": { "subject": "", "content": "" }
+        }
+      },
+      "blockerActive": false,
+      "impalingThrowActive": false,
+      "buffsDebuffs": {
+        "armorUp": false,
+        "baneWeapon": false,
+        "beastForm": false,
+        "edgeUp": false,
+        "demonicSteed": false,
+        "inspired": false,
+        "demonicWard": false,
+        "uncannyReach": false,
+        "initReduced": false,
+        "physDefDown": false,
+        "sorcDefDown": false,
+        "slowed": false,
+        "weakened": false,
+        "checksDown": false,
+        "controlled": false,
+        "attackDown": false,
+        "cannotMove": false,
+        "witsGritDown": false,
+        "cannotDefend": false
+      },
+      "leaderOfMenBuff": null,
+      "leaderOfMenTargets": [],
+      "baneWeaponCaster": null,
+      "baneWeaponBuff": null,
+      "sorcery": {
+        "invokedSpells": {}
+      }
+    },
+    "npc2": {
+      "category": "",
+      "enemyType": "minion",
+      "attributes": {
+        "might": {
+          "label": "MIGHT",
+          "value": 0,
+          "die": "d6"
+        },
+        "edge": {
+          "label": "EDGE",
+          "value": 0,
+          "die": "d6"
+        },
+        "grit": {
+          "label": "GRIT",
+          "value": 0,
+          "die": "d6"
+        },
+        "wits": {
+          "label": "WITS",
+          "value": 0,
+          "die": "d6"
+        }
+      },
+      "defense": {
+        "physical": "",
+        "sorcery": ""
+      },
+      "threshold": 4,
+      "lifePoints": {
+        "value": 0,
+        "max": 0
+      },
+      "ar": "",
+      "meleeAttacks": {},
+      "rangedAttacks": {},
+      "spells": {},
+      "traits": "",
+      "conditions": {
+        "mounted": false,
+        "poisoned": false,
+        "unconscious": false,
+        "stunned": false,
+        "bound": false,
+        "frightened": false,
+        "blinded": false,
+        "prone": false,
+        "grappled": false,
+        "bleeding": false
+      }
+    },
+    "tools": {
+      "flexCelebration": {
+        "enabled": true,
+        "players": [],
+        "celebrations": {}
+      },
+      "chatStyler": {
+        "enabled": false,
+        "font": {
+          "family": "Montserrat",
+          "size": 14,
+          "weight": 400
+        },
+        "colors": {
+          "background": "#1B1B20",
+          "text": "#FFFFFF",
+          "border": "#2A2A2E",
+          "accent": "#E10600",
+          "header": "#E10600"
+        },
+        "layout": {
+          "showTokenImage": true,
+          "tokenImageSize": 48,
+          "showHeader": true,
+          "showDividers": true,
+          "borderRadius": 8,
+          "padding": 12
+        }
+      }
+    },
+    "howard": {
+      "tales": {},
+      "activeTale": null,
+      "settings": {
+        "viewMode": "default"
+      }
+    }
+  },
+  "Item": {
+    "types": []
+  }
+}

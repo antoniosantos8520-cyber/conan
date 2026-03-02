@@ -1,0 +1,500 @@
+<div class="guide-layout">
+
+  {{!-- Main Content Area --}}
+  <div class="guide-main">
+
+    {{!-- Scrollable Content --}}
+    <div class="guide-content">
+
+      {{!-- STEP 1: Welcome --}}
+      <div class="guide-panel {{#if (eq activeStep 1)}}active{{/if}}" data-step="1">
+        <div class="guide-credits-text">Game Design &amp; Rules By Monolith Studio</div>
+        <div class="guide-vtt-credit">Fan Made VTT Sheet by Antonio</div>
+        <div class="guide-credits-banner"></div>
+
+        <h2 class="guide-heading">Welcome to the Hyborian Age</h2>
+
+        {{!-- Section: Introduction --}}
+        <div class="guide-section">
+          <p class="guide-text">
+            Welcome, adventurer, to the savage world of Conan! This guide will walk you through
+            creating your character step by step.
+          </p>
+          <p class="guide-text">
+            <strong>Tip:</strong> Click the numbered tabs on the right to jump to any section,
+            or use the Next/Back buttons below to progress through the guide.
+          </p>
+          <p class="guide-narrator">
+            "Let me tell you of the days of high adventure, when the world was young
+            and heroes strode the earth..."
+          </p>
+        </div>
+
+        {{!-- Section: What You'll Need --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">What You'll Need</h3>
+          <ul class="guide-list">
+            <li>Your character sheet (open behind this window)</li>
+            <li>A concept for your character's background</li>
+            <li>16 stat points to distribute</li>
+            <li>3 starting XP to spend on skills</li>
+          </ul>
+        </div>
+
+        {{!-- Section: Overview --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Creation Overview</h3>
+          <ol class="guide-list">
+            <li><strong>Character Settings</strong> — Name, origin, portrait</li>
+            <li><strong>Stats</strong> — Distribute 16 points across Might, Edge, Grit, Wits</li>
+            <li><strong>Origin Bonuses</strong> — Apply your origin's special abilities</li>
+            <li><strong>Skills &amp; XP</strong> — Spend 3 XP on starting skills</li>
+            <li><strong>Sorcery</strong> — Learn spells (if your origin grants them)</li>
+            <li><strong>Equipment</strong> — Arm yourself with weapons and armor</li>
+            <li><strong>Combat Basics</strong> — Understand how to fight and survive</li>
+          </ol>
+        </div>
+      </div>
+
+      {{!-- STEP 2: Character Settings --}}
+      <div class="guide-panel {{#if (eq activeStep 2)}}active{{/if}}" data-step="2">
+        <h2 class="guide-heading">Character Settings</h2>
+
+        {{!-- Section: Name Your Character --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Name Your Character</h3>
+          <p class="guide-text">
+            Click the <strong>settings cog</strong> in the top-right of your character sheet.
+            There, you shall inscribe your name into the annals of the Hyborian Age.
+          </p>
+          <p class="guide-narrator">
+            "A name carries weight in these lands, young one. Choose wisely, for it shall be
+            whispered in taverns and shouted across battlefields..."
+          </p>
+        </div>
+
+        {{!-- Section: Choose Your Origin --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Choose Your Origin</h3>
+          <p class="guide-text">
+            Your origin shapes who you are. Select one from the dropdown in character settings.
+          </p>
+          <ul class="guide-originSimple">
+            <li><strong>From the Hills</strong> — Hardy folk forged beyond civilization's edge.</li>
+            <li><strong>From the Streets</strong> — Born to muck and larceny in the city's shadow.</li>
+            <li><strong>From the Steppes</strong> — Where the rider rules beneath endless sky.</li>
+            <li><strong>From the North</strong> — Reavers and sailors, hard as northern ice.</li>
+            <li><strong>From the Wilds</strong> — The untamed lands shaped you into something primal.</li>
+            <li><strong>From a Civilized Land</strong> — Decadent cities, but never safe.</li>
+            <li><strong>From Parts Unknown</strong> — Your past is yours alone to keep.</li>
+            <li><strong>Blood of Jhebbal Sag</strong> — The old wild blood runs in your veins.</li>
+            <li><strong>Blood of Acheron</strong> — Ancient sorcerous power awakens within.</li>
+            <li><strong>Blood of a Demon</strong> — Balanced between human and inhuman.</li>
+          </ul>
+          <p class="guide-narrator">
+            "From whence do you hail? The answer shapes your destiny, your strengths,
+            and the dark paths that may open before you..."
+          </p>
+        </div>
+
+        {{!-- Section: Derived Values Note --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Life, Armor &amp; More</h3>
+          <p class="guide-text">
+            Your <strong>Life Points</strong>, <strong>Armor Rating</strong>,
+            <strong>Initiative</strong>, and <strong>Conditions</strong> will be addressed
+            in later steps. For now, focus on who you are.
+          </p>
+        </div>
+
+        {{!-- Section: Portrait & Token --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Portrait &amp; Token</h3>
+          <p class="guide-text">
+            Set your portrait and token image in character settings. Your GM may assist with this.
+            If no image is ready, you may return to this later.
+          </p>
+          <p class="guide-narrator">
+            "A warrior's visage tells much. Whether scarred by battle or untouched by blade,
+            let your image speak of the tales yet to come..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 3: Stats & Derived Values --}}
+      <div class="guide-panel {{#if (eq activeStep 3)}}active{{/if}}" data-step="3">
+        <h2 class="guide-heading">Distribute Stats</h2>
+
+        {{!-- Section: The Four Stats --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">The Four Stats</h3>
+          <p class="guide-text">
+            You have <strong>16 points</strong> to distribute. Each stat must be between
+            <strong>1</strong> and <strong>5</strong> at creation (can reach 8 later with skills).
+          </p>
+
+          <div class="guide-statGrid">
+            {{#each stats}}
+            <div class="guide-statCard">
+              <div class="guide-statCard-name">{{this.name}}</div>
+              <div class="guide-statCard-desc">{{this.description}}</div>
+            </div>
+            {{/each}}
+          </div>
+
+          <p class="guide-narrator">
+            "Strength of arm, swiftness of blade, endurance of spirit, cunning of mind—
+            these are the pillars upon which a warrior is built..."
+          </p>
+        </div>
+
+        {{!-- Section: Flex and Defense --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Flex and Defense</h3>
+          <p class="guide-text">
+            Open the <strong>cog wheel</strong> on your defense section to configure your
+            Flex Die and manage your defenses.
+          </p>
+          <ul class="guide-list">
+            <li><strong>Flex Die:</strong> Starts at d10 and can be improved to d8 or d6 via XP.</li>
+            <li><strong>Physical Defense:</strong> Calculated automatically from your stats by default.</li>
+            <li><strong>Sorcery Defense:</strong> Calculated automatically from your stats by default.</li>
+          </ul>
+          <p class="guide-text">
+            Defenses are <strong>locked</strong> by default and will auto-calculate.
+            Click the lock icon to unlock a defense if you need to manually override its value.
+          </p>
+        </div>
+
+        {{!-- Section: Derived Values --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Derived Values</h3>
+          <p class="guide-text">
+            The following values are calculated automatically from your stats and origin:
+          </p>
+
+          <ul class="guide-list">
+            <li><strong>Life Points (LP):</strong> (Grit × 2) + Origin Base LP + Skill bonuses</li>
+            <li><strong>Stamina Points (SP):</strong> Equal to your Grit stat (resets each Tale)</li>
+          </ul>
+
+          <p class="guide-narrator">
+            "The body's resilience and the quickness of reflexes decide whether
+            you walk from the fray... or are carried from it."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 4: Origin Bonuses --}}
+      <div class="guide-panel {{#if (eq activeStep 4)}}active{{/if}}" data-step="4">
+        <h2 class="guide-heading">Origin Bonuses</h2>
+
+        {{!-- Section: Your Birthright --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Your Birthright</h3>
+          <p class="guide-text">
+            Each origin grants unique bonuses. Navigate to the <strong>Origin tab</strong> on your
+            character sheet to see and manage these abilities.
+          </p>
+          <p class="guide-narrator">
+            "Where you come from shapes what you become. The hills breed warriors,
+            the streets breed survivors, the bloodlines breed... something else entirely..."
+          </p>
+        </div>
+
+        {{!-- Section: Skill Choices --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Starting Skill Choices</h3>
+          <p class="guide-text">
+            Some origins offer a choice between starting skills. If yours does,
+            you'll see buttons to select which skill you want. This choice is permanent.
+          </p>
+          <p class="guide-text">
+            <strong>Note:</strong> Origin skills are free—they don't cost XP. They represent
+            abilities you've developed from your background.
+          </p>
+        </div>
+
+        {{!-- Section: Stat Bonuses --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Per-Tale Bonuses</h3>
+          <p class="guide-text">
+            Origins like "From the Hills" let you choose a stat bonus at the start of each Tale.
+            Check your Origin tab to make this selection when starting a new adventure.
+          </p>
+          <p class="guide-narrator">
+            "Some gifts are constant, others must be chosen anew with each rising sun.
+            Adapt to the challenges before you..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 5: Skills & XP --}}
+      <div class="guide-panel {{#if (eq activeStep 5)}}active{{/if}}" data-step="5">
+        <h2 class="guide-heading">Skills &amp; XP</h2>
+
+        {{!-- Section: Starting XP --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Your Starting XP</h3>
+          <p class="guide-text">
+            You begin with <strong>3 XP</strong> that must be spent before your first adventure.
+            Navigate to the <strong>Skills tab</strong> to spend your XP.
+          </p>
+          <p class="guide-narrator">
+            "Experience is the coin of survival. Spend it wisely, for the Hyborian Age
+            does not suffer fools gladly..."
+          </p>
+        </div>
+
+        {{!-- Section: Skill Categories --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Skill Categories</h3>
+          <ul class="guide-list">
+            <li><strong>Starting Skills (1-3 XP):</strong> Basic abilities available to new characters</li>
+            <li><strong>Legendary Skills (1-6 XP):</strong> Powerful abilities for experienced heroes</li>
+          </ul>
+        </div>
+
+        {{!-- Section: How to Buy --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Buying Skills</h3>
+          <p class="guide-text">
+            Click the <strong>Add Skill</strong> button to open the skill menu. Skills you can afford
+            are highlighted. Click a skill to purchase it—the XP cost is deducted automatically.
+          </p>
+          <p class="guide-text">
+            <strong>Rule:</strong> During play, you can only learn one new skill per Respite
+            (rest period between adventures).
+          </p>
+          <p class="guide-narrator">
+            "A warrior learns in blood and fire. Each new trick, each mastered technique,
+            is carved into your very being..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 6: Sorcery --}}
+      <div class="guide-panel {{#if (eq activeStep 6)}}active{{/if}}" data-step="6">
+        <h2 class="guide-heading">Sorcery</h2>
+
+        {{!-- Section: Dark Arts --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">The Dark Arts</h3>
+          <p class="guide-text">
+            Not all origins grant access to sorcery. If yours does, navigate to the
+            <strong>Sorcery tab</strong> to manage your magical abilities.
+          </p>
+          <p class="guide-narrator">
+            "Sorcery is a blade with no hilt. It cuts the wielder as surely as the foe.
+            Are you prepared to pay its price in blood and soul?"
+          </p>
+        </div>
+
+        {{!-- Section: Disciplines --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Sorcery Disciplines</h3>
+          <ul class="guide-list">
+            <li><strong>Alchemy</strong> — Potions, transmutation, animated constructs</li>
+            <li><strong>Black Magic</strong> — Fear, shadows, illusions, curses</li>
+            <li><strong>Demonic Magic</strong> — Hellfire, fiends, infernal power</li>
+            <li><strong>Necromantic Magic</strong> — Death, undead, life drain</li>
+            <li><strong>White Magic</strong> — Healing, nature, beasts, protection</li>
+          </ul>
+        </div>
+
+        {{!-- Section: Casting --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Casting Spells</h3>
+          <p class="guide-text">
+            Spells cost Life Points and/or Stamina Points to cast. Once purchased with XP,
+            a spell is always available—no preparation needed. If you have the LP/SP, you can cast it.
+          </p>
+          <p class="guide-text">
+            <strong>Inherent Spells:</strong> Each discipline grants three inherent spells
+            for free when you gain access to that discipline.
+          </p>
+          <p class="guide-narrator">
+            "The words of power tear at your very life force. Each incantation
+            is a bargain made with forces beyond mortal ken..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 7: Weapons & Armor --}}
+      <div class="guide-panel {{#if (eq activeStep 7)}}active{{/if}}" data-step="7">
+        <h2 class="guide-heading">Arm Up</h2>
+
+        {{!-- Section: Weapons --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Choose Your Weapons</h3>
+          <p class="guide-text">
+            You can carry up to <strong>3 weapons</strong>, or <strong>2 if using a shield</strong>.
+            Navigate to the <strong>Arms tab</strong> to equip yourself.
+          </p>
+          <ul class="guide-list">
+            <li><strong>Melee</strong> — Swords, axes, maces (Might for attack and damage)</li>
+            <li><strong>Thrown</strong> — Daggers, javelins (Edge for attack, Might for damage)</li>
+            <li><strong>Ranged</strong> — Bows, crossbows (Edge for attack, no stat for damage)</li>
+          </ul>
+          <p class="guide-narrator">
+            "Steel speaks a language all its own. Choose blades that suit your nature,
+            for they shall become extensions of your will..."
+          </p>
+        </div>
+
+        {{!-- Section: Armor --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Armor &amp; Protection</h3>
+          <p class="guide-text">
+            Armor provides an Armor Rating (AR) that reduces incoming damage. Heavier armor
+            protects more but imposes penalties to sorcery and stealth.
+          </p>
+          <ul class="guide-list">
+            <li><strong>Unarmored:</strong> AR 0, no penalties</li>
+            <li><strong>Light (Hide/Leather):</strong> AR 3, -1 sorcery/stealth</li>
+            <li><strong>Medium (Breastplate):</strong> AR 5, -2 sorcery/stealth, max 2 moves</li>
+            <li><strong>Heavy (Full Plate):</strong> AR 8, -3 sorcery/stealth, max 1 move, 1 recovery</li>
+            <li><strong>Shield:</strong> +1 Physical Defense, requires one hand</li>
+          </ul>
+          <p class="guide-narrator">
+            "Plate may turn a blade, but it slows the step. Leather breathes with
+            the warrior's flesh. Choose what serves your path..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 8: Combat Overview --}}
+      <div class="guide-panel {{#if (eq activeStep 8)}}active{{/if}}" data-step="8">
+        <h2 class="guide-heading">Combat Basics</h2>
+
+        {{!-- Section: Making Attacks --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Making Attacks</h3>
+          <p class="guide-text">
+            Roll <strong>Stat Die + Stat Value + Modifiers</strong> vs the target's Defense.
+            Equal or exceed their defense to hit and roll damage.
+          </p>
+          <ul class="guide-list">
+            <li><strong>Melee:</strong> Might Die + Might vs Physical Defense</li>
+            <li><strong>Ranged/Thrown:</strong> Edge Die + Edge vs Physical Defense</li>
+            <li><strong>Sorcery:</strong> Wits Die + Wits vs Sorcery Defense</li>
+          </ul>
+          <p class="guide-narrator">
+            "Combat in the Hyborian Age is swift and brutal. Hesitate, and you die.
+            Strike true, and your enemy falls..."
+          </p>
+        </div>
+
+        {{!-- Section: The Flex Die --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">The Flex Die</h3>
+          <p class="guide-text">
+            Every roll includes a <strong>Flex Die</strong> (starts at d10). Rolling the maximum
+            value grants special effects:
+          </p>
+          <ul class="guide-list">
+            <li><strong>Stamina:</strong> Gain 1 SP</li>
+            <li><strong>Success:</strong> Turn a failed roll into a success</li>
+            <li><strong>Massive Damage:</strong> Add max weapon die to damage</li>
+            <li><strong>Sorcery:</strong> Regain spell's LP/SP cost</li>
+          </ul>
+        </div>
+
+        {{!-- Section: Stamina Spends --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Stamina Spends</h3>
+          <p class="guide-text">
+            Stamina Points fuel special abilities in combat:
+          </p>
+          <ul class="guide-list">
+            <li><strong>1 SP:</strong> +1 to die roll, bonus move, +1d4 damage, extend thrown range</li>
+            <li><strong>2 SP:</strong> +2 to die roll, +2d4 damage</li>
+            <li><strong>Final SP:</strong> Apply Massive Damage effect</li>
+          </ul>
+          <p class="guide-narrator">
+            "Stamina is the fire in your veins. Burn it wisely, for when it fades,
+            so too does your edge in battle..."
+          </p>
+        </div>
+      </div>
+
+      {{!-- STEP 9: Final Overview --}}
+      <div class="guide-panel {{#if (eq activeStep 9)}}active{{/if}}" data-step="9">
+        <h2 class="guide-heading">Ready for Adventure</h2>
+
+        {{!-- Section: Checklist --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Character Checklist</h3>
+          <p class="guide-text">
+            Before you venture forth, ensure you have completed each step:
+          </p>
+          <ul class="guide-list">
+            <li><strong>Name:</strong> Have you named your character?</li>
+            <li><strong>Origin:</strong> Have you selected an origin?</li>
+            <li><strong>Stats:</strong> Have you distributed all 16 stat points?</li>
+            <li><strong>Origin Bonuses:</strong> Have you made any required origin choices?</li>
+            <li><strong>Skills:</strong> Have you spent your 3 starting XP?</li>
+            <li><strong>Weapons:</strong> Have you equipped at least one weapon?</li>
+            <li><strong>Armor:</strong> Have you selected your armor type?</li>
+          </ul>
+        </div>
+
+        {{!-- Section: Quick Reference --}}
+        <div class="guide-section">
+          <h3 class="guide-subheading">Quick Reference</h3>
+          <ul class="guide-list">
+            <li><strong>Actions per Turn:</strong> 2 (Move, Attack, Defend, Cast, etc.)</li>
+            <li><strong>Focused Attack:</strong> 2 Actions for +2 to Attack</li>
+            <li><strong>Defend:</strong> 1 Action for +2 Physical Defense until next turn</li>
+            <li><strong>Recovery:</strong> 2 per Tale (1 with Heavy Armor), regain 50% max LP + 1 SP</li>
+            <li><strong>Death:</strong> At 0 LP, pass Grit Check (Diff 8) or die</li>
+          </ul>
+          <p class="guide-text">
+            <strong>Tip:</strong> Reopen this guide anytime by clicking the guide
+            button at the bottom of your character sheet's tab bar.
+          </p>
+        </div>
+
+        {{!-- Section: Final Words --}}
+        <div class="guide-section">
+          <p class="guide-narrator" style="text-align: center; border-left: none; background: transparent; padding: 16px;">
+            "Know, O prince, that between the years when the oceans drank Atlantis and the
+            gleaming cities, and the years of the rise of the Sons of Aryas, there was an Age
+            undreamed of... And unto this world you are born. A thief, a reaver, a slayer—
+            with gigantic melancholies and gigantic mirth. Go forth, and carve your legend
+            into the stones of the Hyborian Age."
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    {{!-- Navigation Bar --}}
+    <div class="guide-nav">
+      <button type="button" class="guide-navBtn prev" {{#if isFirstStep}}disabled{{/if}}>
+        &larr; Back
+      </button>
+
+      <span class="guide-stepIndicator">Step {{activeStep}} of {{totalSteps}}</span>
+
+      <button type="button" class="guide-navBtn next" {{#if isLastStep}}disabled{{/if}}>
+        Next &rarr;
+      </button>
+    </div>
+
+  </div>
+
+  {{!-- Tab Navigation (Right Side) --}}
+  <nav class="guide-tabs">
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 1)}}active{{/if}}" data-step="1" title="Welcome">1</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 2)}}active{{/if}}" data-step="2" title="Name & Origin">2</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 3)}}active{{/if}}" data-step="3" title="Stats">3</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 4)}}active{{/if}}" data-step="4" title="Origin Bonuses">4</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 5)}}active{{/if}}" data-step="5" title="Skills & XP">5</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 6)}}active{{/if}}" data-step="6" title="Sorcery">6</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 7)}}active{{/if}}" data-step="7" title="Equipment">7</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 8)}}active{{/if}}" data-step="8" title="Combat">8</button>
+    <button type="button" class="guide-tabBtn {{#if (eq activeStep 9)}}active{{/if}}" data-step="9" title="Finish">9</button>
+  </nav>
+
+</div>

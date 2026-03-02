@@ -1,0 +1,2111 @@
+{
+  "version": "1.0",
+  "system": "conan-hyborian-age",
+  "description": "Enemy NPC profiles for Conan: The Hyborian Age",
+  "categories": {
+    "human": {
+      "name": "Human",
+      "icon": "fa-user",
+      "description": "Human enemies from civilized and barbaric lands",
+      "groups": {
+        "guards": {
+          "name": "Guards",
+          "description": "Every palace, every castle, every city has its Guards. They patrol the corridors and alleyways, clutching their weapons.",
+          "enemies": [
+            {
+              "id": "guard",
+              "name": "Guard",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 5,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Pollaxe", "range": "Close", "damage": "1D10+2" },
+                "ranged": { "name": "Light Crossbow", "range": "Medium", "damage": "1D8+1", "special": "+2 Damage at Close Range" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Protect", "description": "A Guard may use 1 Action to Protect a Character within Touch Range. For each Guard that Protects, the target gains +1 Physical Defense, up to a maximum of +3." }
+              ]
+            },
+            {
+              "id": "veteran-guard",
+              "name": "Sergeant",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Pollaxe", "range": "Close", "damage": "1D10+3" },
+                "ranged": { "name": "Light Crossbow", "range": "Medium", "damage": "1D8+1", "special": "+2 Damage at Close Range" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Protect", "description": "A Sergeant may use 1 Action to Protect a Character within Touch Range. For each Sergeant that Protects, the target gains +1 Physical Defense, up to a maximum of +3." }
+              ]
+            },
+            {
+              "id": "guard-captain",
+              "name": "Guard Captain",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 4, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 4, "max": 6 },
+              "attacks": {
+                "melee": { "name": "Pollaxe", "range": "Close", "damage": "1D10+4" },
+                "ranged": { "name": "Light Crossbow", "range": "Medium", "damage": "1D8+1", "special": "+2 Damage at Close Range" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Inspire", "description": "Once per combat, a Guard Captain may use 2 Actions to inspire their allies. All Characters within Long Range that are allied to the Guard Captain apply a +1 Modifier to their Attacks for the remainder of the current combat." }
+              ]
+            }
+          ]
+        },
+        "bandits": {
+          "name": "Bandits",
+          "description": "On the fringes of civilization, people make their living however they can. Banditry is found throughout the Thurian continent.",
+          "enemies": [
+            {
+              "id": "bandit",
+              "name": "Bandit",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 3,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Knife", "range": "Touch", "damage": "1D4+2" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+2", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Skulkers", "description": "A Bandit applies a +1 Modifier to any Edge Checks related to hiding and stealth." }
+              ]
+            },
+            {
+              "id": "veteran-bandit",
+              "name": "Veteran Bandit",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Hand Axe", "range": "Touch", "damage": "1D6+3" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+3", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Skulkers", "description": "A Veteran Bandit applies a +1 Modifier to any Edge Checks related to hiding and stealth." }
+              ]
+            },
+            {
+              "id": "bandit-leader",
+              "name": "Bandit Leader",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Battle Axe", "range": "Touch", "damage": "1D8+3" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Skulkers", "description": "A Bandit Leader applies a +1 Modifier to any Edge Checks related to hiding and stealth." }
+              ]
+            }
+          ]
+        },
+        "picts": {
+          "name": "Picts",
+          "description": "Amidst the northern wilderness, concealed among the trees, watching and waiting, are the Picts.",
+          "enemies": [
+            {
+              "id": "pict-hunter",
+              "name": "Pict Hunter",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D6" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 4,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Primitive Hatchet", "range": "Touch", "damage": "1D4+3" },
+                "ranged": { "name": "Primitive Bow", "range": "Long", "damage": "1D4+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": []
+            },
+            {
+              "id": "pict-warrior",
+              "name": "Pict Warrior",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Primitive Hammer", "range": "Touch", "damage": "1D6+4" },
+                "ranged": { "name": "Primitive Bow", "range": "Long", "damage": "1D4+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": []
+            },
+            {
+              "id": "pict-champion",
+              "name": "Pict Champion",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 5, "die": "D8" },
+                "grit": { "value": 4, "die": "D6" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": { "min": 1, "max": 3 },
+              "attacks": {
+                "melee": { "name": "Primitive Axe", "range": "Touch", "damage": "1D8+5" },
+                "ranged": { "name": "Primitive Bow", "range": "Long", "damage": "1D4+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "War Cry", "description": "Once per combat, a Pict Champion may use 2 Actions to bellow a War Cry. All Picts within Long Range that are allied to the Pict Champion apply a Modifier of +1 to Attacks for the remainder of the current combat." }
+              ]
+            }
+          ]
+        },
+        "cultists": {
+          "name": "Cultists",
+          "description": "There are many deities out there. Many foul, degenerate creatures from the ancient world prepared to call themselves gods.",
+          "enemies": [
+            {
+              "id": "cultist-initiate",
+              "name": "Cultist Initiate",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D6" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 4,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Knife", "range": "Touch", "damage": "1D4+2" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+2", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Blood Sacrifice", "description": "As long as a Cultist Initiate is not Immobilized, they may take 2 Actions to sacrifice themself. The Cultist Initiate is immediately killed and either a Cultist High Priest (or a Demon summoned by one) gains 1D6 Life Points." }
+              ]
+            },
+            {
+              "id": "cultist",
+              "name": "Cultist",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 4, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Knife", "range": "Touch", "damage": "1D4+3" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+3", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Blood Sacrifice", "description": "As long as a Cultist is not Immobilized, they may take 2 Actions to sacrifice themself. The Cultist is immediately killed and either a Cultist High Priest (or a Demon summoned by one) gains 1D6 Life Points." }
+              ]
+            },
+            {
+              "id": "cultist-high-priest",
+              "name": "Cultist High Priest",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 6, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 45,
+              "ar": { "min": 1, "max": 3 },
+              "attacks": {
+                "melee": { "name": "Knife", "range": "Touch", "damage": "1D4+3" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+3", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Summon Fiend", "description": "A Cultist High Priest may cast the Summon Fiend or Summon Horror spells. In place of spending Stamina Points, the Cultist High Priest must instead sacrifice (instantly kill) 1 Cultist or Cultist Initiate per Stamina Point required by the spell." }
+              ]
+            }
+          ]
+        },
+        "pirates": {
+          "name": "Pirates",
+          "description": "The sea offers a means of travel, of trade, of exploration. It opens the Thurian continent up to those prepared to risk the ever-present risk of Pirates.",
+          "enemies": [
+            {
+              "id": "pirate",
+              "name": "Pirate",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 1, "die": "D10" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 6,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Short Sword", "range": "Touch", "damage": "1D6+1" },
+                "ranged": { "name": "Throwing Knife", "range": "Medium", "damage": "1D4+1", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Sneaky", "description": "A Pirate applies a +1 Modifier when determining their Initiative value." }
+              ]
+            },
+            {
+              "id": "pirate-mate",
+              "name": "Pirate Mate",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D10" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Cutlass", "range": "Touch", "damage": "1D8+2" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Sneaky", "description": "A Pirate Mate applies a +1 Modifier when determining their Initiative value." }
+              ]
+            },
+            {
+              "id": "pirate-captain",
+              "name": "Pirate Captain",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 5, "die": "D10" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Cutlass", "range": "Touch", "damage": "1D8+4" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Very Sneaky", "description": "A Pirate Captain applies a +2 Modifier when determining their Initiative value." },
+                { "name": "Stubborn", "description": "A Pirate Captain applies a +2 Modifier to all Checks during a Contest." }
+              ]
+            }
+          ]
+        },
+        "barbarians": {
+          "name": "Barbarians",
+          "description": "Look to the gray hills of the north. The Barbarians of Cimmeria and Nordheim all possess a cold, unyielding, formidable streak.",
+          "enemies": [
+            {
+              "id": "barbarian-youth",
+              "name": "Barbarian Youth",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 6,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Hand Axe", "range": "Touch", "damage": "1D6+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Barbaric Resilience", "description": "When a Barbarian Youth is killed, they must make Grit Check (Difficulty 8). If the Check is passed, the Barbarian Youth may take their next Turn, but will drop dead immediately after." }
+              ]
+            },
+            {
+              "id": "barbarian",
+              "name": "Barbarian",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Battle Axe", "range": "Touch", "damage": "1D8+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Barbaric Resilience", "description": "When a Barbarian is killed, they must make Grit Check (Difficulty 8). If the Check is passed, the Barbarian may take their next Turn, but will drop dead immediately after." }
+              ]
+            },
+            {
+              "id": "barbarian-chieftain",
+              "name": "Barbarian Chieftain",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 5, "die": "D10" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 5, "die": "D10" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Great Axe", "range": "Touch", "damage": "1D12+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Bellow for Blood", "description": "Once per combat, a Barbarian Chieftain may use 1 Action to Bellow for Blood. All Barbarian Youths and Barbarians within Long Range that are allied to the Barbarian Chieftain apply a +1 Modifier to their Damage rolls for the remainder of the current combat." }
+              ]
+            }
+          ]
+        },
+        "steppe-riders": {
+          "name": "Steppe Riders",
+          "description": "The Hyrkanians, the riders of the Vendhyan mountains, the horse-mounted nomad raiders.",
+          "enemies": [
+            {
+              "id": "steppe-rider-youth",
+              "name": "Steppe Rider Youth",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Scimitar", "range": "Touch", "damage": "1D8+2" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Mounted", "description": "A Steppe Rider Youth is considered to be Mounted unless the GM deems otherwise." }
+              ]
+            },
+            {
+              "id": "steppe-rider",
+              "name": "Steppe Rider",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 5, "die": "D10" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Scimitar", "range": "Touch", "damage": "1D8+4" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Mounted", "description": "A Steppe Rider is considered to be Mounted unless the GM deems otherwise." }
+              ]
+            },
+            {
+              "id": "steppe-rider-khan",
+              "name": "Steppe Rider Khan",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 5, "die": "D10" },
+                "edge": { "value": 6, "die": "D10" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 4, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 5, "max": 7 },
+              "attacks": {
+                "melee": { "name": "Scimitar", "range": "Touch", "damage": "1D8+5" },
+                "ranged": { "name": "Long Bow", "range": "Distant", "damage": "1D8+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Mounted", "description": "A Steppe Rider Khan is considered to be Mounted unless the GM deems otherwise." }
+              ]
+            }
+          ]
+        },
+        "sorcerers": {
+          "name": "Sorcerers",
+          "description": "Many seek power. Those who truly seek power, who crave it, are often drawn to the ways of the sorcerer.",
+          "enemies": [
+            {
+              "id": "witch",
+              "name": "Witch",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 2, "die": "D6" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 6, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 4, "max": 6 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Improvised Weapon", "range": "Touch", "damage": "1D4+2" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "White Magic", "description": "A Witch may cast the Call Beast and Favor of the Four Winds spells." }
+              ]
+            },
+            {
+              "id": "necromancer",
+              "name": "Necromancer",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D6" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 5, "die": "D10" },
+                "wits": { "value": 5, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Staff", "range": "Touch", "damage": "1D4+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Master of the Dead", "description": "A Necromancer may cast the Raise Dead and Death Scream spells." },
+                { "name": "Command the Dead", "description": "Any Skeleton Warriors that a Necromancer commands apply a +1 Modifier to Attacks and Damage rolls." }
+              ]
+            },
+            {
+              "id": "summoner",
+              "name": "Summoner",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 5, "die": "D10" },
+                "wits": { "value": 6, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Sacrificial Dagger", "range": "Touch", "damage": "1D4+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Demonic Darkness", "description": "A Summoner may cast the Demonic Ward, Demonic Steed, Hellfire, and Summon Fiend spells." },
+                { "name": "Hellish Sorcery", "description": "A Summoner may ignore the Stamina Point cost on any spells they cast. Life Point costs must be paid as normal." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "inanimate": {
+      "name": "Inanimate",
+      "icon": "fa-chess-rook",
+      "description": "Constructs and animated objects",
+      "groups": {
+        "living-statues": {
+          "name": "Living Statues",
+          "description": "How does one protect the most valuable? Life can be infused into the limbs of statues.",
+          "enemies": [
+            {
+              "id": "living-statue-stone",
+              "name": "Living Statue: Stone",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D8" },
+                "edge": { "value": 1, "die": "D6" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 0, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 20,
+              "ar": { "min": 5, "max": 8 },
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D8+8" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": []
+            },
+            {
+              "id": "living-statue-steel",
+              "name": "Living Statue: Steel",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 10, "die": "D10" },
+                "edge": { "value": 1, "die": "D6" },
+                "grit": { "value": 10, "die": "D10" },
+                "wits": { "value": 0, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": { "min": 9, "max": 12 },
+              "attacks": {
+                "melee": { "name": "Colossal Strike", "range": "Touch", "damage": "1D10+10" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": []
+            }
+          ]
+        }
+      }
+    },
+    "undead": {
+      "name": "Undead",
+      "icon": "fa-skull",
+      "description": "The restless dead, risen from their graves",
+      "groups": {
+        "skeletons": {
+          "name": "Skeletons",
+          "description": "Death is no deterrent to duty. The bones of the ancient dead can be called upon.",
+          "enemies": [
+            {
+              "id": "skeleton-warrior",
+              "name": "Skeleton Warrior",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 1, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 4, "max": 6 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 3,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Short Sword", "range": "Touch", "damage": "1D6+2" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Fleshless", "description": "Whenever a Skeleton Warrior suffers Damage from an arrow (from any kind of Bow or Crossbow), reduce the Damage suffered by half (rounding up)." }
+              ]
+            },
+            {
+              "id": "skeleton-veteran",
+              "name": "Skeleton Veteran",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D10" },
+                "edge": { "value": 2, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "War Spear", "range": "Close", "damage": "1D10+3" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Fleshless", "description": "Whenever a Skeleton Veteran suffers Damage from an arrow (from any kind of Bow or Crossbow), reduce the Damage suffered by half (rounding up)." }
+              ]
+            },
+            {
+              "id": "skeleton-champion",
+              "name": "Skeleton Champion",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 5, "die": "D10" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 25,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Great Axe", "range": "Touch", "damage": "1D12+5" },
+                "ranged": { "name": "Short Bow", "range": "Long", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Fleshless", "description": "Whenever a Skeleton Champion suffers Damage from an arrow (from any kind of Bow or Crossbow), reduce the Damage suffered by half (rounding up)." },
+                { "name": "Vengeful Aura", "description": "Any Skeleton Warriors or Skeleton Veterans within Touch Range of a Skeleton Champion apply a +2 Modifier to their Attacks." }
+              ]
+            }
+          ]
+        },
+        "mummies": {
+          "name": "Mummies",
+          "description": "The great nobles of Stygia and Khitai do not simply rot in the earth.",
+          "enemies": [
+            {
+              "id": "mummy",
+              "name": "Mummy",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D6+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Chilling Blast", "description": "Once per Turn, a Mummy may use 1 Action to target a single Character with the following Sorcery Attack: (Range: Touch), 1D6 Damage; ignores target's AR." }
+              ]
+            },
+            {
+              "id": "mummy-elect",
+              "name": "Mummy Elect",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D10" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 4, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": 12,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D6+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Chilling Blast", "description": "Once per Turn, a Mummy Elect may use 1 Action to target a single Character with the following Sorcery Attack: (Range: Touch), 1D8 Damage; ignores target's AR." }
+              ]
+            },
+            {
+              "id": "mummy-king",
+              "name": "Mummy King",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D10" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 6, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 11, "max": 13 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D6+8" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Chilling Wave", "description": "Once per Turn, a Mummy King may use 1 Action to target all non-Undead Characters within Range with the following Sorcery Attack: (Range: Medium), 1D8 Damage; ignores target's AR." }
+              ]
+            }
+          ]
+        },
+        "ghosts": {
+          "name": "Ghosts",
+          "description": "Some desires last beyond death. Some fury is not obliterated by the end.",
+          "enemies": [
+            {
+              "id": "apparition",
+              "name": "Apparition",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 0, "die": "D4" },
+                "edge": { "value": 0, "die": "D4" },
+                "grit": { "value": 1, "die": "D4" },
+                "wits": { "value": 3, "die": "D4" }
+              },
+              "defenses": {
+                "physical": null,
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 3,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": null,
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 0 },
+              "rules": [
+                { "name": "Unsettle", "description": "While one or more Apparitions are within Close Range, a Character that is not allied to the Apparition applies a -1 Modifier to all Checks and Attacks." },
+                { "name": "Intangible", "description": "An Apparition may never be the target of a Melee or Ranged Attack and only suffers Damage from Sorcery Attacks." }
+              ]
+            },
+            {
+              "id": "ghost",
+              "name": "Ghost",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 0, "die": "D4" },
+                "edge": { "value": 1, "die": "D4" },
+                "grit": { "value": 3, "die": "D4" },
+                "wits": { "value": 4, "die": "D6" }
+              },
+              "defenses": {
+                "physical": null,
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 3,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": null,
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 0 },
+              "rules": [
+                { "name": "Haunt", "description": "Once per Turn, a Ghost may use 1 Action to haunt a target within Close Range. The Ghost and their target perform a Contest; the Ghost uses Wits, the target uses Grit. If the Ghost wins the Contest, the target must use all their Actions during their next Turn to Move directly away from the Ghost." },
+                { "name": "Intangible", "description": "A Ghost may never be the target of a Melee or Ranged Attack and only suffers Damage from Sorcery Attacks." }
+              ]
+            },
+            {
+              "id": "enraged-ghost",
+              "name": "Enraged Ghost",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 4, "die": "D6" },
+                "wits": { "value": 4, "die": "D6" }
+              },
+              "defenses": {
+                "physical": null,
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": null,
+              "lifePoints": 20,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Ethereal Blade", "range": "Touch", "damage": "1D8+2" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Ethereal Anger", "description": "An Enraged Ghost's Melee Attacks ignore their target's AR. Once an Enraged Ghost has inflicted at least 12 Damage during a combat, it will disappear from the combat." },
+                { "name": "Intangible", "description": "An Enraged Ghost may never be the target of a Melee or Ranged Attack and only suffers Damage from Sorcery Attacks." }
+              ]
+            }
+          ]
+        },
+        "vampires": {
+          "name": "Vampires",
+          "description": "Those who would drink the blood of the living to sustain their lives.",
+          "enemies": [
+            {
+              "id": "vampire",
+              "name": "Vampire",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D10" },
+                "edge": { "value": 6, "die": "D10" },
+                "grit": { "value": 6, "die": "D10" },
+                "wits": { "value": 4, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": 15,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Fangs", "range": "Touch", "damage": "1D4+5" },
+                "secondary": { "name": "Uncanny Strength", "range": "Touch", "damage": "1D8+6" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Blood Lust", "description": "A Vampire must always use the Attack Action wherever it has a valid target to Attack." },
+                { "name": "Decaying Bite", "description": "If a Vampire inflicts 6 or more Damage in a single Melee Attack with its Fangs, its target must pass a Grit Check (Difficulty 10) or apply a -1 Modifier to all Checks and Attacks for the duration of the Tale." }
+              ]
+            },
+            {
+              "id": "vampire-master",
+              "name": "Vampire Master",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 7, "die": "D10" },
+                "edge": { "value": 7, "die": "D10" },
+                "grit": { "value": 7, "die": "D12" },
+                "wits": { "value": 5, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Fangs", "range": "Touch", "damage": "1D4+7" },
+                "secondary": { "name": "Uncanny Strength", "range": "Touch", "damage": "1D10+8" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": null },
+              "rules": [
+                { "name": "Blood Lust", "description": "A Vampire Master must always use the Attack Action wherever it has a valid target to Attack." },
+                { "name": "Create Thrall", "description": "If a Vampire Master inflicts 7 or more Damage in a single Melee Attack with its Fangs, its target must pass a Grit Check (Difficulty 10) or begin the transformation into a vampiric thrall." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "monstrosity": {
+      "name": "Monstrosity",
+      "icon": "fa-pastafarianism",
+      "description": "Supernatural and monstrous creatures",
+      "groups": {
+        "ghouls": {
+          "name": "Ghouls",
+          "description": "Skin a rubbery gray, pointed ears above a canine muzzle thicketed with needle-sharp teeth, ghouls are charnel creatures, scavengers, eaters of the dead.",
+          "enemies": [
+            {
+              "id": "ghoul",
+              "name": "Ghoul",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 5,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D6+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 1 },
+              "rules": [
+                { "name": "Grapple", "description": "A Ghoul may use 1 of its Actions to perform a Might Contest with a target within Touch Range. If the Ghoul wins the Contest, the target may not take the Move Action during their next Turn." }
+              ]
+            },
+            {
+              "id": "ghoul-lord",
+              "name": "Ghoul Lord",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 7, "die": "D8" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 4, "die": "D10" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Horrific Bite", "range": "Touch", "damage": "1D8+7" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Razor Sharp", "description": "A Ghoul Lord's Melee Attacks ignore their target's AR." },
+                { "name": "Grapple", "description": "A Ghoul Lord may use 1 of its Actions to perform a Might Contest with a target within Touch Range. If the Ghoul Lord wins the Contest, the target may not take the Move Action during their next Turn." }
+              ]
+            }
+          ]
+        },
+        "scourge-of-set": {
+          "name": "Scourge of Set",
+          "description": "A raging swarm of heads and teeth and mindless fury, the Scourge of Set is a creature of scarcely conceivable savagery.",
+          "enemies": [
+            {
+              "id": "scourge-of-set",
+              "name": "Scourge of Set",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 6, "die": "D10" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 5, "max": 7 },
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Close", "damage": "1D6+8" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 5, "attackLimit": 4, "attackNote": "Must use 4 Actions for Melee Attacks if valid target in Range" },
+              "rules": [
+                { "name": "Venomous Bite", "description": "When the Scourge of Set inflicts 3 or more Damage with a single Melee Attack, the target must pass a Grit Check (Difficulty 11) or become Poisoned." }
+              ]
+            }
+          ]
+        },
+        "black-ones": {
+          "name": "Black Ones",
+          "description": "Clearly more than mere human, the Black Ones inhabit an island somewhere out amidst the churning seas. Almost as tall as giants, their skin obsidian black, with eyes of vibrant gold.",
+          "enemies": [
+            {
+              "id": "black-one",
+              "name": "Black One",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Wicked Claws", "range": "Touch", "damage": "1D8+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 1 },
+              "rules": [
+                { "name": "Throw", "description": "If a Black One hits their target with a Melee Attack, rather than rolling for Damage, they may use an additional Action to throw their target one Range Zone. The target suffers 3 Damage, ignoring all AR." }
+              ]
+            },
+            {
+              "id": "black-one-elder",
+              "name": "Black One Elder",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 4, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": 12,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Wicked Claws", "range": "Touch", "damage": "1D8+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 1 },
+              "rules": [
+                { "name": "Throw", "description": "If a Black One Elder hits their target with a Melee Attack, rather than rolling for Damage, they may use an additional Action to throw their target one Range Zone. The target suffers 5 Damage, ignoring all AR." }
+              ]
+            },
+            {
+              "id": "black-one-ancient",
+              "name": "Black One Ancient",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D10" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 5, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Wicked Claws", "range": "Touch", "damage": "1D8+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Golden Pipes of Agony", "description": "A Black One Ancient may use 1 of its Actions to target a single Character with the following Sorcery Attack: (Range: Medium), 1D8 Damage, ignores target's AR. In addition, the target may not take the Movement or Attack Actions during their next Turn." }
+              ]
+            }
+          ]
+        },
+        "deep-dwellers": {
+          "name": "Deep Dwellers",
+          "description": "Hideous, malformed beings—a grotesque merging of fish and toad, all rubbery skin and bulging eyes. They worship their foul gods, hiding deep in the oceans.",
+          "enemies": [
+            {
+              "id": "deep-dweller",
+              "name": "Deep Dweller",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Barbed Claws", "range": "Touch", "damage": "1D8+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Aquatic", "description": "A Deep Dweller can remain underwater indefinitely." },
+                { "name": "Diving Strike", "description": "A Deep Dweller in water that is at least waist deep increases the Range of their Melee Attacks to Close." },
+                { "name": "Watery Ambush", "description": "A Deep Dweller and any Deep Dweller Lord accompanying them applies a +2 Modifier to the Edge Contest during a Surprise Attack at sea or where there is deep water." }
+              ]
+            },
+            {
+              "id": "deep-dweller-lord",
+              "name": "Deep Dweller Lord",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 6, "die": "D8" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 4, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Barbed Claws", "range": "Touch", "damage": "1D8+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Aquatic", "description": "A Deep Dweller Lord can remain underwater indefinitely." },
+                { "name": "Dragged to the Depths", "description": "A Deep Dweller Lord in or next to deep water may use 3 Actions to target a Character within Close Range. The Deep Dweller Lord and their target perform a Might Contest. If the Deep Dweller Lord wins the Contest, the target is dragged underwater to their death... unless the GM deems it suitable to allow them to be heroically saved." }
+              ]
+            }
+          ]
+        },
+        "jungle-dragons": {
+          "name": "Jungle Dragons",
+          "description": "Relics of a forgotten epoch, a Jungle Dragon is a titanic creature. Spines stretch along its back, turning its already thickly scaled hide into a deadly mesh of bone.",
+          "enemies": [
+            {
+              "id": "lesser-jungle-dragon",
+              "name": "Lesser Jungle Dragon",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D8" },
+                "edge": { "value": 2, "die": "D6" },
+                "grit": { "value": 8, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 4, "max": 6 },
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D8+8" },
+                "secondary": { "name": "Tail", "range": "Close", "damage": "1D6+6" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": []
+            },
+            {
+              "id": "gargantuan-jungle-dragon",
+              "name": "Gargantuan Jungle Dragon",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 10, "die": "D10" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 8, "die": "D10" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": null,
+              "lifePoints": 100,
+              "ar": { "min": 5, "max": 7 },
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D10+10" },
+                "secondary": { "name": "Tail", "range": "Close", "damage": "1D6+6" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": null },
+              "rules": [
+                { "name": "Tail Strike", "description": "When a Gargantuan Jungle Dragon makes a Melee Attack with its Tail, it targets all Characters in Close Range. Make only one Attack, using the lowest Physical Defense of all targets." }
+              ]
+            }
+          ]
+        },
+        "frost-giants": {
+          "name": "Frost-Giants",
+          "description": "Amidst the frozen tundra of the far north, strange creatures dwell. Enormous, hulking creatures bristling with icicles, the children of Ymir.",
+          "enemies": [
+            {
+              "id": "frost-giant",
+              "name": "Frost-Giant",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 2, "die": "D8" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": 15,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Great Axe", "range": "Close", "damage": "1D12+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Snow Ambush", "description": "A Frost-Giant (and any Frost-Giant Jarl that accompanies them) applies a +3 Modifier to the Edge Contest during a Surprise Attack in any snowy or icy terrain." }
+              ]
+            },
+            {
+              "id": "frost-giant-jarl",
+              "name": "Frost-Giant Jarl",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D10" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 6, "die": "D10" },
+                "wits": { "value": 4, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 60,
+              "ar": { "min": 4, "max": 6 },
+              "attacks": {
+                "melee": { "name": "Great Axe", "range": "Close", "damage": "1D12+8" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Winter's Breath", "description": "Once per combat, a Frost-Giant Jarl may use 2 Actions to summon a wintery storm. All Characters that are not Frost-Giants or Frost-Giant Jarls may only take the Move Action once per Turn until the end of the current combat." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "demons": {
+      "name": "Demons",
+      "icon": "fa-fire",
+      "description": "Fiends and horrors from beyond",
+      "groups": {
+        "lesser-demons": {
+          "name": "Lesser Demons",
+          "description": "Pulled from the void between worlds, called forth by those who see in ancient grimoires a path to power. Whether Fiends or Horrors, all are deadly.",
+          "enemies": [
+            {
+              "id": "fiend",
+              "name": "Fiend",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 6, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": { "min": 1, "max": 3 },
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D4+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Uncanny Strike", "description": "A Fiend's Melee Attacks ignore their target's AR." }
+              ]
+            },
+            {
+              "id": "horror",
+              "name": "Horror",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D10" },
+                "edge": { "value": 6, "die": "D8" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 6, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 10, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Crushing Tentacles", "range": "Close", "damage": "1D6+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 4, "attackLimit": 2 },
+              "rules": [
+                { "name": "Infernal Fire", "description": "Once per Turn, a Horror may spend 6 Life Points and use 1 Action to target a single Character with the following Sorcery Attack: (Range: Long), 10 Damage." }
+              ]
+            }
+          ]
+        },
+        "winged-nightmares": {
+          "name": "Winged Nightmares",
+          "description": "In the deep past of the world, great empires turned the denizens of those civilizations into the foulest of demons. These monstrosities are deathless things.",
+          "enemies": [
+            {
+              "id": "winged-nightmare",
+              "name": "Winged Nightmare",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 6, "die": "D10" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Ripping Claws", "range": "Touch", "damage": "1D8+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Flight", "description": "A Winged Nightmare can fly, ignoring all terrain and obstacles when it Moves. In addition, once per Turn, it may use 1 Action to take up to 5 Move Actions." }
+              ]
+            },
+            {
+              "id": "winged-nightmare-abomination",
+              "name": "Winged Nightmare Abomination",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 7, "die": "D10" },
+                "grit": { "value": 5, "die": "D10" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Rending Claws", "range": "Touch", "damage": "1D10+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Flight", "description": "A Winged Nightmare Abomination can fly, ignoring all terrain and obstacles when it Moves. In addition, once per Turn it may use 1 Action to take up to 5 Move Actions." },
+                { "name": "Drag Off", "description": "If a Winged Nightmare Abomination inflicts 5 or more Damage with a single Melee Attack and it has at least 1 Action remaining, its target must pass an Edge Check (Difficulty 9) or be moved up to three Range Zones from their current location." }
+              ]
+            }
+          ]
+        },
+        "servants-of-ahriman": {
+          "name": "Servants of Ahriman",
+          "description": "Dark is the reputation of the god Ahriman. Dark are the beings who still serve at his whims.",
+          "enemies": [
+            {
+              "id": "servant-of-ahriman",
+              "name": "Servant of Ahriman",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 8, "die": "D8" },
+                "edge": { "value": 2, "die": "D8" },
+                "grit": { "value": 8, "die": "D10" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 5, "max": 7 },
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Close", "damage": "1D4+8" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Impaling Embrace", "description": "A Servant of Ahriman may use 3 Actions to target a Character within Touch Range. The Servant of Ahriman and its target must perform a Might Contest. If the Servant of Ahriman wins, the target suffers 3D8+8 Damage." }
+              ]
+            }
+          ]
+        },
+        "nameless-horrors": {
+          "name": "Nameless Horrors",
+          "description": "Beings from the vast gulfs we cannot perceive. They are usually without names. Names are human inventions; they circumscribe and contain. Beings like this are beyond such things.",
+          "enemies": [
+            {
+              "id": "nameless-horror",
+              "name": "Nameless Horror",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 10, "die": "D10" },
+                "edge": { "value": 2, "die": "D8" },
+                "grit": { "value": 10, "die": "D10" },
+                "wits": { "value": 8, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 10, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 80,
+              "ar": { "min": 4, "max": 6 },
+              "attacks": {
+                "melee": { "name": "Demonic Claws", "range": "Close", "damage": "1D12+10" },
+                "secondary": { "name": "Huge Tentacles", "range": "Medium", "damage": "1D8+6" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": null },
+              "rules": [
+                { "name": "True Fear", "description": "Non-Demon Characters within Long Range of a Nameless Horror apply a -2 Modifier to all Grit Checks." },
+                { "name": "Fiery Rage", "description": "Once per Turn, a Nameless Horror may use 3 Actions to target all non-Demon Characters within Range with the following Sorcery Attack: (Range: Long), 1D8+5 Damage, ignores target's AR." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "beasts": {
+      "name": "Beasts",
+      "icon": "fa-paw",
+      "description": "Wild animals and natural creatures",
+      "groups": {
+        "wild-animals": {
+          "name": "Wild Animals",
+          "description": "Out beyond the boundaries of civilization, beyond the high stone walls and the tended fields, savagery reigns. Here, life is red in tooth and claw.",
+          "enemies": [
+            {
+              "id": "wild-dog",
+              "name": "Wild Dog",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 3, "die": "D4" },
+                "wits": { "value": 2, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 4, "max": 6 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 4,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D6+2" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": []
+            },
+            {
+              "id": "hyena",
+              "name": "Hyena",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 2, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 5,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D6+2" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Pack Mentality", "description": "A Hyena gains +1 to their Might Stat when there are at least three Hyenas involved in a combat." }
+              ]
+            },
+            {
+              "id": "wolf",
+              "name": "Wolf",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 2, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 6,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Bite", "range": "Touch", "damage": "1D6+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Pack Tactics", "description": "When there are at least three Wolves involved in a combat, each Wolf gains one additional Move Action per Turn." },
+                { "name": "Fire Aversion", "description": "A Wolf applies a -1 Modifier to Attacks against targets within Close Range of fire." }
+              ]
+            },
+            {
+              "id": "crocodile",
+              "name": "Crocodile",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 5, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Powerful Jaws", "range": "Touch", "damage": "1D8+5" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Swim", "description": "A Crocodile can swim and hide underwater for up to an hour at a time." },
+                { "name": "Swamp Ambush", "description": "A Crocodile applies a +3 Modifier to the Edge Contest during a Surprise Attack in any swamp or wetland Area." }
+              ]
+            },
+            {
+              "id": "lion",
+              "name": "Lion",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 6, "die": "D8" },
+                "grit": { "value": 5, "die": "D6" },
+                "wits": { "value": 3, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 10,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Rending Claws", "range": "Touch", "damage": "1D8+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Pin Prey", "description": "A Lion may use 2 Actions to pin a target. The Lion and their target perform a Might Contest. If the Lion wins the Contest, the target is pinned (Immobilized) and suffers 5 Damage, ignoring AR." },
+                { "name": "Ambush", "description": "A Lion applies a +2 Modifier to the Edge Contest during a Surprise Attack." }
+              ]
+            },
+            {
+              "id": "bear",
+              "name": "Bear",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 7, "die": "D8" },
+                "edge": { "value": 2, "die": "D8" },
+                "grit": { "value": 6, "die": "D8" },
+                "wits": { "value": 2, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 6, "max": 8 },
+                "sorcery": { "min": 5, "max": 7 }
+              },
+              "threshold": 14,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Rending Claws", "range": "Touch", "damage": "1D8+7" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Intimidating Presence", "description": "A Bear applies a Modifier of +2 to all Checks during a Contest." },
+                { "name": "Ferocious Strength", "description": "When a Bear makes a Melee Attack, reroll any results of 1 or 2 on the Damage roll." }
+              ]
+            }
+          ]
+        },
+        "giant-scorpions": {
+          "name": "Giant Scorpions",
+          "description": "The tail of a Giant Scorpion drips a venom capable of eating through flesh and bone in a matter of moments.",
+          "enemies": [
+            {
+              "id": "giant-scorpion",
+              "name": "Giant Scorpion",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 5, "max": 7 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 7,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Stinger", "range": "Touch", "damage": "1D4+2" },
+                "secondary": { "name": "Pincer", "range": "Touch", "damage": "1D6+3" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Poison Sting", "description": "If a Giant Scorpion inflicts 2 or more Damage with a single Melee Attack with its Stinger, its target must pass a Grit Check (Difficulty 8) or become Poisoned." }
+              ]
+            },
+            {
+              "id": "giant-scorpion-brood-guard",
+              "name": "Giant Scorpion Brood Guard",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 5, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 12,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Stinger", "range": "Touch", "damage": "1D4+4" },
+                "secondary": { "name": "Pincer", "range": "Touch", "damage": "1D8+5" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": 1 },
+              "rules": [
+                { "name": "Poison Sting", "description": "If a Giant Scorpion Brood Guard inflicts 2 or more Damage with a single Melee Attack with its Stinger, its target must pass a Grit Check (Difficulty 10) or become Poisoned." }
+              ]
+            },
+            {
+              "id": "giant-scorpion-brood-mother",
+              "name": "Giant Scorpion Brood Mother",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D10" },
+                "edge": { "value": 5, "die": "D8" },
+                "grit": { "value": 6, "die": "D10" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": null,
+              "lifePoints": 35,
+              "ar": { "min": 4, "max": 6 },
+              "attacks": {
+                "melee": { "name": "Barbed Stinger", "range": "Close", "damage": "1D6+6" },
+                "secondary": { "name": "Crushing Pincer", "range": "Close", "damage": "1D12+6" }
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2, "attackNote": "Only 1 Attack may be made with Barbed Stinger each Turn" },
+              "rules": [
+                { "name": "Potent Venom", "description": "If a Giant Scorpion Brood Mother inflicts 2 or more Damage with a single Melee Attack from its Barbed Stinger, its target must pass a Grit Check (Difficulty is equal to the number of Life Points lost from the Barbed Stinger Attack) or become Poisoned and suffer an additional 1D10 Damage, ignoring AR." }
+              ]
+            }
+          ]
+        },
+        "giant-spiders": {
+          "name": "Giant Spiders",
+          "description": "Far too many legs, and far too many eyes. They clamber from the darkness with preternatural agility.",
+          "enemies": [
+            {
+              "id": "giant-spider",
+              "name": "Giant Spider",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D6" },
+                "edge": { "value": 5, "die": "D8" },
+                "grit": { "value": 3, "die": "D6" },
+                "wits": { "value": 1, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Stabbing Limbs", "range": "Touch", "damage": "1D6+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": 2 },
+              "rules": [
+                { "name": "Web-Covered", "description": "All non-Spider Characters apply a -2 Modifier to Initiative during any combat involving one or more Giant Spiders." },
+                { "name": "Web-Shot", "description": "Once per Turn, a Giant Spider may use 1 Action to target a single Character with the following Ranged Attack: (Range: Medium), 1D4 Damage, a target hit by this Attack may not take more than 1 Move Action during their next Turn." }
+              ]
+            },
+            {
+              "id": "giant-spider-queen",
+              "name": "Giant Spider Queen",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 6, "die": "D10" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 4, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Crushing Limbs", "range": "Close", "damage": "1D8+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": null },
+              "rules": [
+                { "name": "Paralyzing Venom", "description": "When a Giant Spider Queen inflicts 3 or more Damage with a single Melee Attack, the target must pass a Grit Check (Difficulty 10) or become Immobilized until the end of their next Turn." },
+                { "name": "Queen's Guard", "description": "All Giant Spiders within Close Range of a Giant Spider Queen apply a Modifier of +1 to Attacks and Damage rolls." }
+              ]
+            }
+          ]
+        },
+        "giant-serpents": {
+          "name": "Giant Serpents",
+          "description": "It is said all human beings fear the serpent. All snakes are, in some way, the chosen of Set.",
+          "enemies": [
+            {
+              "id": "giant-serpent",
+              "name": "Giant Serpent",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 5, "die": "D10" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 2, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Lunging Bite", "range": "Close", "damage": "1D6+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Venomous Bite", "description": "If a Giant Serpent inflicts 5 or more Damage with a single Melee Attack, its target becomes Poisoned." }
+              ]
+            },
+            {
+              "id": "child-of-set",
+              "name": "Child of Set",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 6, "die": "D10" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": 12,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Lunging Bite", "range": "Close", "damage": "1D8+4" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Constrict", "description": "A Child of Set may use 2 Actions to constrict a target within Touch Range. The Child of Set and its target must perform a Might Contest. If the Child of Set wins, the target suffers 1D8+4 Damage and is Immobilized. At the start of the target's Turn they may pass a Might Check (Difficulty 8) to break free." }
+              ]
+            },
+            {
+              "id": "child-of-set-colossal",
+              "name": "Child of Set Colossal",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D10" },
+                "edge": { "value": 6, "die": "D8" },
+                "grit": { "value": 7, "die": "D8" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Lunging Bite", "range": "Close", "damage": "1D10+6" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 3, "attackLimit": null },
+              "rules": [
+                { "name": "Crushing Bite", "description": "If a Child of Set Colossal inflicts 10 or more Damage with a single Melee Attack, its target cannot spend Stamina Points until the end of the current combat." },
+                { "name": "Brutal Constriction", "description": "A Child of Set Colossal may use 1 Action to constrict a target within Touch Range. The Child of Set Colossal and its target must perform a Might Contest. If the Child of Set Colossal wins, the target suffers 1D10+6 Damage and is Immobilized. At the start of the target's Turn they may pass a Might Check (Difficulty 11) to break free." }
+              ]
+            }
+          ]
+        },
+        "gray-man-apes": {
+          "name": "Gray Man-Apes",
+          "description": "An atavism. A reminder of a long-lost epoch. A terrible remnant of humanity's origins.",
+          "enemies": [
+            {
+              "id": "gray-man-ape",
+              "name": "Gray Man-Ape",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 5, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 5, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Strike", "range": "Touch", "damage": "1D4+5" },
+                "ranged": { "name": "Thrown Rock", "range": "Medium", "damage": "1D4+3", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Climb", "description": "A Gray Man-Ape can easily climb surfaces that most humans would consider unscalable." }
+              ]
+            },
+            {
+              "id": "gray-man-ape-brute",
+              "name": "Gray Man-Ape Brute",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 6, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 7, "die": "D8" },
+                "wits": { "value": 1, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 4, "max": 6 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 1, "max": 3 },
+              "attacks": {
+                "melee": { "name": "Brutal Strike", "range": "Touch", "damage": "1D6+6" },
+                "ranged": { "name": "Thrown Rock", "range": "Medium", "damage": "1D4+4", "thrown": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Climb", "description": "A Gray Man-Ape Brute can easily climb surfaces that most humans would consider unscalable." },
+                { "name": "Crushing Grapple", "description": "If a Gray Man-Ape Brute performs two Melee Attacks during its Turn, the second Attack ignores the target's AR." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "originBeast": {
+      "name": "Origin Beasts",
+      "icon": "fa-paw",
+      "description": "Beast forms available to sorcerers through the Beast Form spell. Each origin unlocks a unique transformation.",
+      "groups": {
+        "blood-of-acheron": {
+          "name": "Blood of Acheron",
+          "description": "Those who carry the cursed blood of ancient Acheron can channel its dark power to become something more — and less — than human.",
+          "enemies": [
+            {
+              "id": "the-last-king",
+              "name": "The Last King",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 12, "max": 12 },
+                "sorcery": { "min": 10, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 30,
+              "ar": { "min": 1, "max": 1 },
+              "attacks": {
+                "melee": { "name": "Judgement", "range": "Reach", "damage": "1D10" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [],
+              "traits": "Cannot cast spells or speak while transformed. Stats shown are base — actual values computed from caster's stats +2 Might, +2 Edge, +2 Grit, +2 Phys Def, +1 AR."
+            }
+          ]
+        }
+      }
+    }
+  }
+}

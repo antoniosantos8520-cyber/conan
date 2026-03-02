@@ -1,0 +1,18 @@
+{
+  "CONAN": {
+    "SheetLabels": {
+      "Character2": "Conan Character Sheet",
+      "NPC2": "Enemy Card",
+      "Tools": "Conan GM Tools",
+      "Howard": "Howard the Chronicler"
+    }
+  },
+  "TYPES": {
+    "Actor": {
+      "character2": "Character",
+      "npc2": "Enemy Card (auto-created)",
+      "tools": "GM Tools",
+      "howard": "Howard the Chronicler"
+    }
+  }
+}

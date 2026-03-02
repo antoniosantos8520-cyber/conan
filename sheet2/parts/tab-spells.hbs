@@ -1,0 +1,505 @@
+{{!-- TAB: SORCERY --}}
+<div class="tab-sorcery">
+
+  {{!-- Main Header - Clickable to open Invoke Spell Menu --}}
+  <div class="sheet2-sorceryHeader">
+    {{!-- Sorcery Skills Column (left side of header) --}}
+    {{!-- Only show icons for skills the character owns --}}
+    <div class="sheet2-sorcerySkillsColumn">
+      {{!-- === PRIORITY 1: PASSIVE SKILLS (top) === --}}
+      {{!-- Passive: Lotus Blood (SP cost -1) --}}
+      {{#if hasLotusBlood}}
+      <img src="systems/conan/images/icons/lotus_blood_i_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Lotus Blood" title="Lotus Blood (Sorcery SP cost -1, min 1)"/>
+      {{/if}}
+      {{!-- Passive: Sorcerous Vigor (LP cost -2) --}}
+      {{#if hasSorcerousVigor}}
+      <img src="systems/conan/images/icons/sorcerous_vigor_i_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Sorcerous Vigor" title="Sorcerous Vigor (Sorcery LP cost -2, min 1)"/>
+      {{/if}}
+      {{!-- Passive: Uncanny Warding (+1/+2 Sorcery Defense) - II replaces I --}}
+      {{#if hasUncannyWardingII}}
+      <img src="systems/conan/images/icons/uncanny_warding_ii_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Uncanny Warding II" title="Uncanny Warding II (+2 Sorcery Defense)"/>
+      {{else if hasUncannyWarding}}
+      <img src="systems/conan/images/icons/uncanny_warding_i_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Uncanny Warding" title="Uncanny Warding (+1 Sorcery Defense)"/>
+      {{/if}}
+      {{!-- Passive: Tough-Souled (+1 Sorcery Defense) --}}
+      {{#if hasToughSouled}}
+      <img src="systems/conan/images/icons/tough_souled_i_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Tough-Souled" title="Tough-Souled (+1 Sorcery Defense)"/>
+      {{/if}}
+      {{!-- Passive: Fierce Mind (sorcery attacks: roll 2, take best) --}}
+      {{#if hasFierceMind}}
+      <img src="systems/conan/images/icons/fierce_mind_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Fierce Mind" title="Fierce Mind (Sorcery Attacks: roll 2, take best)"/>
+      {{/if}}
+      {{!-- Passive: Adept Sorcerer (bonus 1-action sorcery attack per turn) --}}
+      {{#if hasAdeptSorcerer}}
+      <img src="systems/conan/images/icons/adept_sorcerer_icon.png"
+           class="sheet2-sorcerySkillIcon active"
+           alt="Adept Sorcerer" title="Adept Sorcerer (Bonus 1-Action Sorcery Attack per Turn)"/>
+      {{/if}}
+      {{!-- Toggle: Radium Gem (on/off light, requires gem in inventory) --}}
+      {{#if hasRadiumGem}}
+      <img src="systems/conan/images/icons/radium_gem_icon.png"
+           class="sheet2-sorcerySkillIcon radium-gem-trigger {{#if radiumGemActive}}stance-active{{else if canUseRadiumGem}}usable{{else}}inactive{{/if}}"
+           alt="Radium Gem" title="{{#if radiumGemActive}}Radium Gem ACTIVE - Click to extinguish{{else if canUseRadiumGem}}Radium Gem - Click to activate light{{else}}Radium Gem - No gem available{{/if}}"/>
+      {{/if}}
+      {{!-- Reactive: Counter Ward (FIRST — purple when ready, red+glow when enemy casts a spell) --}}
+      {{#if hasCounterWard}}
+      <img src="systems/conan/images/icons/counter_ward_icon.png"
+           class="sheet2-sorcerySkillIcon counter-ward-trigger {{#if counterWardTriggered}}counter-ward-alert{{else}}usable{{/if}}"
+           alt="Counter Ward" title="{{#if counterWardTriggered}}ENEMY SPELL DETECTED - Click to Counter!{{else}}Counter Ward (reacts to enemy spells){{/if}}"/>
+      {{/if}}
+      {{!-- Active: Create Bane Weapon (only shows when actively maintaining) --}}
+      {{#if baneWeaponCasterActive}}
+      <img src="systems/conan/images/icons/create_bane_weapon_icon.png"
+           class="sheet2-sorcerySkillIcon bane-weapon-trigger stance-active"
+           alt="Bane Weapon Active" title="Bane Weapon Active ({{baneWeaponCasterTarget}}: {{baneWeaponCasterDie}}) - Click to manage"/>
+      {{/if}}
+      {{!-- Toggle: Chilling Presence (necromantic aura, toggle on/off) --}}
+      {{#if hasChillingPresence}}
+      <img src="systems/conan/images/icons/chilling_presence_icon.png"
+           class="sheet2-sorcerySkillIcon chilling-presence-trigger {{#if chillingPresenceActive}}stance-active{{else}}usable{{/if}}"
+           alt="Chilling Presence" title="{{#if chillingPresenceActive}}Chilling Presence ACTIVE - Click to dismiss{{else}}Chilling Presence - Click to activate cold aura{{/if}}"/>
+      {{/if}}
+      {{!-- Capture Soul: 3-state (empty/captured/primed) --}}
+      {{#if hasCaptureSoul}}
+      <img src="systems/conan/images/icons/capture_soul_icon.png"
+           class="sheet2-sorcerySkillIcon capture-soul-trigger {{#if captureSoulPrimed}}soul-primed{{else if captureSoulCaptured}}soul-captured{{else}}soul-empty{{/if}}"
+           data-spell-id="capture-soul"
+           alt="Capture Soul" title="{{#if captureSoulPrimed}}Soul PRIMED — +2 to next Check or Attack. Click to un-prime.{{else if captureSoulCaptured}}Soul captured — click to prime for +2 to next roll.{{else}}Click to cast Capture Soul.{{/if}}"/>
+      {{/if}}
+      {{!-- Toggle: Eyes of the Raven (+2 Edge perception, toggle on/off) --}}
+      {{#if hasEyesOfTheRaven}}
+      <img src="systems/conan/images/icons/eyes_of_the_raven_icon.png"
+           class="sheet2-sorcerySkillIcon eyes-of-raven-trigger {{#if eyesOfTheRavenActive}}stance-active{{else}}usable{{/if}}"
+           alt="Eyes of the Raven" title="{{#if eyesOfTheRavenActive}}Eyes of the Raven ACTIVE (+2 Edge Perception) - Click to deactivate{{else}}Eyes of the Raven - Click to activate (+2 Edge Perception){{/if}}"/>
+      {{/if}}
+      {{!-- Situational: Lotus Miasma (shows when spell is learned, green when maintained) --}}
+      {{#if hasLotusMiasma}}
+      <img src="systems/conan/images/icons/lotus_miasma_icon.png"
+           class="sheet2-sorcerySkillIcon lotus-miasma-trigger {{#if lotusMiasmaActive}}stance-active{{else}}usable{{/if}}"
+           alt="Lotus Miasma" title="{{#if lotusMiasmaActive}}Lotus Miasma ACTIVE - Click to dismiss{{else}}Lotus Miasma (activated on cast){{/if}}"/>
+      {{/if}}
+      {{!-- Active: Frightful Aura (gold=ready, green=active, gray=spent) --}}
+      {{#if frightfulAuraReady}}
+      <img src="systems/conan/images/icons/frightful_aura_icon.png"
+           class="sheet2-sorcerySkillIcon frightful-aura-trigger usable"
+           alt="Frightful Aura" title="Frightful Aura — 1 SP: Click to target enemies (-2 Wits & Grit)"/>
+      {{else if frightfulAuraActive}}
+      <img src="systems/conan/images/icons/frightful_aura_icon.png"
+           class="sheet2-sorcerySkillIcon frightful-aura-trigger stance-active"
+           alt="Frightful Aura" title="Frightful Aura ACTIVE — Click to dismiss"/>
+      {{else if frightfulAuraSpent}}
+      <img src="systems/conan/images/icons/frightful_aura_icon.png"
+           class="sheet2-sorcerySkillIcon frightful-aura-trigger inactive"
+           alt="Frightful Aura (Spent)" title="Frightful Aura — Spent this combat"/>
+      {{/if}}
+      {{!-- Active: Fearsome Ward (gold=ready, green=active, gray=spent) --}}
+      {{#if fearsomeWardReady}}
+      <img src="systems/conan/images/icons/fearsome_ward_icon.png"
+           class="sheet2-sorcerySkillIcon fearsome-ward-trigger usable"
+           alt="Fearsome Ward" title="Fearsome Ward — Free Action: Ward vs melee attackers (2/5/8 LP)"/>
+      {{else if fearsomeWardActive}}
+      <img src="systems/conan/images/icons/fearsome_ward_icon.png"
+           class="sheet2-sorcerySkillIcon fearsome-ward-trigger stance-active"
+           alt="Fearsome Ward" title="Fearsome Ward ACTIVE — Click to dismiss"/>
+      {{else if fearsomeWardSpent}}
+      <img src="systems/conan/images/icons/fearsome_ward_icon.png"
+           class="sheet2-sorcerySkillIcon fearsome-ward-trigger inactive"
+           alt="Fearsome Ward (Spent)" title="Fearsome Ward — Spent this combat"/>
+      {{/if}}
+      {{!-- Mesmerism: gold when learned, green when controlling a target --}}
+      {{#if hasMesmerism}}
+      <img src="systems/conan/images/icons/mesmerism_icon.png"
+           class="sheet2-sorcerySkillIcon mesmerism-trigger {{#if mesmerismActive}}stance-active{{else}}usable{{/if}}"
+           alt="Mesmerism" title="{{#if mesmerismActive}}Mesmerism ACTIVE — Click to dismiss{{else}}Mesmerism — Click to cast{{/if}}"/>
+      {{/if}}
+      {{!-- Beast Form: green glow when active, click to dismiss --}}
+      {{#if hasBeastForm}}
+      <img src="systems/conan/images/icons/beast_form_icon.png"
+           class="sheet2-sorcerySkillIcon beast-form-trigger stance-active"
+           alt="Beast Form" title="Beast Form ACTIVE — Click to dismiss"/>
+      {{/if}}
+
+      {{#if demonicVesselAlert}}
+      <img src="systems/conan/images/icons/demonic_vessel_icon.png"
+           class="sheet2-sorcerySkillIcon demonic-vessel-trigger demonic-vessel-alert"
+           alt="Demonic Vessel" title="{{demonicVesselTooltip}}"/>
+      {{/if}}
+
+      {{#if uncannyReachActive}}
+      <img src="systems/conan/images/icons/uncanny_reach_icon.png"
+           class="sheet2-sorcerySkillIcon uncanny-reach-trigger stance-active"
+           alt="Uncanny Reach" title="Uncanny Reach ACTIVE — Click to dismiss"/>
+      {{/if}}
+
+      {{#if hasBloodhound}}
+      <img src="systems/conan/images/icons/bloodhound_icon.png"
+           class="sheet2-sorcerySkillIcon bloodhound-trigger stance-active"
+           alt="Bloodhound" title="Bloodhound — Tracking: {{bloodhoundTarget}}. Click to dismiss."/>
+      {{/if}}
+    </div>
+    <button type="button" class="sheet2-sorceryHeaderBtn open-invoke-spell" title="Invoke New Spell">
+      <span class="sheet2-sorceryTitle">INVOKE</span>
+    </button>
+  </div>
+
+  {{!-- Front Display - Learned Spells by Discipline --}}
+  <div class="sheet2-spellsDisplay">
+    {{#each sorceryDisciplines as |discipline|}}
+    {{#if discipline.spells.length}}
+    <div class="sheet2-disciplineSection" data-discipline="{{discipline.id}}">
+      {{!-- Discipline Badge - Clickable to expand/collapse (collapsed by default) --}}
+      <button type="button" class="sheet2-disciplineBadge discipline-toggle collapsed" data-discipline="{{discipline.id}}" title="{{discipline.name}}">
+        <span class="sheet2-disciplineChev">&#9654;</span>
+        <span class="sheet2-disciplineName">{{discipline.name}}</span>
+        <span class="sheet2-disciplineCount">{{discipline.spells.length}}</span>
+      </button>
+
+      {{!-- Spells Grid for this Discipline - 2 columns --}}
+      <div class="sheet2-spellsGrid collapsed" data-discipline-grid="{{discipline.id}}">
+        {{#each discipline.spells as |spell|}}
+        <div class="sheet2-spellCard {{#if spell.isInherent}}inherent{{/if}}" data-spell-id="{{spell.id}}">
+          {{!-- Main Card Face - 205x65 --}}
+          <div class="sheet2-spellCardFace spell-toggle" data-spell-id="{{spell.id}}">
+            <div class="sheet2-spellCardImg spell-img-cast" data-spell-type="{{spell.type}}" data-spell-id="{{spell.id}}">
+              {{#if (eq spell.id "whispers-darkness")}}
+              <img src="systems/conan/images/icons/whispers_in_the_darkness_icon.png" alt="Whispers in the Darkness" />
+              {{else if (eq spell.id "illusory-shadow")}}
+              <img src="systems/conan/images/icons/illusory_shadow_icon.png" alt="Illusory Shadow" />
+              {{else if (eq spell.id "nights-gift")}}
+              <img src="systems/conan/images/icons/nights_gift_icon.png" alt="Night's Gift" />
+              {{else if (eq spell.id "create-bane-weapon")}}
+              <img src="systems/conan/images/icons/create_bane_weapon_icon.png" alt="Create Bane Weapon" />
+              {{else if (eq spell.id "body-of-living-iron")}}
+              <img src="systems/conan/images/icons/armor_up_icon.png" alt="Body of Living Iron" />
+              {{else if (eq spell.id "create-food")}}
+              <img src="systems/conan/images/icons/create_food_icon.png" alt="Create Food" />
+              {{else if (eq spell.id "radium-gem")}}
+              <img src="systems/conan/images/icons/radium_gem_icon.png" alt="Radium Gem" />
+              {{else if (eq spell.id "artifact-spirit")}}
+              <img src="systems/conan/images/icons/artifact_spirit_icon.png" alt="Artifact Spirit" />
+              {{else if (eq spell.id "tide-of-stone")}}
+              <img src="systems/conan/images/icons/tide_of_stone_icon.png" alt="Tide of Stone" />
+              {{else if (eq spell.id "animate-living-statue")}}
+              <img src="systems/conan/images/icons/animate_living_statue_icon.png" alt="Animate Living Statue" />
+              {{else if (eq spell.id "lotus-miasma")}}
+              <img src="systems/conan/images/icons/lotus_miasma_icon.png" alt="Lotus Miasma" />
+              {{else if (eq spell.id "lotus-flash")}}
+              <img src="systems/conan/images/icons/lotus_flash_icon.png" alt="Lotus Flash" />
+              {{else if (eq spell.id "craft-seal")}}
+              <img src="systems/conan/images/icons/craft_seal_icon.png" alt="Craft Seal" />
+              {{else if (eq spell.id "signs-jhebbal-sag")}}
+              <img src="systems/conan/images/icons/the_signs_of_jhebbal_sag_icon.png" alt="Signs of Jhebbal Sag" />
+              {{else if (eq spell.id "sense-sorcery")}}
+              <img src="systems/conan/images/icons/sense_sorcery_icon.png" alt="Sense Sorcery" />
+              {{else if (eq spell.id "life-sight")}}
+              <img src="systems/conan/images/icons/life_sight_icon.png" alt="Life Sight" />
+              {{else if (eq spell.id "talons-of-jhil")}}
+              <img src="systems/conan/images/icons/talons_of_jhil_icon.png" alt="Talons of Jhil" />
+              {{else if (eq spell.id "eyes-of-the-raven")}}
+              <img src="systems/conan/images/icons/eyes_of_the_raven_icon.png" alt="Eyes of the Raven" />
+              {{else if (eq spell.id "healing")}}
+              <img src="systems/conan/images/icons/healing_icon.png" alt="Healing" />
+              {{else if (eq spell.id "call-beast")}}
+              <img src="systems/conan/images/icons/call_beast_icon.png" alt="Call Beast" />
+              {{else if (eq spell.id "favor-four-winds")}}
+              <img src="systems/conan/images/icons/favor_of_the_four_winds_icon.png" alt="Favor of the Four Winds" />
+              {{else if (eq spell.id "inspire")}}
+              <img src="systems/conan/images/icons/inspire_icon.png" alt="Inspire" />
+              {{else if (eq spell.id "counter-ward")}}
+              <img src="systems/conan/images/icons/counter_ward_icon.png" alt="Counter Ward" />
+              {{else if (eq spell.id "snake-arrow")}}
+              <img src="systems/conan/images/icons/snake_arrow_icon.png" alt="Snake Arrow" />
+              {{else if (eq spell.id "astral-projection")}}
+              <img src="systems/conan/images/icons/astral_projection_icon.png" alt="Astral Projection" />
+              {{else if (eq spell.id "frightful-aura")}}
+              <img src="systems/conan/images/icons/frightful_aura_icon.png" alt="Frightful Aura" />
+              {{else if (eq spell.id "fearsome-ward")}}
+              <img src="systems/conan/images/icons/fearsome_ward_icon.png" alt="Fearsome Ward" />
+              {{else if (eq spell.id "wave-of-darkness")}}
+              <img src="systems/conan/images/icons/wave_of_darkness_icon.png" alt="Wave of Darkness" />
+              {{else if (eq spell.id "beast-form")}}
+              <img src="systems/conan/images/icons/beast_form_icon.png" alt="Beast Form" />
+              {{else if (eq spell.id "mesmerism")}}
+              <img src="systems/conan/images/icons/mesmerism_icon.png" alt="Mesmerism" />
+              {{else if (eq spell.id "bloodhound")}}
+              <img src="systems/conan/images/icons/bloodhound_icon.png" alt="Bloodhound" />
+              {{else if (eq spell.id "demonic-vessel")}}
+              <img src="systems/conan/images/icons/demonic_vessel_icon.png" alt="Demonic Vessel" />
+              {{else if (eq spell.id "infernal-ward")}}
+              <img src="systems/conan/images/icons/infernal_ward_icon.png" alt="Infernal Ward" />
+              {{else if (eq spell.id "bloody-talons")}}
+              <img src="systems/conan/images/icons/bloody_talons_icon.png" alt="Bloody Talons" />
+              {{else if (eq spell.id "demonic-ward")}}
+              <img src="systems/conan/images/icons/demonic_ward_icon.png" alt="Demonic Ward" />
+              {{else if (eq spell.id "uncanny-reach")}}
+              <img src="systems/conan/images/icons/uncanny_reach_icon.png" alt="Uncanny Reach" />
+              {{else if (eq spell.id "demonic-steed")}}
+              <img src="systems/conan/images/icons/demonic_steed_icon.png" alt="Demonic Steed" />
+              {{else if (eq spell.id "hellfire")}}
+              <img src="systems/conan/images/icons/hellfire_icon.png" alt="Hellfire" />
+              {{else if (eq spell.id "summon-fiend")}}
+              <img src="systems/conan/images/icons/summon_fiend_icon.png" alt="Summon Fiend" />
+              {{else if (eq spell.id "summon-horror")}}
+              <img src="systems/conan/images/icons/summon_horror_icon.png" alt="Summon Horror" />
+              {{else if (eq spell.id "summon-ghost")}}
+              <img src="systems/conan/images/icons/summon_ghost_icon.png" alt="Summon Ghost" />
+              {{else if (eq spell.id "death-scream")}}
+              <img src="systems/conan/images/icons/death_scream_icon.png" alt="Death Scream" />
+              {{else if (eq spell.id "raise-dead")}}
+              <img src="systems/conan/images/icons/raise_dead_icon.png" alt="Raise Dead" />
+              {{else if (eq spell.id "death-sight")}}
+              <img src="systems/conan/images/icons/death_sight_icon.png" alt="Death Sight" />
+              {{else if (eq spell.id "chilling-presence")}}
+              <img src="systems/conan/images/icons/chilling_presence_icon.png" alt="Chilling Presence" />
+              {{else if (eq spell.id "undead-ward")}}
+              <img src="systems/conan/images/icons/undead_ward_icon.png" alt="Undead Ward" />
+              {{else if (eq spell.id "life-leech")}}
+              <img src="systems/conan/images/icons/life_leech_icon.png" alt="Life Leech" />
+              {{else if (eq spell.id "chilling-touch")}}
+              <img src="systems/conan/images/icons/chilling_touch_icon.png" alt="Chilling Touch" />
+              {{else if (eq spell.id "stamina-leech")}}
+              <img src="systems/conan/images/icons/stamina_leech_icon.png" alt="Stamina Leech" />
+              {{else if (eq spell.id "capture-soul")}}
+              <img src="systems/conan/images/icons/capture_soul_icon.png" alt="Capture Soul" />
+              {{else}}
+              <svg viewBox="0 0 24 24"><path d="M12 2l1.4 4.2L18 8l-4.6 1.8L12 14l-1.4-4.2L6 8l4.6-1.8L12 2zm0 8l.7 2.1L15 13l-2.3.9L12 16l-.7-2.1L9 13l2.3-.9L12 10z"/></svg>
+              {{/if}}
+            </div>
+            <div class="sheet2-spellCardInfo">
+              <span class="sheet2-spellCardName">{{spell.name}}</span>
+            </div>
+          </div>
+          {{!-- Expanded Details Panel --}}
+          <div class="sheet2-spellCardExpanded" data-for="{{spell.id}}">
+            <div class="sheet2-spellCardMeta">
+              <span class="spell-type-{{spell.type}}">{{spell.typeDisplay}}</span>
+              <span class="spell-cost">{{spell.costDisplay}}</span>
+              {{#if spell.isInherent}}<span class="spell-inherent">Inherent</span>{{/if}}
+              {{#if spell.range}}<span>{{spell.range}}</span>{{/if}}
+              {{#if spell.damage}}<span class="spell-damage">{{spell.damage}}</span>{{/if}}
+            </div>
+            <div class="sheet2-spellCardDesc">{{spell.effect}}</div>
+            {{#if spell.limit}}<div class="sheet2-spellCardLimit">Limit: {{spell.limit}}</div>{{/if}}
+            {{#if spell.duration}}<div class="sheet2-spellCardMaintain">Maintain: {{spell.duration.maintainCost}}</div>{{/if}}
+            {{!-- Action Buttons Row --}}
+            <div class="sheet2-spellCardActions">
+              <button type="button" class="sheet2-spellCardBtn chat spell-to-chat" data-spell-id="{{spell.id}}" title="Send to Chat">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+              </button>
+              <button type="button" class="sheet2-spellCardBtn cast roll-spell" data-spell-id="{{spell.id}}" title="Cast Spell">
+                <svg viewBox="0 0 24 24"><path d="M12 2l1.4 4.2L18 8l-4.6 1.8L12 14l-1.4-4.2L6 8l4.6-1.8L12 2z"/></svg>
+                <span>CAST</span>
+              </button>
+              {{#if (eq spell.id "astral-projection")}}
+              {{#if ../../astralProjectionSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset astral-projection-reset" title="Reset Astral Projection">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "frightful-aura")}}
+              {{#if ../../frightfulAuraSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset frightful-aura-reset" title="Reset Frightful Aura">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "fearsome-ward")}}
+              {{#if ../../fearsomeWardSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset fearsome-ward-reset" title="Reset Fearsome Ward">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "beast-form")}}
+              {{#if ../../hasBeastForm}}
+              <button type="button" class="sheet2-spellCardBtn reset beast-form-reset" title="Reset Beast Form — clears state so you can cast again">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "mesmerism")}}
+              {{#if ../../mesmerismActive}}
+              <button type="button" class="sheet2-spellCardBtn reset mesmerism-reset" title="Reset Mesmerism — clears state so you can cast again">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "bloody-talons")}}
+              {{#if ../../bloodyTalonsActive}}
+              <button type="button" class="sheet2-spellCardBtn reset bloody-talons-dismiss" title="Dismiss Bloody Talons">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{else if ../../bloodyTalonsSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset bloody-talons-reset" title="Reset Bloody Talons (combat ended)">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "bloodhound")}}
+              {{#if ../../hasBloodhound}}
+              <button type="button" class="sheet2-spellCardBtn reset bloodhound-reset" title="Dismiss Bloodhound — break the bond">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "infernal-ward")}}
+              {{#if ../../infernalWardSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset infernal-ward-reset" title="Reset Infernal Ward">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "undead-ward")}}
+              {{#if ../../undeadWardSpent}}
+              <button type="button" class="sheet2-spellCardBtn reset undead-ward-reset" title="Reset Undead Ward">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "demonic-steed")}}
+              {{#if ../../demonicSteedActive}}
+              <button type="button" class="sheet2-spellCardBtn reset demonic-steed-reset" title="Dismiss Demonic Steed">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "demonic-ward")}}
+              {{#if ../../hasDemonicWard}}
+              <button type="button" class="sheet2-spellCardBtn reset demonic-ward-reset" title="Dismiss Demonic Ward">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "uncanny-reach")}}
+              {{#if ../../uncannyReachActive}}
+              <button type="button" class="sheet2-spellCardBtn reset uncanny-reach-reset" title="Dismiss Uncanny Reach">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#if (eq spell.id "capture-soul")}}
+              {{#if (or ../../captureSoulCaptured ../../captureSoulPrimed)}}
+              <button type="button" class="sheet2-spellCardBtn reset capture-soul-reset" title="Release captured soul">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              {{/if}}
+              {{/if}}
+              {{#unless spell.isInherent}}
+              <button type="button" class="sheet2-spellCardBtn delete delete-spell" data-spell-id="{{spell.id}}" title="Forget Spell">
+                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+              </button>
+              {{/unless}}
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+    {{/each}}
+
+    {{!-- Empty State --}}
+    {{#unless hasAnySpells}}
+    <div class="sheet2-spellsEmpty">
+      {{#if hasSorceryAccess}}
+      <span>Click INVOKE to learn a spell</span>
+      {{else}}
+      <span>Your origin does not grant sorcery access</span>
+      {{/if}}
+    </div>
+    {{/unless}}
+  </div>
+
+  {{!-- Spell Selection Menu (Overlay) - Matches Skills Menu Pattern --}}
+  <div class="sheet2-spellMenu">
+    <div class="sheet2-spellMenuHeader">
+      <h3>Disciplines</h3>
+      <div class="sheet2-spellMenuXP">
+        <span class="xp-label">Available:</span>
+        <span class="xp-value menu-xp-display">{{xpAvailable}}</span>
+        <span class="xp-label">XP</span>
+      </div>
+      <button type="button" class="sheet2-spellMenuClose close-invoke-spell" title="Close">×</button>
+    </div>
+
+    <div class="sheet2-spellMenuBody">
+      {{#each availableSpellsByDiscipline as |discipline|}}
+      <div class="sheet2-spellTier" data-discipline="{{discipline.id}}">
+        <div class="sheet2-spellTierHeader discipline-tier-toggle" data-discipline="{{discipline.id}}">
+          <span class="sheet2-spellTierChev">▶</span>
+          <span class="sheet2-spellTierName">{{discipline.name}}</span>
+          <span class="sheet2-spellTierCount">{{discipline.spells.length}}</span>
+        </div>
+        <div class="sheet2-spellTierContent" data-discipline-content="{{discipline.id}}">
+          <div class="sheet2-spellTierList" data-discipline-list="{{discipline.id}}">
+            {{#each discipline.spells as |spell|}}
+            <div class="sheet2-spellOption {{#if spell.owned}}owned{{/if}} {{#if spell.unavailable}}unavailable{{/if}} {{#if spell.queued}}queued{{/if}}"
+                 data-spell-def-id="{{spell.id}}"
+                 data-discipline="{{../id}}"
+                 data-xp-cost="{{spell.xpCost}}">
+              <div class="sheet2-spellOptionHeader spell-option-toggle">
+                <span class="sheet2-spellOptionName">{{spell.name}}</span>
+                <span class="sheet2-spellOptionCost">{{spell.xpCost}} XP</span>
+                <span class="sheet2-spellOptionChev">▶</span>
+              </div>
+              <div class="sheet2-spellOptionBody">
+                <div class="sheet2-spellOptionMeta">
+                  <span class="spell-type spell-type-{{spell.type}}">{{spell.typeDisplay}}</span>
+                  <span class="spell-cast-cost">{{spell.costDisplay}}</span>
+                  {{#if spell.range}}<span class="spell-range">{{spell.range}}</span>{{/if}}
+                  {{#if spell.damage}}<span class="spell-damage">{{spell.damage}}</span>{{/if}}
+                </div>
+                <div class="sheet2-spellOptionEffect">{{spell.effect}}</div>
+                {{#if spell.limit}}
+                <div class="sheet2-spellOptionLimit">
+                  <span class="limit-label">Limit:</span>
+                  <span class="limit-value">{{spell.limit}}</span>
+                </div>
+                {{/if}}
+                <div class="sheet2-spellOptionActions">
+                  {{#if spell.owned}}
+                  <div class="sheet2-spellOptionStatus owned">Already Learned</div>
+                  {{else if spell.unavailable}}
+                  <div class="sheet2-spellOptionStatus unavailable">
+                    {{#if spell.cantAfford}}Cannot Afford{{/if}}
+                  </div>
+                  {{else}}
+                  <button type="button" class="sheet2-spellAddBtn spell-queue-toggle" data-spell-def-id="{{spell.id}}" data-discipline="{{../id}}">
+                    {{#if spell.queued}}QUEUED{{else}}ADD{{/if}}
+                  </button>
+                  {{/if}}
+                </div>
+              </div>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="sheet2-spellMenuFooter">
+      <div class="sheet2-spellQueueSummary">
+        <span class="spell-queue-count">0</span> spells queued
+        (<span class="spell-queue-cost">0</span> XP)
+      </div>
+      <button type="button" class="sheet2-confirmSpellsBtn confirm-spell-selection" disabled>
+        Confirm Selection
+      </button>
+    </div>
+  </div>
+
+</div>

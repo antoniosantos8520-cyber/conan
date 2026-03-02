@@ -1,0 +1,66 @@
+{{!-- TAB: JOURNAL --}}
+<div class="tab-journal">
+
+  {{!-- Journal Notebook --}}
+  <div class="sheet2-journalSection">
+    <div class="sheet2-sectionHead">
+      <h3>Notes</h3>
+    </div>
+
+    {{!-- Page Tabs --}}
+    <div class="sheet2-journalTabs">
+      {{#each journalPages as |page num|}}
+      <button type="button" class="sheet2-journalPageTab {{#if page.active}}active{{/if}}" data-page="{{num}}" title="{{#if page.subject}}{{page.subject}}{{else}}Page {{num}}{{/if}}">
+      </button>
+      {{/each}}
+      <button type="button" class="sheet2-journalAddPage add-journal-page" title="Add Page">+</button>
+      {{!-- Badges Tab - Always Last --}}
+      <button type="button" class="sheet2-journalPageTab sheet2-badgesTab {{#if badgesPageActive}}active{{/if}}" data-page="badges" title="Earned Badges">
+        <img src="systems/conan/images/icons/journal_page_icon.png" class="sheet2-badgesTabIcon" alt="Badges"/>
+      </button>
+    </div>
+
+    {{!-- Active Page Content (Notes or Badges) --}}
+    {{#if badgesPageActive}}
+    {{!-- Badges Page Content --}}
+    <div class="sheet2-badgesContent">
+      <div class="sheet2-badgesHeader">
+        <span class="sheet2-badgesTitle">Merit Badges</span>
+        <span class="sheet2-badgesCount">{{earnedBadges.length}} earned</span>
+      </div>
+      {{#if earnedBadges.length}}
+      <div class="sheet2-badgesGrid">
+        {{#each earnedBadges as |badge|}}
+        <div class="sheet2-badgeItem {{#if badge.fromOrigin}}origin-badge{{/if}} {{#if badge.isSpell}}spell-badge{{/if}}" title="{{badge.name}}&#10;{{badge.effect}}">
+          <img src="{{badge.icon}}" class="sheet2-badgeImage" alt="{{badge.name}}"/>
+          <span class="sheet2-badgeLabel">{{badge.name}}</span>
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="sheet2-badgesEmpty">
+        <p>No badges earned yet.</p>
+        <p class="sheet2-badgesHint">Learn skills to earn badges!</p>
+      </div>
+      {{/if}}
+    </div>
+    {{else}}
+    {{!-- Regular Journal Page Content --}}
+    <div class="sheet2-journalContent">
+      <div class="sheet2-journalSubjectLine">
+        <span class="sheet2-journalSubjectLabel">Subject:</span>
+        <input type="text" class="sheet2-journalSubjectInput journal-subject-input" data-page="{{system.journal.activePage}}" value="{{activePageSubject}}"/>
+      </div>
+      <textarea class="sheet2-journalTextarea journal-page-content" data-page="{{system.journal.activePage}}" placeholder="Write your notes here...">{{activePageContent}}</textarea>
+    </div>
+
+    {{!-- Delete Page Button (only show if more than 1 page) --}}
+    {{#if canDeletePage}}
+    <div class="sheet2-journalActions">
+      <button type="button" class="sheet2-journalDeletePage delete-journal-page" data-page="{{system.journal.activePage}}" title="Delete Current Page">Delete Page</button>
+    </div>
+    {{/if}}
+    {{/if}}
+  </div>
+
+</div>

@@ -1,0 +1,789 @@
+{
+  "_meta": {
+    "description": "Random quotes from Robert E. Howard's Conan stories, films, and the Hyborian universe for display on character sheets",
+    "version": "2.0.0",
+    "totalQuotes": 195
+  },
+  "quotes": [
+    {
+      "text": "To crush your enemies, see them driven before you, and to hear the lamentation of their women.",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 1982)"
+    },
+    {
+      "text": "Crom, I have never prayed to you before. I have no tongue for it. No one, not even you, will remember if we were good men or bad. Why we fought, or why we died. All that matters is that two stood against many. That's what's important! Valor pleases you, Crom... so grant me one request. Grant me revenge! And if you do not listen, then to hell with you!",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 1982)"
+    },
+    {
+      "text": "Only pain.",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 1982)"
+    },
+    {
+      "text": "He is Conan, Cimmerian. He won't cry, so I cry for him.",
+      "source": "Subatia the Hyrkanian"
+    },
+    {
+      "text": "Look at the strength in your body, the desire in your heart, I gave you this!",
+      "source": "Thulsa Doom (Conan the Barbarian, 1982)"
+    },
+    {
+      "text": "Enough talk!",
+      "source": "Conan the Cimmerian (Conan the Destroyer, 1984)"
+    },
+    {
+      "text": "What good is a sword against sorcery?",
+      "source": "Conan the Cimmerian (Conan the Destroyer, 1984)"
+    },
+    {
+      "text": "I'll find my kingdom, and a queen to sit beside me.",
+      "source": "Conan the Cimmerian (Conan the Destroyer, 1984)"
+    },
+    {
+      "text": "I live, I love, I slay, and I am content.",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 2011)"
+    },
+    {
+      "text": "When a Cimmerian feels thirst, it is a thirst for blood.",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 2011)"
+    },
+    {
+      "text": "No man shall live in chains.",
+      "source": "Conan the Cimmerian (Conan the Barbarian, 2011)"
+    },
+    {
+      "text": "No man may have me, unless he's beaten me in a fair fight.",
+      "source": "Red Sonja (Red Sonja, 1985)"
+    },
+    {
+      "text": "If danger is a trade, I'll learn it by myself.",
+      "source": "Red Sonja (Red Sonja, 1985)"
+    },
+    {
+      "text": "I know my future. You have none.",
+      "source": "Red Sonja (Red Sonja, 1985)"
+    },
+    {
+      "text": "You have nothing more to learn, Sonja. You are the master of the master. Never have I seen your equal. You must learn to like men a little better.",
+      "source": "Varna (Red Sonja, 1985)"
+    },
+    {
+      "text": "If you yield only to a conqueror, then prepare to be conquered.",
+      "source": "Kalidor (Red Sonja, 1985)"
+    },
+    {
+      "text": "The winds of the steppes carry no mercy for the weak—only arrows and dust.",
+      "source": "Subatia the Hyrkanian"
+    },
+    {
+      "text": "A queen's crown is forged in blood, not gold; I'll wear mine atop a mountain of foes.",
+      "source": "Thalira the Aquilonian"
+    },
+    {
+      "text": "By the serpent's coils, I'll unravel any spell that dares bind me.",
+      "source": "Vira the Stygian Exile"
+    },
+    {
+      "text": "Frost and fury are my kin; no southern heat can melt a Vanir's resolve.",
+      "source": "Freya the Vanir"
+    },
+    {
+      "text": "The forest whispers secrets to those who listen—and death to those who trespass.",
+      "source": "Morna the Pict"
+    },
+    {
+      "text": "Elephants may trample the earth, but a clever blade fells even the mightiest beast.",
+      "source": "Yasmina, Devi of Vendhya"
+    },
+    {
+      "text": "Sail with me, and the seas will yield treasures beyond your wildest greed.",
+      "source": "Belit, Queen of the Black Coast"
+    },
+    {
+      "text": "Armor is for fools who fear the bite of steel; I wear only my scars with pride.",
+      "source": "Valeria of the Red Brotherhood"
+    },
+    {
+      "text": "Ride hard, strike true, and let the gods sort the fallen.",
+      "source": "Red Sonya of Rogatino"
+    },
+    {
+      "text": "The black lotus blooms in dreams, but awakens only nightmares for the unwary.",
+      "source": "Xaltotun the Sorcerer"
+    },
+    {
+      "text": "Cimmerian hills breed iron men; soft lands make only shadows.",
+      "source": "Conan the Cimmerian"
+    },
+    {
+      "text": "Gold flows like rivers in Ophir, but I'll dam it with my enemies' bones.",
+      "source": "Karella the Zingaran"
+    },
+    {
+      "text": "Set's priests hide in shadows, but my light is the flash of a drawn dagger.",
+      "source": "Mitra's High Priestess, Elara"
+    },
+    {
+      "text": "From the frozen wastes, I come with Ymir's breath to chill your coward's heart.",
+      "source": "Gunnar the Aesir"
+    },
+    {
+      "text": "Thieves' guilds are webs of lies; I cut through them like silk.",
+      "source": "Zoltan the Zamoran Shadow"
+    },
+    {
+      "text": "In Vendhya's jungles, gods demand sacrifice—I'll offer them your head.",
+      "source": "Rajah's Blade, Indira"
+    },
+    {
+      "text": "Pictish drums beat war's rhythm; dance to it or die.",
+      "source": "Bran Mak Morn, Last King of the Picts"
+    },
+    {
+      "text": "Hyrkanian bows sing death's song across endless plains.",
+      "source": "Tamara the Horse-Lord"
+    },
+    {
+      "text": "Ancient Valusia's ruins hold curses that time cannot bury.",
+      "source": "Kull of Atlantis"
+    },
+    {
+      "text": "Reavers' feasts are sweetened by the cries of the conquered.",
+      "source": "Amra the Lion, Pirate Chief"
+    },
+    {
+      "text": "Sorcerers bargain with demons; I bargain with none but my blade.",
+      "source": "Livia the Ophirean Rebel"
+    },
+    {
+      "text": "Aquilonia's legions march in vain against the barbarian tide.",
+      "source": "King Numedides"
+    },
+    {
+      "text": "Black coasts swallow the foolish, spitting back only legends.",
+      "source": "Zaporavo the Corsair"
+    },
+    {
+      "text": "Crom's mountain watches silent, granting strength to the worthy.",
+      "source": "Rann the Cimmerian Scout"
+    },
+    {
+      "text": "Shemite sands hide assassins' blades, sharp as envy.",
+      "source": "Belit of Shem"
+    },
+    {
+      "text": "Nordheim's blizzards forge warriors from ice and rage.",
+      "source": "Wulfhere the Skull-Splitter"
+    },
+    {
+      "text": "Kothian forges hammer lies into steel.",
+      "source": "Salome the Witch"
+    },
+    {
+      "text": "Vanir raids leave only flames and vengeance in their wake.",
+      "source": "Ragnor the Red-Beard"
+    },
+    {
+      "text": "Asgardian halls echo with sagas of gods slain.",
+      "source": "Heimdul the God-Slayer"
+    },
+    {
+      "text": "Hyborian wars redraw maps in rivers of blood.",
+      "source": "Epemitreus the Sage"
+    },
+    {
+      "text": "Thieves slip through shadows, claiming crowns from kings.",
+      "source": "Taurus of Nemedia"
+    },
+    {
+      "text": "Ymir's giants crush the bold, but fear the cunning.",
+      "source": "Sif the Frost-Maiden"
+    },
+    {
+      "text": "Stygian pyramids guard pharaohs' wrath eternal.",
+      "source": "Thoth-Amon the Sorcerer"
+    },
+    {
+      "text": "Pictland's spears defend the wild heart of freedom.",
+      "source": "Gorm the Pictish Chief"
+    },
+    {
+      "text": "Conan's path is strewn with thrones trodden underfoot.",
+      "source": "Conan the Cimmerian"
+    },
+    {
+      "text": "Arenas crown victors in blood-soaked glory.",
+      "source": "Murilo the Gladiator"
+    },
+    {
+      "text": "Sorcerers' curses poison the air like foul mist.",
+      "source": "Tsotha-Lanti the Wizard"
+    },
+    {
+      "text": "Hyborian nomads roam free, unbound by stone walls.",
+      "source": "Olmec the Wanderer"
+    },
+    {
+      "text": "Cimmerian pride runs deeper than any wound.",
+      "source": "Brule the Spear-Slayer"
+    },
+    {
+      "text": "Sunken Lemuria whispers of horrors awakening.",
+      "source": "Dagon the Deep-One's Priest"
+    },
+    {
+      "text": "Picts ambush in mists, silent as ghosts.",
+      "source": "Cormac na Connacht"
+    },
+    {
+      "text": "Zingaran corsairs raid under moonlit sails.",
+      "source": "Tranicos the Buccaneer"
+    },
+    {
+      "text": "Hyrkanian shamans ride winds of prophecy.",
+      "source": "Kerim Shah the Turanian"
+    },
+    {
+      "text": "Valusian serpents strike from forgotten tombs.",
+      "source": "Ka-Nu the Ambassador"
+    },
+    {
+      "text": "Set's hunger feeds on souls offered in darkness.",
+      "source": "Akivasha the Vampire"
+    },
+    {
+      "text": "Cimmerian forges birth blades of northern fire.",
+      "source": "Crom-Ya the Smith"
+    },
+    {
+      "text": "Reavers' oaths bind tighter than chains.",
+      "source": "Strom the Pirate"
+    },
+    {
+      "text": "Heroes' deeds echo through time's bloody scrolls.",
+      "source": "Prospero the Chronicler"
+    },
+    {
+      "text": "Black lotus snares the mind in velvet chains.",
+      "source": "Yara the Priest"
+    },
+    {
+      "text": "Aquilonian rebels rise with swords of justice.",
+      "source": "Pallantides the General"
+    },
+    {
+      "text": "Mitra's light banishes shadows, but night returns.",
+      "source": "Hadrathus the Priest"
+    },
+    {
+      "text": "Shemite bazaars trade in whispers and daggers.",
+      "source": "Khemsa the Assassin"
+    },
+    {
+      "text": "Zamora's towers house spiders of intrigue.",
+      "source": "Nestor the Gunderman"
+    },
+    {
+      "text": "Nordheim's snows bury the unworthy.",
+      "source": "Niord the Hunter"
+    },
+    {
+      "text": "Kothian mercenaries sell loyalty like cheap wine.",
+      "source": "Strabonus the King"
+    },
+    {
+      "text": "Black kingdoms pulse with ancient rhythms.",
+      "source": "Bajujh the Kushite"
+    },
+    {
+      "text": "Vanir axes cleave fates in red fury.",
+      "source": "Grimmdal the Raider"
+    },
+    {
+      "text": "Asgardian gods reward the valiant dead.",
+      "source": "Atali the Frost-Giant's Daughter"
+    },
+    {
+      "text": "Hyborian chronicles foretell the barbarian's rise.",
+      "source": "The Nemedian Scribe"
+    },
+    {
+      "text": "Thieves' cunning unlocks forbidden vaults.",
+      "source": "Shevatas the Master Thief"
+    },
+    {
+      "text": "Vendhyan temples demand rivers of blood.",
+      "source": "Chunder Shan the Governor"
+    },
+    {
+      "text": "Ymir's breath freezes cowards in their tracks.",
+      "source": "Horsa the Aesir"
+    },
+    {
+      "text": "Stygian sands entomb secrets of the damned.",
+      "source": "Khosatral Khel the Demon"
+    },
+    {
+      "text": "Pictish war-cries shatter civilized dreams.",
+      "source": "Sagayetha the Shaman"
+    },
+    {
+      "text": "Conan's laugh defies gods and kings.",
+      "source": "Conan the Cimmerian"
+    },
+    {
+      "text": "Gladiators' blood fuels the crowd's savage joy.",
+      "source": "Flavius the Arena Master"
+    },
+    {
+      "text": "Sorcerers summon abyssal terrors for power.",
+      "source": "Orastes the Renegade"
+    },
+    {
+      "text": "Hyborian caravans brave perils for spice and gold.",
+      "source": "Murad the Merchant"
+    },
+    {
+      "text": "Cimmerian omens read doom in the stars.",
+      "source": "Venarium's Elder, Grimnir"
+    },
+    {
+      "text": "Atlantean ruins curse the greedy explorer.",
+      "source": "Diviatix the Druid"
+    },
+    {
+      "text": "Picts paint victory in enemies' gore.",
+      "source": "Teyanoga the Warrior"
+    },
+    {
+      "text": "Zingaran wine drowns sorrows in red haze.",
+      "source": "Zaporavo's Mate, Sancha"
+    },
+    {
+      "text": "Hyrkanian hordes thunder like storms unleashed.",
+      "source": "Yezdigerd the Turanian King"
+    },
+    {
+      "text": "Valusian kings rule from thrones of bone.",
+      "source": "Trocero the Count"
+    },
+    {
+      "text": "Set's priests weave doom in serpent tongues.",
+      "source": "Thutothmes the Acolyte"
+    },
+    {
+      "text": "Cimmerian winters temper souls for war.",
+      "source": "Eithriall the Hill-Woman"
+    },
+    {
+      "text": "Reavers' sails hunt horizons for plunder.",
+      "source": "Zarono the Black"
+    },
+    {
+      "text": "Heroes tread paths lined with fallen foes.",
+      "source": "Publius the Scholar"
+    },
+    {
+      "text": "Black lotus visions lure to madness' edge.",
+      "source": "Yogah of Yag"
+    },
+    {
+      "text": "Aquilonian banners fly high in defiance.",
+      "source": "Conan the King"
+    },
+    {
+      "text": "Mitra's faithful clash with darkness' spawn.",
+      "source": "Pelias the Sorcerer"
+    },
+    {
+      "text": "Shemite nomads ride with scimitars drawn.",
+      "source": "Olgerd Vladislav"
+    },
+    {
+      "text": "Zamora's thieves claim shadows as kin.",
+      "source": "Conan the Thief"
+    },
+    {
+      "text": "Nordheim's eternal ice guards ancient secrets.",
+      "source": "Rann Njalsdatter"
+    },
+    {
+      "text": "Know, oh prince, that between the years when the oceans drank Atlantis and the gleaming cities, and the years of the rise of the Sons of Aryas, there was an Age undreamed of, when shining kingdoms lay spread across the world like blue mantles beneath the stars.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "Hither came Conan, the Cimmerian, black-haired, sullen-eyed, sword in hand, a thief, a reaver, a slayer, with gigantic melancholies and gigantic mirth, to tread the jeweled thrones of the Earth under his sandalled feet.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "Civilized men are more discourteous than savages because they know they can be impolite without having their skulls split, as a general thing.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "Barbarism is the natural state of mankind. Civilization is unnatural. It is a whim of circumstance. And barbarism must always ultimately triumph.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "In this world men struggle and suffer vainly, finding pleasure only in the bright madness of battle.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "I have known many gods. He who denies them is as blind as he who trusts them too deeply.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "They have no hope here or hereafter. Their gods are Crom and his dark race, who rule over a sunless place of everlasting mist, which is the world of the dead.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "What do I know of cultured ways, the gilt, the craft and the lie? I, who was born in a naked land and bred in the open sky. The subtle tongue, the sophist guile, they fail when the broadswords sing; Rush in and die, dogs—I was a man before I was a king.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "When I was a fighting-man, the kettle-drums they beat, The people scattered gold-dust before my horses feet; But now I am a great king, the people hound my track With poison in my wine-cup, and daggers at my back.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "The more I see of what you call civilization, the more highly I think of what you call savagery!",
+      "source": "Robert E. Howard, Conan Tales"
+    },
+    {
+      "text": "In the old free days all I wanted was a sharp sword and a straight path to my enemies. Now no paths are straight and my sword is useless.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "For man's only weapon is courage that flinches not from the gates of Hell itself, and against such not even the legions of Hell can stand.",
+      "source": "Robert E. Howard"
+    },
+    {
+      "text": "Cimmeria—a land of darkness and deep night, where no sun ever shone, and where the people were dark and brooding like the land itself.",
+      "source": "Robert E. Howard, \"Cimmeria\" (poem)"
+    },
+    {
+      "text": "But in the north, the tribes are growing. These people are called Hyborians, or Hybori; their god was Bori—some great chief, whom legend made even more ancient as the king who led them into the north, in the days of the great Cataclysm.",
+      "source": "Robert E. Howard, \"The Hyborian Age\""
+    },
+    {
+      "text": "The tale of the next thousand years is the tale of the rise of the Hyborians, whose warlike tribes dominate the western world.",
+      "source": "Robert E. Howard, \"The Hyborian Age\""
+    },
+    {
+      "text": "A tribe of that race has discovered the use of stone in building, and the first Hyborian kingdom has come into being—the rude and barbaric kingdom of Hyperborea.",
+      "source": "Robert E. Howard, \"The Hyborian Age\""
+    },
+    {
+      "text": "The Hyborians have encountered the Picts, driving them into the barren lands of the west.",
+      "source": "Robert E. Howard, \"The Hyborian Age\""
+    },
+    {
+      "text": "He seemed more a part of the sun and high places of the outlands. His slightest movement spoke of steel-spring muscles knit to a keen brain.",
+      "source": "Robert E. Howard, Conan Tales"
+    },
+    {
+      "text": "Conan, grim, blood-stained, naked but for a loin-cloth, shackles on his mighty limbs, his blue eyes blazing beneath the tangled black mane.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "I know this: if life is an illusion, then I am no less an illusion, and being thus, the illusion is real to me.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "Someday, when all your civilization and science are likewise swept away, your kind will pray for a man with a sword.",
+      "source": "Robert E. Howard"
+    },
+    {
+      "text": "Where does barbarism leave off and civilization begin?",
+      "source": "Robert E. Howard"
+    },
+    {
+      "text": "Yet it may be in some far day the shadows shall fade and the Prince of Darkness be chained forever in his hell. And till then mankind can but stand up stoutly to the monsters in his own heart and without.",
+      "source": "Robert E. Howard"
+    },
+    {
+      "text": "History fair drips with blood.",
+      "source": "Robert E. Howard"
+    },
+    {
+      "text": "Let me live deep while I live; let me know the rich juices of red meat and stinging wine on my palate, the hot embrace of white arms, the mad exultation of battle when the blue blades flame and crimson, and I am content.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "When I cannot stand alone, it will be time to die. But I would like to fall with teeth locked in a foeman's throat.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "I live, I burn with life, I love, I slay, and am content.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "He did not wonder at the strangeness of it all, not even why he should be in such a place of dread and mystery. He had ceased to wonder at the strange places his feet led him.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "There comes a time in every man's life when he must face the reality of his own mortality.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "He had not learned to fear. All the world was his oyster, and he was the stone knife that would pry it open.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "In that dead citadel of forgotten ages might sleep shapes of living horror.",
+      "source": "Robert E. Howard, \"Red Nails\""
+    },
+    {
+      "text": "Men say I am a thief, but this charge I deny: I am a liberator of doomed treasure.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "Free my sword arm, and I'll make corpses of you all!",
+      "source": "Robert E. Howard, \"A Witch Shall Be Born\""
+    },
+    {
+      "text": "A man's greatest gift is a sharp blade and a strong arm to wield it.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "The clangor of the swords had died away, the shouting of the slaughter was hushed; silence lay on the red-stained snow.",
+      "source": "Robert E. Howard, \"The Frost-Giant's Daughter\""
+    },
+    {
+      "text": "Their path was the sword-path and red it ran through the world.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "He moved with the assurance of a panther in the dark.",
+      "source": "Robert E. Howard, \"Rogues in the House\""
+    },
+    {
+      "text": "This is what I was born for—this and battle! Let me be a mercenary, with sword and courage for sale.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "Crom and his dark race never answered save with the clang of steel.",
+      "source": "Robert E. Howard, \"The Phoenix on the Sword\""
+    },
+    {
+      "text": "I seek not beyond death. It may be the blackness averred by the Nemedian skeptics, or Crom's realm of ice and cloud, or the snowy plains and vaulted halls of the Nordheimer's Valhalla.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "Know, oh prince, that between the years when the oceans drank Atlantis and the gleaming cities, and the years of the rise of the Sons of Aryas, there was an Age undreamed of.",
+      "source": "Robert E. Howard, \"The Nemedian Chronicles\""
+    },
+    {
+      "text": "What use to call on Crom? He cares not if men live or die. Better to be silent than to call his attention to you; he will send you dooms, not fortune!",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "Conan sensed that the aura of ancient evil which hung over this place was not lifted by the coming of morning.",
+      "source": "Robert E. Howard, \"The Devil in Iron\""
+    },
+    {
+      "text": "His sword was part of him, and his arm was tireless.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "There was movement in the darkness and a figure emerged, tall and powerful as a leopard.",
+      "source": "Robert E. Howard, \"Rogues in the House\""
+    },
+    {
+      "text": "He had learned that civilized men were more dangerous than savages—not physically, but in the crafty cunning of their plotting.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "The wind moaned through the black branches, and there was no other sound in all the forest.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "Life was a continual battle, with no quarter asked or given.",
+      "source": "Robert E. Howard, \"Black Colossus\""
+    },
+    {
+      "text": "The sands of the desert are red with the blood of kings and armies.",
+      "source": "Robert E. Howard, \"Black Colossus\""
+    },
+    {
+      "text": "He was bred in the game of war, and his sword was as natural to him as his hands.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "Steel cannot harm me, but I am not ready for death.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "In that dead empire men walked the streets bearing the ghosts of their former glory.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "The night was full of sounds: the howl of distant wolves, the hiss of the wind, and the clank of armor.",
+      "source": "Robert E. Howard, \"The Frost-Giant's Daughter\""
+    },
+    {
+      "text": "Fear? I know not fear. I have looked into the abyss and the abyss blinked first.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "Gold and women, they are the roots of all the trouble in the world.",
+      "source": "Robert E. Howard, \"Rogues in the House\""
+    },
+    {
+      "text": "He fought, not because fighting was his trade, but because he loved battle.",
+      "source": "Robert E. Howard, \"Red Nails\""
+    },
+    {
+      "text": "Shadows swam in the darkness and unseen presences lurked in the black corners.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "There is always another dawn.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "Let teachers and priests and philosophers brood over questions of reality and illusion. I know this: if life is illusion, then I am no less an illusion, and being thus, the illusion is real to me.",
+      "source": "Robert E. Howard, \"Queen of the Black Coast\""
+    },
+    {
+      "text": "He was a man against whom the world had turned, but who had not turned against the world.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "The jewels winked at him in the darkness like demon eyes.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "Death had been Conan's companion for so long that he had come to look upon the dark specter as an old comrade.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "Out of the darkness came the sound of swords singing their deadly song.",
+      "source": "Robert E. Howard, \"A Witch Shall Be Born\""
+    },
+    {
+      "text": "The moon hung like a silver scimitar in the black velvet sky.",
+      "source": "Robert E. Howard, \"Shadows in Zamboula\""
+    },
+    {
+      "text": "All fled from him who had never fled from any man.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "He came into the world with teeth and claws and fists, and with teeth and claws and fists he would leave it.",
+      "source": "Robert E. Howard, \"Black Colossus\""
+    },
+    {
+      "text": "Midnight found him still on his feet, his sword still dripping.",
+      "source": "Robert E. Howard, \"Red Nails\""
+    },
+    {
+      "text": "He was as one born out of his time—too early for civilization's chains, too late for the age of heroes.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "I am not a priest. I do not know why things happen as they do. I only know they happen.",
+      "source": "Robert E. Howard, \"The Devil in Iron\""
+    },
+    {
+      "text": "In this world every man must stand alone.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "There comes a time when a man must choose between the path of the warrior and the path of the wise.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "The ancient temple stood like a fist thrust up from the earth, defying the sky.",
+      "source": "Robert E. Howard, \"Jewels of Gwahlur\""
+    },
+    {
+      "text": "He came of a race of hillmen, accustomed to scaling forbidding crags, and he was a man of unusual strength and agility.",
+      "source": "Robert E. Howard, \"Jewels of Gwahlur\""
+    },
+    {
+      "text": "There was no mistaking the invitation in her eyes, nor the challenge.",
+      "source": "Robert E. Howard, \"A Witch Shall Be Born\""
+    },
+    {
+      "text": "In one of these dens merriment thundered to the low smoke-stained roof, where rascals gathered in every stage of rags and tatters.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "Men said he spent much time in the hills, in curious conclaves with surviving remnants of an old race.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "Aye. And when the day of reckoning came, the sword was not spared. So Acheron ceased to be.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "I am of human origin, but I rule demons. You have seen the Lords of the Black Circle.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "Once all living things worshipped him. That was long ago, when beasts and men spoke one language.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "As he talked he was leading the way deeper and deeper into the ancient wilderness.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "Shaking the sweat and blood from his eyes, Conan saw four horsemen sitting their steeds in the twilight and staring up at him.",
+      "source": "Robert E. Howard, \"A Witch Shall Be Born\""
+    },
+    {
+      "text": "Man of the raven locks, tell me your name, so that my brothers in Vanaheim may know who was the last of Wulfhere's band to fall before the sword of Heimdul.",
+      "source": "Robert E. Howard, \"The Frost-Giant's Daughter\""
+    },
+    {
+      "text": "Once, limned against a purple sunless horizon, he saw the mighty walls and towers of a great city such as rose nowhere on the waking earth he knew.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "The night was moonless and black, as befitted such bloody work.",
+      "source": "Robert E. Howard, \"A Witch Shall Be Born\""
+    },
+    {
+      "text": "Trust not to sorcery, for the cost is always more than the gain.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "He struck with such fury that his blade sang as it cut the air.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "Through midnight shadows he ran, silent as a panther.",
+      "source": "Robert E. Howard, \"Rogues in the House\""
+    },
+    {
+      "text": "Every man's hand was against him, and his hand was against every man.",
+      "source": "Robert E. Howard, \"The Tower of the Elephant\""
+    },
+    {
+      "text": "Gold has a way of vanishing, but cold steel remains.",
+      "source": "Robert E. Howard, \"Black Colossus\""
+    },
+    {
+      "text": "There was a tiger's strength in his thews and a wolf's stealth in his tread.",
+      "source": "Robert E. Howard, \"The Hour of the Dragon\""
+    },
+    {
+      "text": "The dice were loaded against him but still he played, for that was his nature.",
+      "source": "Robert E. Howard, \"The Scarlet Citadel\""
+    },
+    {
+      "text": "He trusted nothing but his own senses and his sword.",
+      "source": "Robert E. Howard, \"Beyond the Black River\""
+    },
+    {
+      "text": "Somewhere a jackal howled and was answered by another, and another, until all the night was alive with their hideous concert.",
+      "source": "Robert E. Howard, \"Shadows in Zamboula\""
+    },
+    {
+      "text": "They were the sons of barbarians, and the seed of civilization had not yet been planted in their hearts.",
+      "source": "Robert E. Howard, \"The People of the Black Circle\""
+    },
+    {
+      "text": "His word was as good as his sword arm—and no man questioned that.",
+      "source": "Robert E. Howard, \"Black Colossus\""
+    }
+  ]
+}

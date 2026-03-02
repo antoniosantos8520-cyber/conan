@@ -1,0 +1,133 @@
+{{!-- TAB: ORIGIN --}}
+<div class="tab-origin">
+
+  {{#if originData}}
+    {{!-- Origin Header --}}
+    <div class="sheet2-originHeader">
+      <div class="sheet2-sectionHead">
+        <h3>{{originData.name}}</h3>
+      </div>
+    </div>
+
+    {{!-- Random Flavor Quote (changes on each sheet open) --}}
+    {{#if randomQuote}}
+    <div class="sheet2-originQuote">
+      <p class="sheet2-quoteText">"{{randomQuote.text}}"</p>
+      <p class="sheet2-quoteSource">— {{randomQuote.source}}</p>
+    </div>
+    {{/if}}
+
+    {{!-- Origin Stats --}}
+    <div class="sheet2-originStats">
+      <div class="sheet2-originStat">
+        <span class="sheet2-originStatLabel">Base LP</span>
+        <span class="sheet2-originStatValue">{{originData.baseLP}}</span>
+      </div>
+      <div class="sheet2-originStat">
+        <span class="sheet2-originStatLabel">Sorcery</span>
+        <span class="sheet2-originStatValue">{{originData.sorcery}}</span>
+      </div>
+      <div class="sheet2-originStat">
+        <span class="sheet2-originStatLabel">Skills</span>
+        <span class="sheet2-originStatValue">{{originData.startingSkills}}</span>
+      </div>
+    </div>
+
+    {{!-- Origin Bonuses --}}
+    <div class="sheet2-originBonuses">
+      <div class="sheet2-sectionHead">
+        <h3>Origin Bonuses</h3>
+      </div>
+      <div class="sheet2-originBonusText">{{originData.bonuses}}</div>
+
+      {{!-- Bonus Choice Selection (if applicable) --}}
+      {{#if originBonuses.requiresChoice}}
+      <div class="sheet2-bonusChoiceSection">
+        {{#if (eq originBonuses.choiceType "stat")}}
+          <div class="sheet2-bonusChoiceLabel">
+            Choose your bonus stat for this Tale:
+          </div>
+          <div class="sheet2-bonusChoiceButtons">
+            {{#each originBonuses.choiceOptions}}
+              <button type="button"
+                      class="sheet2-bonusChoiceBtn origin-bonus-choice {{#if (eq ../system.originBonuses.statChoice this.value)}}active{{/if}}"
+                      data-choice-type="stat"
+                      data-choice-value="{{this.value}}">
+                {{this.label}}
+              </button>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if (eq originBonuses.choiceType "skill")}}
+          <div class="sheet2-bonusChoiceLabel">
+            Choose your starting skill:
+          </div>
+          <div class="sheet2-bonusChoiceButtons">
+            {{#each originBonuses.choiceOptions}}
+              <button type="button"
+                      class="sheet2-bonusChoiceBtn origin-bonus-choice {{#if (eq ../system.originBonuses.skillChoice this.value)}}active{{/if}}"
+                      data-choice-type="skill"
+                      data-choice-value="{{this.value}}">
+                {{this.label}}
+              </button>
+            {{/each}}
+          </div>
+        {{/if}}
+      </div>
+      {{/if}}
+
+      {{!-- Active Bonuses Summary --}}
+      <div class="sheet2-activeBonusSummary">
+        <div class="sheet2-sectionHead">
+          <h4>Active Bonuses</h4>
+        </div>
+        <div class="sheet2-activeBonusList">
+          {{!-- Stat Check Bonuses --}}
+          {{#if originBonuses.statChecks.might}}<div class="sheet2-activeBonusItem">+{{originBonuses.statChecks.might}} Might Checks</div>{{/if}}
+          {{#if originBonuses.statChecks.edge}}<div class="sheet2-activeBonusItem">+{{originBonuses.statChecks.edge}} Edge Checks</div>{{/if}}
+          {{#if originBonuses.statChecks.grit}}<div class="sheet2-activeBonusItem">+{{originBonuses.statChecks.grit}} Grit Checks</div>{{/if}}
+          {{#if originBonuses.statChecks.wits}}<div class="sheet2-activeBonusItem">+{{originBonuses.statChecks.wits}} Wits Checks</div>{{/if}}
+
+          {{!-- Attack Bonuses --}}
+          {{#if originBonuses.attacks.might}}<div class="sheet2-activeBonusItem">+{{originBonuses.attacks.might}} Melee Attacks</div>{{/if}}
+          {{#if originBonuses.attacks.edge}}<div class="sheet2-activeBonusItem">+{{originBonuses.attacks.edge}} Ranged Attacks</div>{{/if}}
+          {{#if originBonuses.attacks.wits}}<div class="sheet2-activeBonusItem">+{{originBonuses.attacks.wits}} Sorcery Attacks</div>{{/if}}
+          {{#if originBonuses.attacks.contest}}<div class="sheet2-activeBonusItem">+{{originBonuses.attacks.contest}} Contest Checks</div>{{/if}}
+
+          {{!-- Damage Bonuses --}}
+          {{#if originBonuses.damage.melee}}<div class="sheet2-activeBonusItem">+{{originBonuses.damage.melee}} Melee Damage</div>{{/if}}
+          {{#if originBonuses.damage.ranged}}<div class="sheet2-activeBonusItem">+{{originBonuses.damage.ranged}} Ranged Damage</div>{{/if}}
+          {{#if originBonuses.damage.sorcery}}<div class="sheet2-activeBonusItem">+{{originBonuses.damage.sorcery}} Sorcery Damage</div>{{/if}}
+
+          {{!-- LP Recovery Bonus --}}
+          {{#if originBonuses.lpRecovery}}<div class="sheet2-activeBonusItem">+{{originBonuses.lpRecovery}} LP on Recovery</div>{{/if}}
+
+          {{!-- Stamina Spends --}}
+          {{#each originBonuses.staminaSpends}}
+            <div class="sheet2-activeBonusItem sheet2-staminaSpendBonus">
+              <span class="sheet2-staminaCostBadge">{{this.cost}} SP</span> {{this.effect}}
+            </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+
+    {{!-- Origin Description/Lore --}}
+    {{#if originData.description}}
+    <div class="sheet2-originDescription">
+      <div class="sheet2-sectionHead">
+        <h3>Your Story</h3>
+      </div>
+      <div class="sheet2-originDescriptionText">{{{originData.descriptionHtml}}}</div>
+    </div>
+    {{/if}}
+
+  {{else}}
+    {{!-- No Origin Selected --}}
+    <div class="sheet2-originEmpty">
+      <p>No origin selected. Use the settings cog on the character panel to choose an origin.</p>
+    </div>
+  {{/if}}
+
+</div>

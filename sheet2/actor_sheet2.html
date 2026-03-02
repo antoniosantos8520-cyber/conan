@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Menus</title>
+  <style>
+    :root{
+      --bg:#000;
+      --ink:#fff;
+      --muted:rgba(255,255,255,.65);
+      --soft:rgba(255,255,255,.08);
+      --soft2:rgba(255,255,255,.05);
+      --stroke:rgba(255,255,255,.85);
+      --stroke2:rgba(255,255,255,.35);
+      --swapMs:220ms;
+
+      --tabSize:72px;
+      --pillH:72px;
+
+      --tipBg: rgba(10,10,10,.96);
+      --tipStroke: rgba(255,255,255,.35);
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:"Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .sheet{
+      width: min(980px, 96vw);
+      height: min(680px, 92vh);
+      border: 2px solid var(--stroke);
+      position: relative;
+      background: var(--bg);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-width: 340px;
+      min-height: 520px;
+    }
+
+    .header{
+      height:44px;
+      border-bottom:1px solid var(--stroke);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      font-size:22px;
+      font-weight:700;
+      background: rgba(0,0,0,.92);
+      flex: 0 0 auto;
+    }
+    .close{
+      font-size:30px;
+      line-height:1;
+      cursor:pointer;
+      opacity:.85;
+      user-select:none;
+    }
+    .close:hover{ opacity:1; }
+
+    /* MAIN | TABS (right) */
+    .layout{
+      flex: 1 1 auto;
+      min-height:0;
+      display:grid;
+      grid-template-columns: 1fr 104px;
+    }
+
+    .main{
+      padding:14px 16px 16px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width:0;
+      min-height:0;
+    }
+
+    .tabs{
+      border-left:1px solid var(--stroke);
+      padding:10px 8px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      overflow:auto;
+      min-height:0;
+
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+    .tabs::-webkit-scrollbar{ width:0; height:0; }
+
+    .tabBtn{
+      width:var(--tabSize);
+      height:var(--tabSize);
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      background: transparent;
+      color: var(--ink);
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      transition: transform .14s ease, background .14s ease, color .14s ease;
+      user-select:none;
+      flex: 0 0 auto;
+    }
+    .tabBtn svg{ width:26px; height:26px; fill: currentColor; }
+    .tabBtn .label{ font-size:11px; letter-spacing:.3px; }
+    .tabBtn:hover{ background: var(--soft); transform: translateY(-1px); }
+    .tabBtn:active{ transform: translateY(0px) scale(.98); }
+    .tabBtn.active{
+      background: var(--ink);
+      color: var(--bg);
+      font-weight:700;
+      cursor:default;
+    }
+
+    /* Tooltips */
+    [data-tip]{ position:relative; }
+    [data-tip]:hover::after{
+      content: attr(data-tip);
+      position:absolute;
+      z-index:99;
+      left:50%;
+      transform: translateX(-50%);
+      bottom: calc(100% + 10px);
+      width: max-content;
+      max-width: 280px;
+      white-space: pre-wrap;
+      padding:10px 10px;
+      border:1px solid var(--tipStroke);
+      border-radius:12px;
+      background: var(--tipBg);
+      color:var(--ink);
+      font-size:12px;
+      line-height:1.35;
+      box-shadow: 0 10px 24px rgba(0,0,0,.55);
+      pointer-events:none;
+    }
+    [data-tip]:hover::before{
+      content:"";
+      position:absolute;
+      z-index:99;
+      left:50%;
+      transform: translateX(-50%);
+      bottom: calc(100% + 3px);
+      width:0; height:0;
+      border-left:7px solid transparent;
+      border-right:7px solid transparent;
+      border-top:7px solid var(--tipStroke);
+      pointer-events:none;
+    }
+
+    /* ===== Compact character block ===== */
+    .charTop{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      padding:12px;
+      display:grid;
+      grid-template-columns: 1fr 220px; /* left info + portrait */
+      gap:12px;
+      align-items:start;
+      background: rgba(0,0,0,.35);
+      flex: 0 0 auto;
+    }
+
+    .leftInfo{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width:0;
+    }
+
+    .vitalsRow{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      padding:10px 14px;
+      min-width:92px;
+      height: var(--pillH);
+      text-align:center;
+      background: transparent;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:4px;
+    }
+    .pill .k{ font-size:11px; opacity:.9; letter-spacing:.4px; }
+    .pill .v{ font-size:18px; font-weight:900; }
+
+    .lpPill{
+      min-width:132px;
+      background: rgba(255,255,255,.06);
+    }
+    .lpPill .v{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .lpPill .tag{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.6px;
+      opacity:.95;
+      padding:2px 6px;
+      border:1px solid var(--stroke2);
+      border-radius:10px;
+    }
+
+    .drPill .v{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .drPill .miniIcon{
+      width:18px;
+      height:18px;
+      border:1px solid var(--stroke2);
+      border-radius:6px;
+      display:grid;
+      place-items:center;
+      font-size:12px;
+      opacity:.95;
+    }
+
+    /* Name/origin */
+    .nameBox{
+      border:1px solid var(--stroke);
+      border-radius:18px;
+      padding:10px 12px;
+      background: transparent;
+      min-width:0;
+    }
+    .nameBox .name{
+      width:100%;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:var(--ink);
+      font-size:22px;
+      font-weight:900;
+      text-align:center;
+      padding:8px 0 6px;
+      border-bottom:1px solid var(--stroke);
+      letter-spacing:.6px;
+    }
+    .nameBox .origin{
+      width:100%;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+      padding:8px 0 2px;
+      letter-spacing:.5px;
+    }
+
+    .portrait{
+      width:200px;
+      height:200px;
+      border:2px solid var(--stroke);
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+      justify-self:end;
+      align-self:start;
+    }
+
+    /* Swap area (scroll; scrollbar hidden) */
+    .swapArea{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      background: rgba(0,0,0,.55);
+      padding:16px;
+      overflow:auto;
+      min-height:0;
+      flex:1 1 auto;
+
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+    .swapArea::-webkit-scrollbar{ width:0; height:0; }
+
+    .panel{
+      opacity:1;
+      transform: translateX(0);
+      transition: opacity var(--swapMs) ease, transform var(--swapMs) ease;
+    }
+    .panel.leaving{ opacity:0; transform: translateX(-18px); }
+    .panel.entering{ opacity:0; transform: translateX(18px); }
+
+    /* ===== Home UI ===== */
+    .homeWrap{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+
+    .triRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:12px;
+    }
+    .tri{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      background: transparent;
+      padding:12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      height:64px;
+    }
+    .tri .num{ font-size:28px; font-weight:900; line-height:1; }
+    .tri .lbl{
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      opacity:.9;
+    }
+
+    .statsCard{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      background: transparent;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+
+    /* ✅ NEW COLUMN ORDER: Arrow | Stat | Value | Die | Roll */
+    .statsHead{
+      display:grid;
+      grid-template-columns: 46px 1fr 120px 120px 120px;
+      gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid var(--stroke);
+      font-size:12px;
+      letter-spacing:.6px;
+      opacity:.95;
+      align-items:center;
+    }
+    .statsHead .center{ text-align:center; }
+
+    .statList{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:12px;
+    }
+
+    .statItem{
+      border:1px solid var(--stroke2);
+      border-radius:14px;
+      background: var(--soft2);
+      overflow:hidden;
+    }
+
+    /* ✅ NEW COLUMN ORDER: Arrow | Stat | Value | Die | Roll */
+    .statTop{
+      display:grid;
+      grid-template-columns: 46px 1fr 120px 120px 120px;
+      gap:10px;
+      align-items:center;
+      padding:10px 10px;
+    }
+
+    .statName{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      letter-spacing:.3px;
+      font-size:18px;
+      min-width:0;
+    }
+
+    .rollBtn{
+      border:1px solid var(--stroke);
+      background: transparent;
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 8px;
+      font-weight:900;
+      text-align:center;
+      cursor:pointer;
+      transition: background .14s ease, transform .14s ease;
+      user-select:none;
+    }
+    .rollBtn:hover{ background: var(--soft); }
+    .rollBtn:active{ transform: scale(.985); }
+
+    .pillEdit{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border-radius:12px;
+      padding:10px 10px;
+      text-align:center;
+      font-weight:900;
+      font-size:18px;
+      min-height:42px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .pillEdit input, .pillEdit select{
+      width:100%;
+      border:0;
+      outline:none;
+      background: transparent;
+      color:var(--ink);
+      text-align:center;
+      font: inherit;
+      font-weight:900;
+    }
+
+    .chev{
+      width:42px;
+      height:42px;
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      font-size:16px;
+      font-weight:900;
+      opacity:.95;
+      user-select:none;
+      cursor:pointer;
+      transition: background .14s ease, transform .14s ease;
+    }
+    .chev:hover{ background: var(--soft); }
+    .chev:active{ transform: scale(.985); }
+
+    .statBody{
+      display:none;
+      border-top:1px solid var(--stroke2);
+      padding:10px 12px 12px;
+      gap:10px;
+      background: rgba(255,255,255,.03);
+    }
+    .statItem.open .statBody{ display:grid; }
+
+    .statNotes{
+      border:1px dashed var(--stroke2);
+      border-radius:12px;
+      padding:10px 10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .editRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-items:center;
+    }
+    .editRow label{
+      display:block;
+      font-size:11px;
+      letter-spacing:.6px;
+      opacity:.9;
+      margin-bottom:6px;
+      text-transform:uppercase;
+    }
+    .field{
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      padding:10px;
+      background: rgba(255,255,255,.04);
+    }
+    .field input, .field select{
+      width:100%;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:var(--ink);
+      font-family: inherit;
+      font-size:13px;
+    }
+
+    .miniBottom{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    .miniCard{
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      background: transparent;
+      padding:12px 12px;
+      min-height:74px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+
+    .recoverBoxes{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+    }
+    .tick{
+      width:26px; height:26px;
+      border:1px solid var(--stroke);
+      border-radius:8px;
+      background: transparent;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      user-select:none;
+    }
+    .tick.on{ background: var(--ink); color: var(--bg); }
+
+    .staminaField{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .staminaField input{
+      width:100%;
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      padding:10px 12px;
+      background: rgba(255,255,255,.04);
+      color:var(--ink);
+      font-size:18px;
+      font-weight:900;
+      text-align:center;
+      outline:none;
+    }
+
+    .skullBtn{
+      width:56px;
+      height:56px;
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      background: transparent;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      transition: background .14s ease, transform .14s ease;
+    }
+    .skullBtn:hover{ background: var(--soft); }
+    .skullBtn:active{ transform: scale(.985); }
+    .skullBtn svg{ width:30px; height:30px; fill: currentColor; }
+
+    @media (max-height: 620px){
+      .portrait{ width:170px; height:170px; }
+      :root{ --pillH:64px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sheet">
+    <div class="header">
+      <div>Menus</div>
+      <div class="close" title="Close">×</div>
+    </div>
+
+    <div class="layout">
+      <div class="main">
+        <div class="charTop">
+          <div class="leftInfo">
+            <div class="vitalsRow">
+              <div class="pill lpPill" data-tip="Life Points (LP)\nYour overall health + survivability.">
+                <div class="v">
+                  <span id="lpCur">31</span>/<span id="lpMax">39</span>
+                  <span class="tag">LP</span>
+                </div>
+                <div class="k"></div>
+              </div>
+
+              <div class="pill drPill" data-tip="DR\nDamage Reduction. Subtract from incoming damage.">
+                <div class="v">
+                  <span class="miniIcon">🛡</span>
+                  <span id="drVal">3</span>
+                </div>
+                <div class="k">DR</div>
+              </div>
+
+              <div class="pill" data-tip="Initiative\nOrder marker for combat.">
+                <div class="v" id="initVal">✕</div>
+                <div class="k">Initiative</div>
+              </div>
+            </div>
+
+            <div class="nameBox">
+              <input class="name" placeholder="NAME" />
+              <input class="origin" placeholder="ORIGIN" />
+            </div>
+          </div>
+
+          <div class="portrait" data-tip="Portrait\n(placeholder)">IMAGE</div>
+        </div>
+
+        <div class="swapArea">
+          <div class="panel" id="panel"></div>
+        </div>
+      </div>
+
+      <div class="tabs" id="tabs"></div>
+    </div>
+  </div>
+
+  <script>
+    const tabsEl = document.getElementById("tabs");
+    const panel = document.getElementById("panel");
+
+    const TAB_DEFS = [
+      { key:"home",    label:"Home",      icon:`<path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3l9-8z"/>` },
+      { key:"attacks", label:"Attacks",   icon:`<path d="M14.7 6.3l3 3-8.4 8.4H6.3v-3L14.7 6.3zM16.1 4.9l1.4-1.4a1 1 0 011.4 0l1.6 1.6a1 1 0 010 1.4l-1.4 1.4-3-3z"/>` },
+      { key:"spells",  label:"Spells",    icon:`<path d="M12 2l1.4 4.2L18 8l-4.6 1.8L12 14l-1.4-4.2L6 8l4.6-1.8L12 2zm7 11l.9 2.7L23 17l-3.1 1.3L19 21l-.9-2.7L15 17l3.1-1.3L19 13z"/>` },
+      { key:"skills",  label:"Skills",    icon:`<path d="M16 2H8a2 2 0 00-2 2v16a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2zm-6 17l-3-3 1.4-1.4L10 16.2l5.6-5.6L17 12l-7 7z"/>` },
+      { key:"equip",   label:"Equip/Inv", icon:`<path d="M7 7h10V5H7v2zm12 2H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-9a2 2 0 00-2-2zm-9 9H6v-2h4v2z"/>` },
+      { key:"journal", label:"Journal",   icon:`<path d="M6 2h11a2 2 0 012 2v16a2 2 0 01-2 2H6a3 3 0 01-3-3V5a3 3 0 013-3zm0 2a1 1 0 00-1 1v14a1 1 0 001 1h11V4H6zm2 3h7v2H8V7zm0 4h7v2H8v-2z"/>` }
+    ];
+
+    const HOME = {
+      flexDie: "d10",
+      physical: 6,
+      sorcery: 5,
+      stats: [
+        { key:"might", name:"Might", value:3, die:"d6", notes:"Used for: lifting, breaking, grappling, forcing doors.\nTypical checks: Athletics, Intimidation (physical), Feats of strength." },
+        { key:"edge",  name:"Edge",  value:3, die:"d6", notes:"Used for: reflexes, aim, initiative contests, quick reactions.\nTypical checks: Acrobatics, Marksmanship, Sleight of hand." },
+        { key:"grit",  name:"Grit",  value:3, die:"d6", notes:"Used for: endurance, pain tolerance, resisting fear/poison.\nTypical checks: Fortitude, Resolve, Marching, Holding out." },
+        { key:"wits",  name:"Wits",  value:3, die:"d6", notes:"Used for: perception, tactics, awareness, problem solving.\nTypical checks: Notice, Investigation, Survival, Tactics." }
+      ],
+      recovery: [false, false],
+      stamina: 5
+    };
+
+    let activeKey = "home";
+
+    function tabButton(def, isActive){
+      const btn = document.createElement("button");
+      btn.className = "tabBtn" + (isActive ? " active" : "");
+      btn.dataset.key = def.key;
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">${def.icon}</svg>
+        <div class="label">${def.label}</div>
+      `;
+      return btn;
+    }
+
+    function renderTabs(){
+      tabsEl.innerHTML = "";
+      TAB_DEFS.forEach(def => {
+        const b = tabButton(def, def.key === activeKey);
+        if (def.key !== activeKey){
+          b.addEventListener("click", () => setActive(def.key));
+        }
+        tabsEl.appendChild(b);
+      });
+    }
+
+    function buildHome(){
+      const wrap = document.createElement("div");
+      wrap.className = "homeWrap";
+
+      const tri = document.createElement("div");
+      tri.className = "triRow";
+      tri.innerHTML = `
+        <div class="tri" data-tip="Flex Die\nYour base die for flexible actions.">
+          <div class="num">${HOME.flexDie.toUpperCase()}</div>
+          <div class="lbl">Flex</div>
+        </div>
+        <div class="tri" data-tip="Physical\nYour physical capability rating.">
+          <div class="num">${HOME.physical}</div>
+          <div class="lbl">Physical</div>
+        </div>
+        <div class="tri" data-tip="Sorcery\nYour magical capability rating.">
+          <div class="num">${HOME.sorcery}</div>
+          <div class="lbl">Sorcery</div>
+        </div>
+      `;
+      wrap.appendChild(tri);
+
+      const card = document.createElement("div");
+      card.className = "statsCard";
+
+      const head = document.createElement("div");
+      head.className = "statsHead";
+      head.innerHTML = `
+        <div></div>
+        <div>STAT</div>
+        <div class="center">VALUE</div>
+        <div class="center">DIE</div>
+        <div class="center">ROLL</div>
+      `;
+      card.appendChild(head);
+
+      const list = document.createElement("div");
+      list.className = "statList";
+
+      HOME.stats.forEach(stat => {
+        const item = document.createElement("div");
+        item.className = "statItem";
+        item.dataset.key = stat.key;
+
+        /* ✅ NEW ORDER: arrow | name | value | die | roll */
+        item.innerHTML = `
+          <div class="statTop">
+            <div class="chev" data-action="toggle" data-tip="Expand / Edit / Notes" aria-label="Expand">▶</div>
+
+            <div class="statName"><span>${stat.name}</span></div>
+
+            <div class="pillEdit" data-pill="value">
+              <span class="readonly">${stat.value}</span>
+              <input class="edit" type="number" value="${stat.value}" style="display:none;" />
+            </div>
+
+            <div class="pillEdit" data-pill="die">
+              <span class="readonly">${stat.die}</span>
+              <select class="edit" style="display:none;">
+                ${["d4","d6","d8","d10","d12"].map(d => `<option value="${d}" ${d===stat.die?"selected":""}>${d}</option>`).join("")}
+              </select>
+            </div>
+
+            <div class="rollBtn" data-action="roll" data-tip="Roll ${stat.name}">ROLL</div>
+          </div>
+
+          <div class="statBody">
+            <div class="statNotes" data-tip="Notes\nCommon skills/checks tied to this stat.">
+              ${stat.notes.replaceAll("\n","<br>")}
+            </div>
+
+            <div class="editRow">
+              <div>
+                <label>Value</label>
+                <div class="field"><input type="number" data-edit="value" value="${stat.value}"></div>
+              </div>
+              <div>
+                <label>Die</label>
+                <div class="field">
+                  <select data-edit="die">
+                    ${["d4","d6","d8","d10","d12"].map(d => `<option value="${d}" ${d===stat.die?"selected":""}>${d}</option>`).join("")}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const chev = item.querySelector('[data-action="toggle"]');
+        const roll = item.querySelector('[data-action="roll"]');
+
+        const valuePill = item.querySelector('[data-pill="value"]');
+        const diePill = item.querySelector('[data-pill="die"]');
+        const valueReadonly = valuePill.querySelector(".readonly");
+        const dieReadonly = diePill.querySelector(".readonly");
+        const valueEditInline = valuePill.querySelector(".edit");
+        const dieEditInline = diePill.querySelector(".edit");
+
+        const valueEdit = item.querySelector('[data-edit="value"]');
+        const dieEdit = item.querySelector('[data-edit="die"]');
+
+        function setExpanded(expanded){
+          item.classList.toggle("open", expanded);
+          chev.textContent = expanded ? "▼" : "▶";
+
+          valueReadonly.style.display = expanded ? "none" : "inline";
+          dieReadonly.style.display = expanded ? "none" : "inline";
+          valueEditInline.style.display = expanded ? "inline" : "none";
+          dieEditInline.style.display = expanded ? "inline" : "none";
+
+          if (expanded){
+            valueEdit.value = valueEditInline.value;
+            dieEdit.value = dieEditInline.value;
+          } else {
+            const newVal = parseInt(valueEditInline.value, 10) || 0;
+            const newDie = dieEditInline.value;
+
+            stat.value = newVal;
+            stat.die = newDie;
+
+            valueReadonly.textContent = String(newVal);
+            dieReadonly.textContent = newDie;
+
+            valueEdit.value = String(newVal);
+            dieEdit.value = newDie;
+          }
+        }
+
+        // Only arrow folds/unfolds
+        chev.addEventListener("click", (e) => {
+          e.stopPropagation();
+          setExpanded(!item.classList.contains("open"));
+        });
+
+        // Roll never folds/unfolds
+        roll.addEventListener("click", (e) => {
+          e.stopPropagation();
+          console.log(`ROLL ${stat.name}: ${stat.value} + ${stat.die}`);
+          alert(`Roll ${stat.name}: ${stat.value} + ${stat.die} (placeholder)`);
+        });
+
+        // Sync inline editors and expanded editors
+        valueEditInline.addEventListener("input", () => valueEdit.value = valueEditInline.value);
+        dieEditInline.addEventListener("change", () => dieEdit.value = dieEditInline.value);
+        valueEdit.addEventListener("input", () => valueEditInline.value = valueEdit.value);
+        dieEdit.addEventListener("change", () => dieEditInline.value = dieEdit.value);
+
+        list.appendChild(item);
+      });
+
+      card.appendChild(list);
+      wrap.appendChild(card);
+
+      const bottom = document.createElement("div");
+      bottom.className = "miniBottom";
+      bottom.innerHTML = `
+        <div class="miniCard" data-tip="Recover\nTwo clicks: mark recovery uses.">
+          <div class="recoverBoxes">
+            <div class="tick ${HOME.recovery[0] ? "on":""}" data-rec="0" aria-label="Recovery 1"></div>
+            <div class="tick ${HOME.recovery[1] ? "on":""}" data-rec="1" aria-label="Recovery 2"></div>
+          </div>
+        </div>
+
+        <div class="miniCard" data-tip="Stamina\nEditable numeric field.">
+          <div class="staminaField">
+            <input id="staminaInput" type="number" value="${HOME.stamina}">
+          </div>
+        </div>
+
+        <div class="miniCard" data-tip="Death Saves\nClick the skull to roll death saves.">
+          <button class="skullBtn" id="deathBtn" aria-label="Roll death saves">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2c-4.4 0-8 3.6-8 8 0 3.2 1.9 6 4.6 7.3V20c0 1.1.9 2 2 2h3c1.1 0 2-.9 2-2v-2.7C18.1 16 20 13.2 20 10c0-4.4-3.6-8-8-8zm-3 9c-.8 0-1.5-.7-1.5-1.5S8.2 8 9 8s1.5.7 1.5 1.5S9.8 11 9 11zm6 0c-.8 0-1.5-.7-1.5-1.5S14.2 8 15 8s1.5.7 1.5 1.5S15.8 11 15 11zm-6.2 4.5c.7-.9 1.8-1.5 3.2-1.5s2.5.6 3.2 1.5c.3.4.2 1-.2 1.3-.4.3-1 .2-1.3-.2-.3-.4-.9-.7-1.7-.7s-1.4.3-1.7.7c-.3.4-.9.5-1.3.2-.4-.3-.5-.9-.2-1.3z"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      wrap.appendChild(bottom);
+
+      bottom.querySelectorAll(".tick").forEach(box => {
+        box.addEventListener("click", () => {
+          const idx = parseInt(box.dataset.rec, 10);
+          HOME.recovery[idx] = !HOME.recovery[idx];
+          box.classList.toggle("on", HOME.recovery[idx]);
+        });
+      });
+
+      bottom.querySelector("#staminaInput").addEventListener("input", (e) => {
+        HOME.stamina = parseInt(e.target.value, 10) || 0;
+      });
+
+      bottom.querySelector("#deathBtn").addEventListener("click", () => {
+        console.log("DEATH SAVE ROLL (placeholder)");
+        alert("Death save roll (placeholder)");
+      });
+
+      return wrap;
+    }
+
+    function setPanelContent(key){
+      panel.classList.add("leaving");
+
+      setTimeout(() => {
+        panel.innerHTML = "";
+        const title = TAB_DEFS.find(t => t.key === key)?.label ?? key;
+
+        if (key === "home"){
+          panel.appendChild(buildHome());
+        } else {
+          const h2 = document.createElement("h2");
+          h2.textContent = title;
+          const p = document.createElement("p");
+          p.textContent = `This is ${title}. (placeholder content)`;
+          panel.appendChild(h2);
+          panel.appendChild(p);
+        }
+
+        panel.classList.remove("leaving");
+        panel.classList.add("entering");
+        requestAnimationFrame(() => panel.classList.remove("entering"));
+      }, 220);
+    }
+
+    function setActive(nextKey){
+      if (nextKey === activeKey) return;
+      activeKey = nextKey;
+      renderTabs();
+      setPanelContent(nextKey);
+    }
+
+    // init
+    renderTabs();
+    setPanelContent(activeKey);
+  </script>
+</body>
+</html>

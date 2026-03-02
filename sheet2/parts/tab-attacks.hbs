@@ -1,0 +1,436 @@
+{{!-- TAB: ARMS --}}
+<div class="tab-attacks">
+
+  {{!-- Weapons Section Container --}}
+  <div class="sheet2-weaponsSection">
+    {{!-- Header Row: Combat Skills + ARMS Button --}}
+    <div class="sheet2-attacksHeader">
+      {{!-- Combat Skills Column (left side of header) --}}
+      {{!-- Only show icons for skills the character owns --}}
+      <div class="sheet2-combatSkillsColumn">
+        {{!-- === PRIORITY 1: PASSIVE SKILLS (top) === --}}
+        {{!-- Received Buff: Leader of Men (passive indicator on buffed targets) --}}
+        {{#if hasLeaderOfMenBuff}}
+        <img src="systems/conan/images/icons/leader_of_men_i_icon.png"
+             class="sheet2-combatSkillIcon leader-buff-indicator active"
+             alt="Inspired" title="Inspired by {{leaderOfMenBuffSource}} (+1 Attack)"/>
+        {{/if}}
+        {{!-- Received Buff: Bane Weapon (passive indicator on buffed targets) --}}
+        {{#if hasBaneWeaponBuff}}
+        <img src="systems/conan/images/icons/create_bane_weapon_icon.png"
+             class="sheet2-combatSkillIcon bane-weapon-buff-indicator active"
+             alt="Bane Weapon" title="Bane Weapon from {{baneWeaponBuffSource}} (+{{baneWeaponBuffDie}} melee/thrown damage)"/>
+        {{/if}}
+        {{!-- Received Buff: Favor of the Four Winds (+3 bonus Move Actions next Turn) --}}
+        {{#if hasFavorFourWindsBuff}}
+        <img src="systems/conan/images/icons/favor_of_the_four_winds_icon.png"
+             class="sheet2-combatSkillIcon active stance-active"
+             alt="Favor of the Four Winds" title="Favor of the Four Winds from {{favorFourWindsBuffSource}} — +3 bonus Move Actions on your next Turn"/>
+        {{/if}}
+        {{!-- Passive: Reload (ammo recovery — activates on initiative) --}}
+        {{#if hasReloadIcon}}
+        <img src="systems/conan/images/icons/reload_icon.png"
+             class="sheet2-combatSkillIcon reload-trigger active {{#if reloadTrackerActive}}clickable stance-active{{/if}}"
+             alt="Reload" title="{{#if reloadTrackerActive}}Reload — Click to recover spent ammo{{else}}Reload — Activates on initiative{{/if}}"/>
+        {{/if}}
+        {{!-- Passive: Fierce Strokes (melee: roll 2, take best) --}}
+        {{#if hasFierceStrokes}}
+        <img src="systems/conan/images/icons/fierce_strokes_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Fierce Strokes" title="Fierce Strokes (Melee: roll 2, take best)"/>
+        {{/if}}
+        {{!-- Passive: Fierce Shots (ranged: roll 2, take best) --}}
+        {{#if hasFierceShots}}
+        <img src="systems/conan/images/icons/fierce_shots_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Fierce Shots" title="Fierce Shots (Ranged: roll 2, take best)"/>
+        {{/if}}
+        {{!-- Passive: Murderous Frenzy (requires two-handed heavy weapon) --}}
+        {{#if hasMurderousFrenzy}}
+        <img src="systems/conan/images/icons/murderous_frenzy_i_icon.png"
+             class="sheet2-combatSkillIcon {{#if canUseMurderousFrenzy}}active{{/if}}"
+             alt="Murderous Frenzy" title="Murderous Frenzy"/>
+        {{/if}}
+        {{!-- Poisoner: clickable toggle — apply/remove poison on melee weapons --}}
+        {{#if hasPoisoner}}
+        <img src="systems/conan/images/icons/poisoner_i_icon.png"
+             class="sheet2-combatSkillIcon poisoner-trigger active clickable {{#if canUsePoisoner}}usable{{/if}} {{#if anyWeaponPoisoned}}stance-active{{/if}}"
+             alt="Poisoner" title="{{#if anyWeaponPoisoned}}Poisoner — Click to clean weapons (wastes Ichor){{else if canUsePoisoner}}Poisoner — Click to apply poison{{else}}Poisoner — No Ichor available{{/if}}"/>
+        {{/if}}
+        {{!-- Passive: Eagle-Eyed (ranged damage bonus) - II replaces I if both owned --}}
+        {{#if hasEagleEyedII}}
+        <img src="systems/conan/images/icons/eagle_eyed_ii_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Eagle-Eyed II" title="Eagle-Eyed II (+2 Ranged Damage)"/>
+        {{else if hasEagleEyed}}
+        <img src="systems/conan/images/icons/eagle_eyed_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Eagle-Eyed" title="Eagle-Eyed (+1 Ranged Damage)"/>
+        {{/if}}
+        {{!-- Passive: Assassin (Edge for attack with 1H Light/Medium melee) --}}
+        {{#if hasAssassin}}
+        <img src="systems/conan/images/icons/assassin_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Assassin" title="Assassin (1H Light/Medium: Edge for Attack)"/>
+        {{/if}}
+        {{!-- Passive: Brawler (+1 melee damage) --}}
+        {{#if hasBrawler}}
+        <img src="systems/conan/images/icons/brawler_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Brawler" title="Brawler (+1 Melee Damage)"/>
+        {{/if}}
+        {{!-- Passive: Waterfront Fists (unarmed = improvised) --}}
+        {{#if hasWaterfrontFists}}
+        <img src="systems/conan/images/icons/waterfront_fists_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Waterfront Fists" title="Waterfront Fists (Unarmed = 1d4 Light)"/>
+        {{/if}}
+        {{!-- Passive: Fleet Footed (2 Move = bonus 3rd Move) --}}
+        {{#if hasFleetFooted}}
+        <img src="systems/conan/images/icons/fleet_footed_i_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Fleet Footed" title="Fleet Footed (2 Move = bonus 3rd Move)"/>
+        {{/if}}
+        {{!-- Passive: Soldier's Endurance (ignore armor encumbrance) --}}
+        {{#if hasSoldiersEndurance}}
+        <img src="systems/conan/images/icons/soldier's_endurance_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Soldier's Endurance" title="Soldier's Endurance (Ignore armor encumbrance, Heavy=Medium stipulations)"/>
+        {{/if}}
+        {{!-- Passive: Legendary Sword Arm (bonus melee attack once per turn) --}}
+        {{#if hasLegendarySwordArm}}
+        <img src="systems/conan/images/icons/ledgendary_sword_arm_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Legendary Sword Arm" title="Legendary Sword Arm (Bonus Melee Attack, 1/turn)"/>
+        {{/if}}
+        {{!-- Passive: Sharpshooter (bonus ranged attack once per turn) --}}
+        {{#if hasSharpshooter}}
+        <img src="systems/conan/images/icons/sharpshooter_icon.png"
+             class="sheet2-combatSkillIcon active"
+             alt="Sharpshooter" title="Sharpshooter (Bonus Ranged Attack, 1/turn)"/>
+        {{/if}}
+        {{!-- === PRIORITY 2: SITUATIONAL SKILLS (middle) === --}}
+        {{!-- Situational: Born in the Saddle (active when mounted) --}}
+        {{#if hasBornInSaddle}}
+        <img src="systems/conan/images/icons/born_in_the_saddle_i_icon.png"
+             class="sheet2-combatSkillIcon active {{#if system.isMounted}}stance-active{{/if}}"
+             alt="Born in the Saddle" title="{{#if system.isMounted}}Born in the Saddle ACTIVE - No ranged penalty, +1 vs non-mounted{{else}}Born in the Saddle - Mount up to activate{{/if}}"/>
+        {{/if}}
+        {{!-- Situational: Wide Arc (melee hits 2 in Touch, 1/round) --}}
+        {{#if hasWideArc}}
+        <img src="systems/conan/images/icons/wide_arc_icon.png"
+             class="sheet2-combatSkillIcon wide-arc-trigger active clickable usable"
+             alt="Wide Arc" title="Wide Arc (Melee hits 2 in Touch, use higher Def, 1/round)"/>
+        {{/if}}
+        {{!-- Situational: Unseen Strike (pre-activate for surprise attack) --}}
+        {{#if hasUnseenStrike}}
+        <img src="systems/conan/images/icons/unseen_strike_i_icon.png"
+             class="sheet2-combatSkillIcon unseen-strike-trigger active clickable {{#if canUseUnseenStrike}}usable{{/if}} {{#if unseenStrikeActive}}stance-active{{/if}}"
+             alt="Unseen Strike" title="{{#if unseenStrikeActive}}Unseen Strike READY - Next attack gets +2 Atk, +1 Dmg{{else}}Unseen Strike - Click to prepare surprise attack{{/if}}"/>
+        {{/if}}
+        {{!-- Stance: Defender (intercept attack on ally, once per round) --}}
+        {{#if hasDefender}}
+        <img src="systems/conan/images/icons/defender_i_icon.png"
+             class="sheet2-combatSkillIcon defender-trigger active clickable {{#if canUseDefender}}usable{{/if}} {{#if defenderActive}}stance-active{{/if}}"
+             alt="Defender" title="{{#if defenderActive}}DEFENDER STANCE - Ready to intercept attack on ally (1/round){{else}}Defender - Click to ready stance{{/if}}"/>
+        {{/if}}
+        {{!-- Stance: Blocker (no SP, requires shield) --}}
+        {{#if hasBlocker}}
+        <img src="systems/conan/images/icons/blocker_i_icon.png"
+             class="sheet2-combatSkillIcon blocker-trigger active clickable {{#if canUseBlocker}}usable{{/if}} {{#if blockerActive}}stance-active{{/if}}"
+             alt="Blocker" title="{{#if blockerActive}}BLOCKER STANCE - +1 Defense while shield equipped{{else}}Blocker - Click to ready stance (requires shield){{/if}}"/>
+        {{/if}}
+        {{!-- === PRIORITY 3: ACTIVE SKILLS (bottom) === --}}
+        {{!-- Active: Impaling Throw (1 SP) --}}
+        {{#if hasImpalingThrow}}
+        <img src="systems/conan/images/icons/impaling_throw_i_icon.png"
+             class="sheet2-combatSkillIcon impaling-throw-trigger active clickable {{#if canUseImpalingThrow}}usable{{/if}}"
+             alt="Impaling Throw" title="Impaling Throw - 1 SP for double thrown damage"/>
+        {{/if}}
+        {{!-- Active: Charge (1 SP) --}}
+        {{#if hasCharge}}
+        <img src="systems/conan/images/icons/charge_i_icon.png"
+             class="sheet2-combatSkillIcon charge-trigger active clickable {{#if canUseCharge}}usable{{/if}}"
+             alt="Charge" title="Charge - 1 SP for 2 Move + Melee Attack"/>
+        {{/if}}
+        {{!-- Active: Hit and Run (1 SP) --}}
+        {{#if hasHitAndRun}}
+        <img src="systems/conan/images/icons/hit_and_run_i_icon.png"
+             class="sheet2-combatSkillIcon hit-and-run-trigger active clickable {{#if canUseHitAndRun}}usable{{/if}}"
+             alt="Hit and Run" title="Hit and Run - 1 SP for Attack + 2 Move"/>
+        {{/if}}
+        {{!-- Active: Sacrifice Armor (1 SP) --}}
+        {{#if hasSacrificeArmor}}
+        <img src="systems/conan/images/icons/sacrifice_armor_i_icon.png"
+             class="sheet2-combatSkillIcon sacrifice-armor-trigger active clickable {{#if canUseSacrificeArmor}}usable{{/if}}"
+             alt="Sacrifice Armor" title="Sacrifice Armor"/>
+        {{/if}}
+        {{!-- Active: Pantherish (1 SP to reroll failed attack) --}}
+        {{#if hasPantherish}}
+        <img src="systems/conan/images/icons/pantherish_i_icon.png"
+             class="sheet2-combatSkillIcon pantherish-trigger active clickable {{#if canUsePantherish}}usable{{/if}}"
+             data-context="attack"
+             alt="Pantherish" title="Pantherish - 1 SP to reroll last failed attack"/>
+        {{/if}}
+      </div>
+      <button type="button" class="sheet2-attacksHeaderBtn open-add-weapon" title="Add New Weapon">
+        <span class="sheet2-attacksTitle">ARMS</span>
+      </button>
+    </div>
+
+  {{!-- Front Display - Armed Weapons Grid --}}
+  <div class="sheet2-weaponsGrid" data-weapon-count="{{weaponCount}}">
+    {{#each system.armedWeapons as |weapon id|}}
+    <div class="sheet2-weaponItem" data-weapon-id="{{id}}">
+      {{!-- Weapon Image (Roll Button) --}}
+      <div class="sheet2-weaponRollWrapper">
+        {{!-- No title attribute when impaling throw is ready (prevents tooltip orphan) --}}
+        {{#if weapon.impalingThrowReady}}
+        <img src="{{weapon.image}}"
+             class="sheet2-weaponRollIcon roll-weapon-attack"
+             data-weapon-id="{{id}}"
+             alt="{{weapon.name}}"/>
+        {{else}}
+        <img src="{{weapon.image}}"
+             class="sheet2-weaponRollIcon roll-weapon-attack"
+             data-weapon-id="{{id}}"
+             title="{{weapon.name}}&#10;Attack: {{weapon.attackFormula}}&#10;Damage: {{weapon.damageFormula}}&#10;Range: {{weapon.range}}"
+             alt="{{weapon.name}}"/>
+        {{/if}}
+        {{#if weapon.ammo}}
+        <span class="sheet2-weaponAmmoOverlay" title="Ammo: {{weapon.ammo.current}}/{{weapon.ammo.max}}">{{weapon.ammo.current}}</span>
+        {{/if}}
+        {{#if weapon.showIchor}}
+        <span class="sheet2-weaponIchorOverlay active">{{weapon.ichorQty}}</span>
+        {{/if}}
+        {{#if weapon.impalingThrowReady}}
+        <div class="sheet2-impalingThrowOverlay">💀</div>
+        {{/if}}
+        {{#if weapon.snakeArrowReady}}
+        <div class="sheet2-snakeArrowOverlay"><img src="systems/conan/images/icons/snake_arrow_icon.png" alt="Snake Arrow"/></div>
+        {{/if}}
+        {{#if weapon.bloodyTalonsReady}}
+        <div class="sheet2-bloodyTalonsOverlay"><img src="systems/conan/images/icons/bloody_talons_icon.png" alt="Bloody Talons"/></div>
+        {{/if}}
+        {{#if weapon.uncannyReachReady}}
+        <div class="sheet2-uncannyReachOverlay"><img src="systems/conan/images/icons/uncanny_reach_icon.png" alt="Uncanny Reach"/></div>
+        {{/if}}
+      </div>
+      {{!-- Weapon Name (Dropdown Trigger) - overlays bottom of image --}}
+      <span class="sheet2-weaponLabel weapon-toggle" data-weapon-id="{{id}}" title="{{weapon.name}}">{{weapon.abbrev}}</span>
+    </div>
+    {{/each}}
+
+    {{!-- Empty State --}}
+    {{#unless system.armedWeapons}}
+    <div class="sheet2-weaponsEmpty">
+      <span>Click ARMS to arm a weapon</span>
+    </div>
+    {{/unless}}
+  </div>
+
+  {{!-- Weapon Edit Panel - Appears below grid when weapon chevron is clicked --}}
+  <div class="sheet2-weaponEditPanel">
+    {{#each system.armedWeapons as |weapon id|}}
+    <div class="sheet2-weaponEdit" data-for="{{id}}">
+      <div class="sheet2-weaponEditHeader">
+        <h4>{{#if weapon.isPoisoned}}Poison {{/if}}{{weapon.name}}</h4>
+        {{#if weapon.canBePoisoned}}
+        <span class="sheet2-poisonToggle poison-toggle {{#if weapon.isPoisoned}}active{{/if}}"
+              data-weapon-id="{{id}}"
+              title="{{#if weapon.isPoisoned}}Remove Poison{{else}}Apply Poison{{/if}}">🐍</span>
+        {{/if}}
+      </div>
+      <div class="sheet2-weaponEditGrid">
+        <div class="sheet2-weaponDetail">
+          <label>Type:</label>
+          <span>{{weapon.type}}{{#if weapon.effectiveCategory}} <em style="color: #90EE90;">({{weapon.effectiveCategory}})</em>{{/if}}</span>
+        </div>
+        <div class="sheet2-weaponDetail">
+          <label>Damage:</label>
+          <span>{{weapon.damage}}{{#if weapon.waterfrontFistsUpgrade}} <em style="color: #90EE90;">(upgraded)</em>{{/if}}</span>
+        </div>
+        <div class="sheet2-weaponDetail">
+          <label>Range:</label>
+          <span>{{weapon.range}}</span>
+        </div>
+        {{#if weapon.ammo}}
+        <div class="sheet2-weaponDetail">
+          <label>Ammo:</label>
+          <div class="sheet2-ammoControls">
+            <button type="button" class="sheet2-ammoPlusMinus ammo-decrease" data-weapon-id="{{id}}" data-delta="-1">−</button>
+            <span class="sheet2-ammoValue">{{weapon.ammo.current}}/{{weapon.ammo.max}}</span>
+            <button type="button" class="sheet2-ammoPlusMinus ammo-increase" data-weapon-id="{{id}}" data-delta="1">+</button>
+          </div>
+        </div>
+        {{/if}}
+        {{#if weapon.rules}}
+        <div class="sheet2-weaponDetail sheet2-weaponRules">
+          <label>Rules:</label>
+          <span>{{weapon.rules}}</span>
+        </div>
+        {{/if}}
+      </div>
+      <div class="sheet2-weaponBonuses">
+        <h5>Active Bonuses</h5>
+        <div class="sheet2-bonusList">
+          {{!-- Attack Bonuses - Single or Split based on mounted status --}}
+          {{#if weapon.activeBonuses.singleLine}}
+          <div class="sheet2-bonusItem">
+            <span class="sheet2-bonusLabel">Attack:</span>
+            <span class="sheet2-bonusValue">{{weapon.activeBonuses.value}}</span>
+          </div>
+          {{else}}
+          <div class="sheet2-bonusItem {{#if weapon.activeBonuses.vsNonMounted.isPenalty}}sheet2-mountedPenalty{{else}}sheet2-mountedBonus{{/if}}">
+            <span class="sheet2-bonusLabel">{{weapon.activeBonuses.vsNonMounted.label}}:</span>
+            <span class="sheet2-bonusValue">{{weapon.activeBonuses.vsNonMounted.value}}</span>
+          </div>
+          <div class="sheet2-bonusItem {{#if weapon.activeBonuses.vsMounted.isPenalty}}sheet2-mountedPenalty{{else}}sheet2-mountedBonus{{/if}}">
+            <span class="sheet2-bonusLabel">{{weapon.activeBonuses.vsMounted.label}}:</span>
+            <span class="sheet2-bonusValue">{{weapon.activeBonuses.vsMounted.value}}</span>
+          </div>
+          {{/if}}
+          {{!-- Damage Bonuses --}}
+          <div class="sheet2-bonusItem">
+            <span class="sheet2-bonusLabel">Damage:</span>
+            <span class="sheet2-bonusValue">{{weapon.damageStat}} {{weapon.damageStatValue}}{{#if weapon.originDamageBonus}}, Origin +{{weapon.damageOriginBonus}}{{/if}}{{#if weapon.damageSkillBonus}}, {{weapon.damageSkillBonus}}{{/if}}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sheet2-weaponImageToggle">
+        <label>
+          <input type="checkbox" class="weapon-image-toggle" data-weapon-id="{{id}}" {{#if weapon.useSpecificImage}}checked{{/if}}/>
+          Use specific weapon image
+        </label>
+      </div>
+      <div class="sheet2-weaponDeleteRow">
+        <button type="button" class="sheet2-weaponDeleteBtn delete-weapon" data-weapon-id="{{id}}" data-weapon-name="{{weapon.name}}" title="Remove Weapon"><i class="fas fa-trash-alt"></i></button>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  </div>
+
+  {{!-- ===== ARMOR SECTION ===== --}}
+  <div class="sheet2-armsArmorSection">
+    <div class="sheet2-armsArmorHeader">
+      <span class="sheet2-armsArmorTitle">ARMOR</span>
+    </div>
+
+    <div class="sheet2-armsArmorContent">
+      <div class="sheet2-armsArmorButtons">
+        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'unarmored')}}active{{/if}}" data-armor-type="unarmored" title="Unarmored (AR 0)">
+          <img src="systems/conan/images/armor_unarmored.png" class="sheet2-armsArmorImg" alt="Unarmored"/>
+        </button>
+        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'light')}}active{{/if}}" data-armor-type="light" title="Light Armor (AR 3)">
+          <img src="systems/conan/images/armor_light.png" class="sheet2-armsArmorImg" alt="Light Armor"/>
+        </button>
+        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'medium')}}active{{/if}}" data-armor-type="medium" title="Medium Armor (AR 5)">
+          <img src="systems/conan/images/armor_medium.png" class="sheet2-armsArmorImg" alt="Medium Armor"/>
+        </button>
+        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'heavy')}}active{{/if}}" data-armor-type="heavy" title="Heavy Armor (AR 8)">
+          <img src="systems/conan/images/armor_heavy.png" class="sheet2-armsArmorImg" alt="Heavy Armor"/>
+        </button>
+        <button type="button" class="sheet2-armsArmorBtn sheet2-armsShieldBtn {{#if system.armorEquipped.shield}}active{{/if}}" data-armor-type="shield" title="Shield (+1 Physical Def)">
+          <img src="systems/conan/images/armor_shield.png" class="sheet2-armsArmorImg" alt="Shield"/>
+        </button>
+      </div>
+
+      <div class="sheet2-armsArmorDesc">
+        <textarea readonly class="sheet2-armsArmorDetails">{{system.armorEquipped.description}}</textarea>
+      </div>
+
+      <div class="sheet2-armsArmorNote">
+        <strong>Armor Rule:</strong> Subtract AR from incoming damage. If attack hits, always deal at least 1 damage regardless of AR.
+      </div>
+    </div>
+  </div>
+
+  {{!-- Add Weapon Menu (Behind the Scenes) - Grid-based weapon picker --}}
+  <div class="sheet2-addWeaponMenu">
+    <div class="sheet2-addWeaponHeader">
+      <h3>ARM YOURSELF</h3>
+      <button type="button" class="sheet2-closeAddWeapon close-add-weapon" title="Close">×</button>
+    </div>
+
+    <div class="sheet2-addWeaponBody">
+      {{!-- Category Tabs --}}
+      <div class="sheet2-weaponCategoryTabs">
+        <button type="button" class="sheet2-weaponCategoryTab active" data-category="melee">
+          <span class="sheet2-catTabIcon">⚔</span>
+          <span class="sheet2-catTabLabel">Melee</span>
+        </button>
+        <button type="button" class="sheet2-weaponCategoryTab" data-category="thrown">
+          <span class="sheet2-catTabIcon">🗡</span>
+          <span class="sheet2-catTabLabel">Thrown</span>
+        </button>
+        <button type="button" class="sheet2-weaponCategoryTab" data-category="ranged">
+          <span class="sheet2-catTabIcon">🏹</span>
+          <span class="sheet2-catTabLabel">Ranged</span>
+        </button>
+      </div>
+
+      {{!-- Melee Sub-Category Tabs (only visible when melee selected) --}}
+      <div class="sheet2-weaponSubCategoryTabs" data-for="melee">
+        <button type="button" class="sheet2-weaponSubTab active" data-subcategory="light">Light</button>
+        <button type="button" class="sheet2-weaponSubTab" data-subcategory="medium">Medium</button>
+        <button type="button" class="sheet2-weaponSubTab" data-subcategory="heavy">Heavy</button>
+      </div>
+
+      {{!-- Weapon Grid (populated dynamically) --}}
+      <div class="sheet2-weaponPickerGrid" data-category="melee">
+        {{!-- Weapons injected by JS --}}
+      </div>
+
+      {{!-- Selected Weapon Preview --}}
+      <div class="sheet2-weaponPickerPreview">
+        <div class="sheet2-pickerPreviewEmpty">
+          <span>Select a weapon above</span>
+        </div>
+        <div class="sheet2-pickerPreviewContent" style="display: none;">
+          <div class="sheet2-pickerPreviewLeft">
+            <img src="" class="sheet2-pickerPreviewImage" alt=""/>
+            <span class="sheet2-pickerPreviewName">--</span>
+          </div>
+          <div class="sheet2-pickerPreviewRight">
+            <div class="sheet2-pickerStat">
+              <span class="sheet2-pickerStatLabel">Type:</span>
+              <span class="sheet2-pickerStatValue weapon-preview-category">--</span>
+            </div>
+            <div class="sheet2-pickerStat">
+              <span class="sheet2-pickerStatLabel">Damage:</span>
+              <span class="sheet2-pickerStatValue weapon-preview-damage">--</span>
+            </div>
+            <div class="sheet2-pickerStat">
+              <span class="sheet2-pickerStatLabel">Range:</span>
+              <span class="sheet2-pickerStatValue weapon-preview-range">--</span>
+            </div>
+            <div class="sheet2-pickerStat weapon-preview-rules-row" style="display: none;">
+              <span class="sheet2-pickerStatLabel">Rules:</span>
+              <span class="sheet2-pickerStatValue weapon-preview-rules">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{!-- Image Option --}}
+      <div class="sheet2-imageOption">
+        <label>
+          <input type="checkbox" class="add-weapon-use-specific-image"/>
+          Use specific weapon image
+        </label>
+      </div>
+
+      {{!-- Action Buttons --}}
+      <div class="sheet2-addWeaponActions">
+        <button type="button" class="sheet2-armBtn arm-weapon" disabled title="Add weapon to your arsenal">
+          ARM
+        </button>
+        <button type="button" class="sheet2-cancelBtn close-add-weapon" title="Cancel">
+          CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

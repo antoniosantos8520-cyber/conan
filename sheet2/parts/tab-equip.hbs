@@ -1,0 +1,230 @@
+{{!-- TAB: EQUIPMENT - Portrait + Mount Layout --}}
+<div class="tab-equip" style="background-image: url('{{#if hasMount}}/{{mountImagePath}}{{else}}/systems/conan/images/Mounts/pack.png{{/if}}')">
+
+  {{!-- Character portrait inside equip tab, right-justified --}}
+  <div class="equip-portrait" style="background-image: url('{{actor.img}}');"></div>
+
+  {{!-- Mount Icon (top-left, small) --}}
+  <button type="button" class="equip-mount-btn {{#if hasMount}}has-mount{{/if}}" title="{{#if hasMount}}Release {{system.mount.name}}{{else}}Summon Mount{{/if}}">
+    <img src="systems/conan/images/icons/mounted_icon.png" alt="Mount" class="equip-mount-icon"/>
+  </button>
+
+  {{!-- Plunder readout + coin (lower layer, behind overlays) --}}
+  <div class="equip-button-bar">
+    <div class="equip-plunder-readout">
+      <button type="button" class="equip-plunder-quick minus pack-plunder-minus" title="Spend 1 Plunder">&minus;</button>
+      <span class="equip-plunder-total">{{system.totalPlunderValue}}</span>
+      <button type="button" class="equip-plunder-quick plus pack-plunder-plus" title="Add 1 Plunder">+</button>
+    </div>
+    <button type="button" class="equip-plunder-btn" title="Roll Plunder">
+      <img src="systems/conan/images/icons/plunder_icon.png" alt="Plunder" class="equip-plunder-icon"/>
+    </button>
+  </div>
+
+  {{!-- Pill buttons (top layer, above overlays) --}}
+  <div class="equip-pill-row">
+    {{#if hasMount}}
+    <button type="button" class="equip-saddlebag-btn" title="{{system.mount.name}}'s Saddlebag">
+      <i class="fas fa-horse-saddle equip-btn-icon"></i>
+      <span class="equip-btn-label">Saddlebag</span>
+    </button>
+    {{/if}}
+    <button type="button" class="equip-pack-btn" title="Open Pack">
+      <i class="fas fa-sack equip-btn-icon"></i>
+      <span class="equip-btn-label">Pack</span>
+    </button>
+    {{#if squanderName}}
+    <button type="button" class="equip-squander-btn" title="{{squanderName}}">
+      <i class="fas fa-dice equip-btn-icon"></i>
+      <span class="equip-btn-label">{{squanderName}}</span>
+    </button>
+    {{/if}}
+  </div>
+
+  {{!-- ═══════ PACK OVERLAY ═══════ --}}
+  <div class="equip-overlay equip-pack-overlay">
+
+    {{!-- Inventory header --}}
+    <div class="inv-section-header">
+      <div class="inv-section-icon inventory-icon"><i class="fas fa-sack"></i></div>
+      <span class="inv-section-title">Inventory</span>
+      <span class="inv-section-count {{#if system.isInventoryEncumbered}}encumbered{{/if}}">{{system.inventoryCount}}/5</span>
+      <button type="button" class="pack-slot-add inv-add-btn" title="Add Item">+</button>
+    </div>
+
+    {{!-- Item list (sorted: protected → treasure → plunder → gear) --}}
+    <div class="inv-items">
+      {{#each system.inventoryDisplay}}
+      {{#if this.groupBreak}}<div class="inv-group-sep"></div>{{/if}}
+
+      {{#if this.isSpecial}}
+      {{!-- Protected item (Alchemy Gem / Poisoner Kit) --}}
+      <div class="inv-item protected {{#if this.isPoisonerItem}}poison{{/if}}" data-item-id="{{this.id}}">
+        <div class="inv-item-icon">
+          {{#if this.isAlchemyGem}}<i class="fas fa-flask"></i>{{else}}<i class="fas fa-skull-crossbones"></i>{{/if}}
+        </div>
+        <span class="inv-item-name">{{this.name}}</span>
+        <div class="inv-item-qty">{{this.quantity}}</div>
+        <span class="inv-item-lock"><i class="fas fa-lock"></i></span>
+      </div>
+
+      {{else if this.isTreasureItem}}
+      {{!-- Treasure item --}}
+      <div class="inv-item treasure inv-has-desc" data-item-id="{{this.id}}">
+        <div class="inv-item-row">
+          <div class="inv-item-icon"><i class="fas fa-gem"></i></div>
+          <span class="inv-item-name">{{this.name}}</span>
+          <div class="inv-item-qty">{{this.quantity}}</div>
+          <span class="inv-item-lock"></span>
+        </div>
+        {{#if this.description}}
+        <div class="inv-item-desc">{{this.description}}</div>
+        {{/if}}
+      </div>
+
+      {{else if this.isPlunder}}
+      {{!-- Plunder stack --}}
+      <div class="inv-item plunder {{#if this.description}}inv-has-desc{{/if}}" data-item-id="{{this.id}}">
+        <div class="inv-item-row">
+          <div class="inv-item-icon"><i class="fas fa-coins"></i></div>
+          <span class="inv-item-name">Plunder</span>
+          <div class="inv-item-qty">{{this.quantity}}</div>
+          <button type="button" class="pack-slot-delete inv-item-delete" data-item-id="{{this.id}}"><i class="fas fa-times"></i></button>
+        </div>
+        {{#if this.description}}
+        <div class="inv-item-desc">{{this.description}}</div>
+        {{/if}}
+      </div>
+
+      {{else}}
+      {{!-- Gear item (editable) --}}
+      <div class="inv-item gear" data-item-id="{{this.id}}">
+        <div class="inv-item-icon"><i class="fas fa-box-open"></i></div>
+        <div class="inv-item-name"><input type="text" class="pack-slot-name" data-item-id="{{this.id}}" value="{{this.name}}" placeholder="Item name..."/></div>
+        <div class="inv-item-qty"><input type="number" class="pack-slot-qty" data-item-id="{{this.id}}" value="{{this.quantity}}" min="0"/></div>
+        <button type="button" class="pack-slot-delete inv-item-delete" data-item-id="{{this.id}}"><i class="fas fa-times"></i></button>
+      </div>
+      {{/if}}
+
+      {{else}}
+      <div class="inv-empty">Pack is empty — plunder awaits the bold.</div>
+      {{/each}}
+    </div>
+
+    {{!-- Plunder footer with +/- --}}
+    <div class="inv-footer">
+      <span class="inv-total-label">Plunder</span>
+      <button type="button" class="inv-spend-btn minus pack-plunder-minus" title="Spend 1 Plunder">&minus;</button>
+      <span class="inv-total-value"><i class="fas fa-coins inv-total-coin"></i> {{system.totalPlunderValue}}</span>
+      <button type="button" class="inv-spend-btn plus pack-plunder-plus" title="Add 1 Plunder">+</button>
+    </div>
+
+  </div>
+
+  {{!-- ═══════ SQUANDER OVERLAY ═══════ --}}
+  {{#if squanderName}}
+  <div class="equip-overlay equip-squander-overlay">
+    <div class="inv-section-header">
+      <div class="inv-section-icon squander-icon"><i class="fas fa-dice"></i></div>
+      <span class="inv-section-title">{{squanderName}}</span>
+    </div>
+
+    <div class="squander-overlay-body">
+      <div class="squander-dialog-flavor">"{{squanderFlavor}}"</div>
+
+      <button type="button" class="squander-roll-btn">
+        <i class="fas fa-dice"></i> {{squanderName}}
+      </button>
+
+      <div class="squander-dialog-amount">
+        <button type="button" class="squander-minus">&minus;</button>
+        <div>
+          <span class="squander-dialog-value">{{squanderDefault}}</span>
+          <br><span class="squander-dialog-label">Plunder</span>
+        </div>
+        <button type="button" class="squander-plus">+</button>
+      </div>
+
+      {{#if squanderCanTreasure}}
+      <div class="squander-dialog-treasure squander-treasure-toggle" style="cursor: pointer;">
+        <span class="squander-treasure-check">☐</span>
+        <span>Include a treasure (+1 XP)</span>
+      </div>
+      {{/if}}
+
+      <div class="squander-dialog-tier">
+        Tier {{squanderTierDisplay}} (d20+{{squanderTierDisplay}})
+      </div>
+
+      {{#unless squanderOriginComplete}}
+      <div class="squander-wip-note">table coming soon</div>
+      {{/unless}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{!-- ═══════ SADDLEBAG OVERLAY ═══════ --}}
+  <div class="equip-overlay equip-saddlebag-overlay">
+
+    <div class="inv-section-header">
+      <div class="inv-section-icon saddlebag-icon"><i class="fas fa-horse-saddle"></i></div>
+      <span class="inv-section-title">{{system.mount.name}}'s Saddlebag</span>
+      <span class="inv-section-count">{{system.saddlebagCount}}/6</span>
+      <button type="button" class="saddlebag-slot-add inv-add-btn" title="Add Item">+</button>
+    </div>
+
+    <div class="inv-items">
+      {{#each system.saddlebagDisplay}}
+      {{#if this.groupBreak}}<div class="inv-group-sep"></div>{{/if}}
+
+      {{#if this.isTreasureItem}}
+      <div class="inv-item treasure inv-has-desc" data-item-id="{{this.id}}">
+        <div class="inv-item-row">
+          <div class="inv-item-icon"><i class="fas fa-gem"></i></div>
+          <span class="inv-item-name">{{this.name}}</span>
+          <div class="inv-item-qty">{{this.quantity}}</div>
+          <button type="button" class="saddlebag-slot-delete inv-item-delete" data-item-id="{{this.id}}"><i class="fas fa-times"></i></button>
+        </div>
+        {{#if this.description}}
+        <div class="inv-item-desc">{{this.description}}</div>
+        {{/if}}
+      </div>
+
+      {{else if this.isPlunder}}
+      <div class="inv-item plunder {{#if this.description}}inv-has-desc{{/if}}" data-item-id="{{this.id}}">
+        <div class="inv-item-row">
+          <div class="inv-item-icon"><i class="fas fa-coins"></i></div>
+          <span class="inv-item-name">Plunder</span>
+          <div class="inv-item-qty">{{this.quantity}}</div>
+          <button type="button" class="saddlebag-slot-delete inv-item-delete" data-item-id="{{this.id}}"><i class="fas fa-times"></i></button>
+        </div>
+        {{#if this.description}}
+        <div class="inv-item-desc">{{this.description}}</div>
+        {{/if}}
+      </div>
+
+      {{else}}
+      <div class="inv-item gear" data-item-id="{{this.id}}">
+        <div class="inv-item-icon"><i class="fas fa-box-open"></i></div>
+        <div class="inv-item-name"><input type="text" class="saddlebag-slot-name" data-item-id="{{this.id}}" value="{{this.name}}" placeholder="Item name..."/></div>
+        <div class="inv-item-qty"><input type="number" class="saddlebag-slot-qty" data-item-id="{{this.id}}" value="{{this.quantity}}" min="0"/></div>
+        <button type="button" class="saddlebag-slot-delete inv-item-delete" data-item-id="{{this.id}}"><i class="fas fa-times"></i></button>
+      </div>
+      {{/if}}
+
+      {{else}}
+      <div class="inv-empty">Saddlebag is empty</div>
+      {{/each}}
+    </div>
+
+    {{!-- Saddlebag plunder footer with +/- --}}
+    <div class="inv-footer">
+      <span class="inv-total-label">Plunder</span>
+      <button type="button" class="inv-spend-btn minus saddlebag-plunder-minus" title="Spend 1 Plunder">&minus;</button>
+      <span class="inv-total-value"><i class="fas fa-coins inv-total-coin"></i> {{system.saddlebagPlunderValue}}</span>
+      <button type="button" class="inv-spend-btn plus saddlebag-plunder-plus" title="Add 1 Plunder">+</button>
+    </div>
+
+  </div>
+
+</div>

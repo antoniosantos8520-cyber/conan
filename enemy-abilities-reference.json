@@ -1,0 +1,281 @@
+{
+  "title": "Enemy Abilities System",
+  "description": "Implementation reference for enemy special rule abilities triggered from enemy cards (Foundry VTT Dialog instances). Each ability has a clickable button on the enemy card portrait, targeting logic to apply effects, active effect indicators on target cards, real-time dialog updates via Foundry hooks, and cleanup when tokens are deleted. All code lives in module/tools-sheet.js inside the showEnemyRollDialog() function. Styling in css/tools.css.",
+
+  "systemContext": {
+    "game": "Monolith Conan board game (NOT Modiphius 2d20 Conan)",
+    "platform": "Foundry VTT v11",
+    "rulesReference": "conan-rules-reference.json contains full game rules",
+    "enemyData": "data/enemies.json contains all enemy profiles by category",
+    "attackFormula": "1[StatDie] + StatValue + Modifiers vs Defense (Physical or Sorcery)",
+    "damageFormula": "Separate roll, e.g. 1d10+2. Not affected by attack modifiers.",
+    "keyDistinction": "Attack roll modifiers (like Inspire +1) only affect the hit check, never damage"
+  },
+
+  "architecture": {
+    "overview": "Enemy cards are Foundry Dialog instances created by showEnemyRollDialog() in module/tools-sheet.js (~line 5280+). They are NOT ActorSheet subclasses. The dialog receives enemyData from token flags (tokenDoc.flags.conan.enemyData) and renders a custom HTML layout with portrait, stats, weapons, and rules.",
+
+    "abilityButtons": {
+      "location": "Bottom-left of .enemy-portrait-container, position: absolute",
+      "cssClass": ".enemy-ability-buttons",
+      "generation": "Built during content HTML generation before dialog creation (~line 5415). Each rule in enemyData.rules[] gets a button. State classes are set based on token flags at render time.",
+      "html": "<button class='ability-btn {stateClass}' data-rule-index='{i}' data-rule-name='{name}'><i class='fas fa-bolt'></i> {name}</button>"
+    },
+
+    "activeEffects": {
+      "location": "Bottom-right of .enemy-portrait-container, position: absolute",
+      "cssClass": ".enemy-active-effects",
+      "layout": "flex-direction: column — Protect always first in DOM (top position), other effects stack below",
+      "generation": "Built during content HTML generation (~line 5435). Checks actor flags for protectBonus and inspireBuff. Updated in real-time via updateActor hook.",
+      "principle": "Use text labels (not icons) for effect names to avoid running out of icons. Exception: Protect uses shield icon + count badge since it stacks numerically."
+    },
+
+    "targeting": {
+      "method": "Hooks.on('controlToken') captures when GM clicks a token on the canvas",
+      "prerequisite": "canvas.tokens.releaseAll() MUST be called before registering the hook, otherwise clicking an already-selected token won't fire the hook",
+      "singleTarget": "Protect: controlToken fires once, applies immediately, unhooks",
+      "multiTarget": "Inspire: controlToken fires for each click, accumulates token IDs in array. Separate keyup listener on 'Shift' triggers activation.",
+      "cancel": "Escape key or clicking the pulsing button again cancels targeting mode"
+    },
+
+    "realTimeHooks": {
+      "setup": "Registered inside the dialog's render callback (~line 5571). Two hook IDs tracked: updateHookId (updateActor) and tokenUpdateHookId (updateToken).",
+      "cleanup": "Both hooks are unregistered in the dialog's close callback via Hooks.off().",
+      "updateActor": {
+        "watches": ["flags.conan.protectBonus", "flags.conan.-=protectBonus", "flags.conan.inspireBuff", "flags.conan.-=inspireBuff", "system.conditions", "system.buffsDebuffs"],
+        "actions": "Rebuilds active effects display, toggles protect-boosted class on defense, rebuilds status grid. Re-attaches click handlers to new DOM elements using specific selectors like .active-effect-btn[data-effect='protect']."
+      },
+      "updateToken": {
+        "watches": ["flags.conan.protectUsed", "flags.conan.-=protectUsed", "flags.conan.inspireState", "flags.conan.-=inspireState", "flags.conan.enemyData.physicalDefense"],
+        "actions": "Toggles ability button classes (ability-active, ability-spent), updates defense value text."
+      },
+      "gotcha": "Foundry's unsetFlag creates a '-=flagName' key in the changes object, so both setFlag and unsetFlag changes must be detected."
+    },
+
+    "deletionCleanup": {
+      "hook": "Hooks.on('deleteToken') — global hook registered at module level (~line 5167)",
+      "cases": [
+        "Protected target deleted → iterate protectBonus.sources, clear protectUsed and protectTarget on each guard",
+        "Guard deleted → find protectTarget, remove this guard from target's protectBonus.sources, decrement total, revert enemyData.physicalDefense",
+        "Captain deleted → iterate inspireTargets, unsetFlag inspireBuff on each target actor",
+        "Inspired target deleted → find inspireBuff.source captain, remove this target from captain's inspireTargets. If no targets remain, set captain to 'spent' state"
+      ],
+      "order": "Protect cleanup runs first, then Inspire cleanup, then actor deletion (enemyData.actorId)"
+    }
+  },
+
+  "abilities": {
+    "protect": {
+      "enemy": "Guard",
+      "category": "human",
+      "ruleText": "A Guard may use 1 Action to Protect a Character within Touch Range. For each Guard that Protects, the target gains +1 Physical Defense, up to a maximum of +3.",
+
+      "workflow": {
+        "step1": "GM clicks Protect button on guard's enemy card",
+        "step2": "canvas.tokens.releaseAll() deselects any highlighted tokens",
+        "step3": "Button enters targeting state (pulsing animation, class: ability-targeting)",
+        "step4": "controlToken hook registered — waits for GM to click a target token",
+        "step5": "GM clicks target token on canvas",
+        "step6": "Validation: not self, not already protected by this guard, target not at +3 cap",
+        "step7": "Apply: setFlag protectBonus on target actor (increment total, add guard to sources), setFlag protectUsed/protectTarget on guard token, update enemyData.physicalDefense on target token",
+        "step8": "Guard button goes green (ability-active). Target card shows shield+count. Defense value turns green.",
+        "step9": "Chat message posted with details"
+      },
+
+      "dismissWorkflow": {
+        "from_target_card": "Click shield icon → removes most recent guard (sources.pop()), decrements total. If total reaches 0, unsetFlag protectBonus entirely.",
+        "from_guard_card": "Click green Protect button → looks up protectTarget, removes this guard from target's sources, decrements total, clears guard's protectUsed/protectTarget flags."
+      },
+
+      "flags": {
+        "guard_token_flags": {
+          "conan.protectUsed": { "type": "boolean", "description": "Whether this guard has used Protect (true = active, shown as green button)" },
+          "conan.protectTarget": { "type": "string (tokenId)", "description": "Token ID of the target being protected. Used for dismiss-from-guard and deletion cleanup." }
+        },
+        "target_actor_flags": {
+          "conan.protectBonus": {
+            "type": "object",
+            "shape": "{ total: number (0-3), sources: string[] (guard tokenIds) }",
+            "description": "Cumulative protection bonus. sources array tracks which guards are contributing. Max total of 3.",
+            "cleanup": "When total reaches 0, use unsetFlag (not setFlag with 0) to fully remove"
+          }
+        },
+        "target_token_flags": {
+          "conan.enemyData.physicalDefense": {
+            "type": "number",
+            "description": "The displayed physical defense value on the enemy card. Incremented/decremented alongside protectBonus. Note: enemyData is the full enemy data object, so updates use spread: { ...existingData, physicalDefense: newValue }"
+          }
+        }
+      },
+
+      "buttonStates": {
+        "ready": { "class": "none", "appearance": "Normal theme-colored button" },
+        "targeting": { "class": "ability-targeting", "appearance": "Pulsing red/theme animation" },
+        "active": { "class": "ability-active", "appearance": "Green border, green text, green hover glow" }
+      },
+
+      "targetEffectDisplay": {
+        "type": "Shield icon with count badge",
+        "html": "<button class='active-effect-btn' data-effect='protect'><i class='fas fa-shield-alt'></i><span class='effect-count'>N</span></button>",
+        "position": "Always first (top) in the active effects column",
+        "dismiss": "Each click decrements by 1 (removes most recent guard via sources.pop()). When count reaches 0, button and container removed."
+      },
+
+      "limits": {
+        "maxBonusPerTarget": 3,
+        "maxUsesPerGuard": 1,
+        "sameGuardSameTarget": "Prevented by checking sources.includes(sourceTokenId)"
+      }
+    },
+
+    "inspire": {
+      "enemy": "Guard Captain",
+      "category": "human",
+      "ruleText": "Once per combat, a Guard Captain may use 2 Actions to inspire their allies. All Characters within Long Range that are allied to the Guard Captain apply a +1 Modifier to their Attacks for the remainder of the current combat.",
+
+      "workflow": {
+        "step1": "GM clicks Inspire button on captain's enemy card",
+        "step2": "canvas.tokens.releaseAll() deselects any highlighted tokens",
+        "step3": "Button enters targeting state (pulsing). controlToken hook and keyup listener registered.",
+        "step4": "GM clicks targets one at a time — each click fires controlToken, token ID added to inspireSelected array. Notification shows count.",
+        "step5": "GM presses Shift key — keyup handler fires, activates the ability",
+        "step6": "Apply: setFlag inspireBuff on each target actor, setFlag inspireTargets and inspireState='active' on captain token",
+        "step7": "Captain button goes green. Target cards show 'Inspire' text button. Chat message lists all targets.",
+        "step8_deactivate": "Click green button → removes inspireBuff from all targets, sets inspireState='spent', button goes dark",
+        "step9_reset": "Click dark button → unsets inspireState, button returns to ready for re-use"
+      },
+
+      "dismissWorkflow": {
+        "from_target_card": "Click 'Inspire' text button → unsetFlag inspireBuff on this target, remove from captain's inspireTargets. If no targets remain, captain goes to 'spent'.",
+        "from_captain_card": "Click green Inspire button → unsetFlag inspireBuff on ALL targets, captain goes to 'spent' state."
+      },
+
+      "flags": {
+        "captain_token_flags": {
+          "conan.inspireState": {
+            "type": "string or null",
+            "values": { "null": "Ready (can activate)", "active": "Currently inspiring targets", "spent": "Used and deactivated" },
+            "description": "3-state cycle: null → 'active' → 'spent' → null (clicking spent resets to ready)"
+          },
+          "conan.inspireTargets": {
+            "type": "string[] (tokenIds)",
+            "description": "Array of token IDs currently being inspired. Cleared when deactivated."
+          }
+        },
+        "target_actor_flags": {
+          "conan.inspireBuff": {
+            "type": "object",
+            "shape": "{ source: string (captainTokenId), bonus: number (1) }",
+            "description": "Tracks which captain is inspiring this target and the bonus value."
+          }
+        }
+      },
+
+      "buttonStates": {
+        "ready": { "class": "none", "appearance": "Normal theme-colored button with tooltip" },
+        "targeting": { "class": "ability-targeting", "appearance": "Pulsing red/theme animation" },
+        "active": { "class": "ability-active", "appearance": "Green border, green text" },
+        "spent": { "class": "ability-spent", "appearance": "Dark/dim, 60% opacity, grey border" }
+      },
+
+      "targetEffectDisplay": {
+        "type": "Text button (no icon)",
+        "html": "<button class='active-effect-btn' data-effect='inspire' data-source-token='{captainTokenId}'>Inspire</button>",
+        "position": "Below Protect in the active effects column (if both present)",
+        "dismiss": "Click removes this target's inspireBuff and updates captain's target list"
+      },
+
+      "combatEffect": {
+        "what": "+1 to attack rolls (the hit check: 1[StatDie] + StatValue + Modifiers vs Defense)",
+        "notAffected": "Damage rolls are NOT modified",
+        "implementation": "In the weapon-btn click handler, check token.actor.getFlag('conan', 'inspireBuff'). If present, add 1 to skillTotal.",
+        "chatDisplay": "Green +1 shown inline: 'Hit (Edge): d6: 4 +2 <span style=\"color: #32CD32; font-weight: bold;\">+1</span> = 7'",
+        "codeLocation": "weapon-btn click handler in the dialog render callback (~line 5922)"
+      },
+
+      "tooltip": "Click targets, then press Shift to activate"
+    },
+
+    "skulkers": {
+      "enemy": "Bandit, Veteran Bandit, Bandit Leader",
+      "category": "human",
+      "ruleText": "A Bandit applies a +1 Modifier to any Edge Checks related to hiding and stealth.",
+      "type": "instant-roll",
+      "description": "Simple click-to-roll ability. No targeting, no state, no flags. Click the button, it rolls an Edge check with the +1 Skulkers bonus baked in.",
+
+      "workflow": {
+        "step1": "GM clicks Skulkers button on any bandit enemy card",
+        "step2": "Immediately rolls Edge check: 1[EdgeDie] + EdgeValue + 1 (Skulkers bonus)",
+        "step3": "Posts chat message with roll result and flavor quote"
+      },
+
+      "flags": "None — no persistent state needed",
+
+      "chatOutput": {
+        "header": "{enemyName} - Skulkers (Stealth)",
+        "rollLine": "Edge Check: {die}: {roll} +{stat} <green>+1</green> = {total}",
+        "flavorQuote": "\"{enemyName} was born in the shadows and knows its secrets better than most.\"",
+        "greenBonus": "The +1 Skulkers bonus is shown in green to distinguish it from the base stat"
+      },
+
+      "codeLocation": "ability-btn click handler, before the DEFAULT generic handler (~line 6252)"
+    }
+  },
+
+  "abilityTypes": {
+    "instant-roll": "Click button, immediately rolls dice and posts to chat. No targeting, no state. Examples: Skulkers.",
+    "single-target": "Click button, click one target, applies effect. Has source/target flags and real-time hooks. Examples: Protect.",
+    "multi-target": "Click button, click multiple targets, press Shift to activate. Has source/target flags, 3-state cycle, real-time hooks. Examples: Inspire."
+  },
+
+  "cssReference": {
+    "file": "css/tools.css",
+    "classes": {
+      ".enemy-ability-buttons": "Container: position absolute, bottom-left of portrait, flex column, gap 3px, z-index 5",
+      ".ability-btn": "Small button: 11px font, theme border, 3px 6px padding, pointer cursor",
+      ".ability-btn.ability-targeting": "Pulsing: theme-accent background, white text, ability-pulse animation 0.8s infinite alternate",
+      ".ability-btn.ability-active": "Green: black bg, #32CD32 border/text, green hover glow",
+      ".ability-btn.ability-spent": "Dark: black bg, #444 border, #666 text, 60% opacity",
+      ".enemy-active-effects": "Container: position absolute, bottom-right of portrait, flex column, gap 3px, z-index 5",
+      ".active-effect-btn": "Effect button: black bg, #32CD32 border/text, 12px font, flex row with gap for icon+count",
+      ".active-effect-btn:hover": "Red: #8B0000 bg, #DC143C border, white text (dismiss indicator)",
+      ".effect-count": "Count badge: bold, 11px font",
+      ".def-value.protect-boosted": "Green text with glow on physical defense value",
+      "@keyframes ability-pulse": "Box-shadow oscillates from 4px to 12px theme glow"
+    }
+  },
+
+  "codeLocations": {
+    "showEnemyRollDialog": "module/tools-sheet.js ~line 5280 — the main function that builds and shows enemy cards",
+    "abilityButtonGeneration": "~line 5415 — builds ability button HTML with state detection from token flags",
+    "activeEffectsGeneration": "~line 5435 — builds active effects HTML (protect shield+count, inspire text)",
+    "dialogHooksSetup": "~line 5571 — render callback registers updateActor and updateToken hooks",
+    "protectBonusRealtimeHandler": "~line 5680 in updateActor hook — rebuilds protect display, re-attaches handlers",
+    "inspireBuffRealtimeHandler": "~line 5733 in updateActor hook — rebuilds inspire display, re-attaches handlers",
+    "protectUsedRealtimeHandler": "~line 5770 in updateToken hook — toggles guard button green/normal",
+    "inspireStateRealtimeHandler": "~line 5832 in updateToken hook — toggles captain button green/spent/normal",
+    "weaponRollHandler": "~line 5922 — checks inspireBuff, adds +1 to attack roll and green indicator in chat",
+    "protectClickHandler": "~line 5968 in ability-btn click — full Protect targeting and application logic",
+    "inspireClickHandler": "~line 6052 in ability-btn click — full Inspire 3-state and multi-target logic",
+    "protectDismissHandler": "~line 6156 — active-effect-btn click handler for protect dismiss",
+    "inspireDismissHandler": "~line 6253 — active-effect-btn click handler for inspire dismiss",
+    "deleteTokenCleanup": "~line 5167 — global deleteToken hook handles all 4 cleanup cases",
+    "dialogCloseCleanup": "~line 6310 — close callback unregisters both hooks"
+  },
+
+  "implementationPattern": {
+    "description": "Follow this pattern when adding a new enemy ability:",
+    "steps": [
+      "1. Define token flags for source state and target effect (see flags sections above)",
+      "2. Add state detection in ability button generation (~line 5415) — check token flags, set stateClass",
+      "3. Add active effect HTML in effects generation (~line 5435) — check target actor flags",
+      "4. Add click handler in ability-btn handler (~line 5968) — implement targeting, validation, application",
+      "5. Add dismiss handler in active-effect-btn handler (~line 6156) — handle removal from target card",
+      "6. Add real-time updateActor handler for target effect flag changes (~line 5680)",
+      "7. Add real-time updateToken handler for source state flag changes (~line 5770)",
+      "8. Add deleteToken cleanup cases (~line 5167) for both source-deleted and target-deleted",
+      "9. Add CSS classes for any new button states in css/tools.css",
+      "10. If the ability modifies rolls, update the weapon-btn click handler (~line 5922)"
+    ]
+  }
+}
