@@ -1354,7 +1354,10 @@ Hooks.on('renderChatMessage', (message, html, data) => {
         // Clear player source - enemy damage comes from lastEnemyAttack.enemyName instead
         game.conan.lastDamageActorId = null;
         // Clear spell effect - enemy damage doesn't carry spell effects
-        game.conan.lastDamageEffect = null;
+        // BUT preserve if the effect was set programmatically (e.g. Death Scream ignoresAR, enemy Hellfire inferno)
+        if (!game.conan.lastDamageEffect?.ignoresAR && !game.conan.lastDamageEffect?.inferno) {
+          game.conan.lastDamageEffect = null;
+        }
         console.log(`%c[TRACE 2/4] DAMAGE PARSED — lastDamageRoll = ${damageValue}`, 'color: #FFD700; font-weight: bold;');
         console.log(`  Parsed from: "${damageText}", lastEnemyAttack:`, game.conan.lastEnemyAttack);
       }
@@ -3258,7 +3261,8 @@ async function applyDamageToToken(token) {
   // ==========================================
   // DEMONIC WARD: 50% non-sorcery damage reduction (after AR)
   // ==========================================
-  if (!isHealing && damage > 0 && actor?.system?.buffsDebuffs?.demonicWard) {
+  const hasDemonicWard = actor?.system?.buffsDebuffs?.demonicWard || actor?.getFlag('conan', 'demonicWard');
+  if (!isHealing && damage > 0 && hasDemonicWard) {
     // Check if damage source is sorcery — sorcery bypasses the ward
     const isSorceryDamage = game.conan?.lastEnemyAttack?.attackType === 'sorcery' ||
       game.conan?.lastDamageEffect?.type != null;
@@ -3438,9 +3442,39 @@ async function applyDamageToToken(token) {
         await actor.update({ 'system.lifePoints.value': newHP });
 
         if (newHP <= 0 && !isHealing) {
-          isDead = true;
-          await token.document.setFlag('conan', 'dead', true);
-          console.log(`%c  [LP WRITE] %ctoken.setFlag('dead', true) — KILLED`, 'color: #ff9944;', 'color: #ff4444; font-weight: bold;');
+          // DEATHLESS: redirect killing blow to a living skeleton
+          let deathlessRedirected = false;
+          if (enemyData?.threatTraits?.includes('deathless')) {
+            const necroId = token.document.id;
+            const livingSkel = canvas.scene.tokens.find(t => {
+              return t.getFlag('conan', 'summonedBy') === necroId && !t.getFlag('conan', 'dead');
+            });
+            if (livingSkel) {
+              deathlessRedirected = true;
+              // Restore necromancer to pre-damage HP
+              newHP = currentHP;
+              await actor.update({ 'system.lifePoints.value': currentHP });
+              // Kill the skeleton
+              await livingSkel.setFlag('conan', 'dead', true);
+              await livingSkel.setFlag('conan', 'wounded', true);
+              await livingSkel.update({ 'texture.tint': '#ff0000', alpha: 0.5 });
+              const skelData = livingSkel.getFlag('conan', 'enemyData');
+              const skelName = skelData?.chatName || skelData?.name || livingSkel.name;
+              const necroName = enemyData.chatName || enemyData.name;
+              // Floating damage on skeleton instead
+              broadcastFloatingDamage(livingSkel.id, damage, true, false, false);
+              ChatMessage.create({
+                content: `<div class="enemy-msg theme-undead"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-shield-alt"></i></div><div class="msg-titles"><div class="msg-name">Deathless!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${necroName} should have died — but ${skelName} crumbles to dust in their place!</div></div></div>`,
+                speaker: { alias: enemyData.name }
+              });
+              console.log(`%c[DEATHLESS] ${necroName} survived — ${skelName} dies instead`, 'color: #9400D3; font-weight: bold;');
+            }
+          }
+          if (!deathlessRedirected) {
+            isDead = true;
+            await token.document.setFlag('conan', 'dead', true);
+            console.log(`%c  [LP WRITE] %ctoken.setFlag('dead', true) — KILLED`, 'color: #ff9944;', 'color: #ff4444; font-weight: bold;');
+          }
         }
       }
     }
@@ -3679,6 +3713,66 @@ async function applyDamageToToken(token) {
 
   // Show floating damage/healing number (local + broadcast to all clients via ChatMessage)
   broadcastFloatingDamage(token.id, damage, isDead, isWounded, isHealing);
+
+  // Bone Armor: reflect damage = number of living skeletons summoned by this necromancer
+  if (!isHealing && enemyData?.threatTraits?.includes('bonearmor') && game.conan?.lastDamageActorId) {
+    // Count living skeletons summoned by this necromancer
+    const necroTokenId = token.document.id;
+    const livingSkeletons = canvas.scene.tokens.filter(t => {
+      if (t.getFlag('conan', 'summonedBy') !== necroTokenId) return false;
+      if (t.getFlag('conan', 'dead')) return false;
+      return true;
+    });
+    const reflectDmg = livingSkeletons.length;
+    if (reflectDmg > 0) {
+      const attackerActor = game.actors.get(game.conan.lastDamageActorId);
+      if (attackerActor?.system?.lifePoints) {
+        const curLP = attackerActor.system.lifePoints.value ?? attackerActor.system.lifePoints.max ?? 0;
+        const newLP = Math.max(0, curLP - reflectDmg);
+        await attackerActor.update({ 'system.lifePoints.value': newLP });
+        const attackerToken = canvas.tokens.placeables.find(t => t.actor?.id === attackerActor.id);
+        if (attackerToken) broadcastFloatingDamage(attackerToken.id, reflectDmg, false, false, false);
+        const necroName = enemyData.chatName || enemyData.name || token.name;
+        ChatMessage.create({
+          content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-bone"></i></div><div class="msg-titles"><div class="msg-name">Bone Armor! (${reflectDmg})</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">Shards of bone lash out from ${necroName} — ${attackerActor.name} takes ${reflectDmg} damage!</div></div></div>`,
+          speaker: { alias: enemyData.name }
+        });
+      }
+    }
+  }
+
+  // Backdraft: melee attackers take 1d4 fire damage when they strike
+  if (!isHealing && enemyData?.threatTraits?.includes('backdraft') && game.conan?.lastDamageActorId) {
+    const attackerActor = game.actors.get(game.conan.lastDamageActorId);
+    if (attackerActor?.system?.lifePoints) {
+      const bdRoll = await new Roll('1d4').evaluate();
+      const bdDmg = bdRoll.total;
+      const curLP = attackerActor.system.lifePoints.value ?? attackerActor.system.lifePoints.max ?? 0;
+      const newLP = Math.max(0, curLP - bdDmg);
+      await attackerActor.update({ 'system.lifePoints.value': newLP });
+      const attackerToken = canvas.tokens.placeables.find(t => t.actor?.id === attackerActor.id);
+      if (attackerToken) broadcastFloatingDamage(attackerToken.id, bdDmg, false, false, false);
+      const bdName = enemyData.chatName || enemyData.name || token.name;
+      ChatMessage.create({
+        content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-fire"></i></div><div class="msg-titles"><div class="msg-name">Backdraft! (${bdDmg})</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">Flames erupt from ${bdName} — ${attackerActor.name} takes ${bdDmg} fire damage!</div></div></div>`,
+        speaker: { alias: enemyData.name }
+      });
+    }
+  }
+
+  // Inferno: Hellfire sets target ablaze (burning debuff, max 3 rounds)
+  if (!isHealing && game.conan?.lastDamageEffect?.type === 'inferno' && game.conan.lastDamageEffect.inferno) {
+    const targetActor = token.actor || (token.document ? game.actors.get(token.document.actorId) : null);
+    if (targetActor) {
+      await targetActor.setFlag('conan', 'burningDebuff', { active: true, roundsLeft: 3 });
+      await targetActor.update({ 'system.conditions.burning': true });
+      const targetName = targetActor.name || token.name;
+      ChatMessage.create({
+        content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-fire"></i></div><div class="msg-titles"><div class="msg-name">Ablaze!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${targetName} is engulfed in hellfire! Burns for up to 3 rounds.</div></div></div>`,
+        speaker: { alias: 'GM' }
+      });
+    }
+  }
 
   // Send simple GM whisper with undo button
   const undoData = JSON.stringify(prevState).replace(/"/g, '&quot;');
@@ -4680,6 +4774,32 @@ async function applyDamageToToken(token) {
     }
   }
 
+  // Volatile: on death, 1d8 fire damage to killer
+  if (isDead && enemyData?.threatTraits?.includes('volatile') && !isHealing) {
+    const volName = enemyData.chatName || enemyData.name;
+    const volRoll = await new Roll('1d8').evaluate();
+    const volDamage = volRoll.total;
+    const sourceActorId = game.conan?.lastDamageActorId;
+    const sourceActor = sourceActorId ? game.actors.get(sourceActorId) : null;
+
+    if (sourceActor && sourceActor.type === 'character2') {
+      const playerToken = canvas.tokens.placeables.find(t => t.actor?.id === sourceActorId);
+      const playerAR = sourceActor.system?.armorRating || 0;
+      const actualDamage = Math.max(0, volDamage - playerAR);
+      if (actualDamage > 0 && playerToken) {
+        const currentLP = sourceActor.system.lifePoints?.value || 0;
+        const newLP = Math.max(0, currentLP - actualDamage);
+        await sourceActor.update({ 'system.lifePoints.value': newLP });
+        broadcastFloatingDamage(playerToken.id, actualDamage, newLP <= 0, false);
+      }
+      ChatMessage.create({
+        speaker: { alias: enemyData.name },
+        content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-explosion"></i></div><div class="msg-titles"><div class="msg-name">Volatile!</div></div></div><div class="enemy-msg-body"><div style="color: #ccc; text-align: center; font-style: italic;">${volName} detonates in a pillar of flame!</div><div class="roll-row" style="justify-content: center; margin-top: 6px;"><div class="roll-dice"><div class="die dmg">${volRoll.total}</div></div><div class="roll-total" style="color: #ff4444;">${volDamage} fire damage${playerAR > 0 ? ` (−${playerAR} AR = ${actualDamage})` : ''}</div></div></div></div>`
+      });
+      console.log(`%c[VOLATILE] ${volName} explodes for ${actualDamage} fire damage to ${sourceActor.name}!`, 'color: #ff4500; font-weight: bold;');
+    }
+  }
+
   // ==========================================
   // MARTYR TRAIT (Threat Engine — Cultists)
   // ==========================================
@@ -4821,6 +4941,39 @@ async function applyDamageToToken(token) {
     };
 
     canvas.stage.on('pointerdown', dedClickHandler);
+  }
+
+  // ==========================================
+  // SOUL HARVEST TRAIT (Threat Engine — Necromancer)
+  // ==========================================
+  // When a skeleton dies, if its summoner necromancer has soulharvest, heal 1D6 LP
+  if (isDead && !isHealing) {
+    const summonerId = token.document.getFlag('conan', 'summonedBy');
+    if (summonerId) {
+      const necroTokenDoc = canvas.scene.tokens.get(summonerId);
+      const necroData = necroTokenDoc?.getFlag('conan', 'enemyData');
+      if (necroData?.threatTraits?.includes('soulharvest') && !necroTokenDoc.getFlag('conan', 'dead')) {
+        const healRoll = await new Roll('1d6').evaluate();
+        const healAmt = healRoll.total;
+        // DUAL LP WRITE — heal necromancer
+        const necroActor = necroTokenDoc.actor;
+        if (necroActor?.system?.lifePoints) {
+          const curLP = necroActor.system.lifePoints.value ?? 0;
+          const maxLP = necroActor.system.lifePoints.max ?? necroData.lifePoints ?? curLP;
+          const newLP = Math.min(maxLP, curLP + healAmt);
+          await necroActor.update({ 'system.lifePoints.value': newLP });
+          // Floating green heal on necromancer token
+          const necroToken = canvas.tokens.get(summonerId);
+          if (necroToken) broadcastFloatingDamage(necroToken.id, healAmt, false, false, true);
+          const necroName = necroData.chatName || necroData.name;
+          const skelName = enemyData.chatName || enemyData.name || token.name;
+          ChatMessage.create({
+            content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-skull"></i></div><div class="msg-titles"><div class="msg-name">Soul Harvest!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${necroName} devours ${skelName}'s departing soul — heals ${healAmt} LP!</div></div></div>`,
+            speaker: { alias: necroData.name }
+          });
+        }
+      }
+    }
   }
 
   } catch (error) {
@@ -5499,6 +5652,209 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     if (swiftEnemy?.threatTraits?.includes('swift') && swiftTokenDoc.getFlag('conan', 'swiftUsed')) {
       await swiftTokenDoc.setFlag('conan', 'swiftUsed', false);
       console.log(`%c[SWIFT] ${swiftEnemy.chatName || swiftEnemy.name} — Swift refreshed`, 'color: #87CEEB; font-weight: bold;');
+    }
+  }
+
+  // === GLAMOUR BLIND: Expires at end of blinded player's turn ===
+  const prevCombatant = combat.combats?.length ? null : null; // fallback
+  const prevTurn = combat.previous?.turn;
+  if (prevTurn != null && combat.turns?.[prevTurn]) {
+    const glamourPrevCombatant = combat.turns[prevTurn];
+    const glamourActor = glamourPrevCombatant?.actor;
+    if (glamourActor?.type === 'character2') {
+      const glamourFlag = glamourActor.getFlag('conan', 'glamourDebuff');
+      if (glamourFlag?.active) {
+        await glamourActor.update({ 'system.conditions.blinded': false });
+        await glamourActor.unsetFlag('conan', 'glamourDebuff');
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: glamourActor }),
+          content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${glamourActor.name} — Glamour Fades</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">The blinding sorcery loosens its grip — sight returns!</div></div>`
+        });
+        console.log(`%c[GLAMOUR] ${glamourActor.name} — Glamour expired end of turn`, 'color: #708090; font-weight: bold;');
+      }
+    }
+  }
+
+  // === HELLISH BURNING: 1d4 damage on burning player's turn, random extinguish check ===
+  const burnCombatant = combat.combatant;
+  if (burnCombatant?.actor) {
+    const burnFlag = burnCombatant.actor.getFlag('conan', 'burningDebuff');
+    if (burnFlag?.active && burnFlag.roundsLeft > 0) {
+      // Extinguish check: 50/50 each round — coin flip before damage
+      const extinguishRoll = Math.random();
+      const goesOut = extinguishRoll < 0.5;
+      const playerName = burnCombatant.actor.name;
+
+      if (goesOut) {
+        // Fire goes out — no damage this round
+        await burnCombatant.actor.unsetFlag('conan', 'burningDebuff');
+        await burnCombatant.actor.update({ 'system.conditions.burning': false });
+        ChatMessage.create({
+          content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-fire"></i></div><div class="msg-titles"><div class="msg-name">Flames Die Out!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${playerName} smothers the hellfire — the flames sputter and die!</div></div></div>`,
+          speaker: { alias: 'GM' }
+        });
+      } else {
+        // Fire persists — deal 1d4 damage
+        const burnRoll = await new Roll('1d4').evaluate();
+        const burnDmg = burnRoll.total;
+        const lpData = burnCombatant.actor.system?.lifePoints;
+        if (lpData) {
+          const curLP = lpData.value ?? lpData.max ?? 0;
+          const newLP = Math.max(0, curLP - burnDmg);
+          await burnCombatant.actor.update({ 'system.lifePoints.value': newLP });
+          // Floating damage on burning token
+          const burnToken = burnCombatant.token ? canvas.tokens.get(burnCombatant.token.id) : null;
+          if (burnToken) broadcastFloatingDamage(burnToken.id, burnDmg, false, false, false);
+        }
+        const remaining = burnFlag.roundsLeft - 1;
+        if (remaining <= 0) {
+          // Max rounds reached — fire goes out after this damage
+          await burnCombatant.actor.unsetFlag('conan', 'burningDebuff');
+          await burnCombatant.actor.update({ 'system.conditions.burning': false });
+          ChatMessage.create({
+            content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-fire"></i></div><div class="msg-titles"><div class="msg-name">Burning! (Final)</div></div></div><div class="enemy-msg-body"><div style="text-align: center; margin-bottom: 6px;"><img src="systems/conan/images/icons/burning_icon.png" alt="Burning" style="width: 48px; height: 48px; filter: drop-shadow(0 0 6px rgba(255,69,0,0.8));"/></div><div class="enemy-msg-flavor">${playerName} burns for ${burnDmg} damage! The hellfire finally dies out.</div></div></div>`,
+            speaker: { alias: 'GM' }
+          });
+        } else {
+          await burnCombatant.actor.setFlag('conan', 'burningDebuff', { active: true, roundsLeft: remaining });
+          ChatMessage.create({
+            content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-fire"></i></div><div class="msg-titles"><div class="msg-name">Burning!</div></div></div><div class="enemy-msg-body"><div style="text-align: center; margin-bottom: 6px;"><img src="systems/conan/images/icons/burning_icon.png" alt="Burning" style="width: 48px; height: 48px; filter: drop-shadow(0 0 6px rgba(255,69,0,0.8));"/></div><div class="enemy-msg-flavor">${playerName} burns for ${burnDmg} damage! (${remaining} round${remaining > 1 ? 's' : ''} remaining)</div></div></div>`,
+            speaker: { alias: 'GM' }
+          });
+        }
+      }
+    }
+  }
+
+  // === HEX: Auto-tick +1 stack at start of witch's turn (cap 3) ===
+  const hexCombatant = combat.combatant;
+  if (hexCombatant?.token) {
+    const hexTokenDoc = game.scenes.active?.tokens.get(hexCombatant.token.id);
+    const hexEnemy = hexTokenDoc?.getFlag('conan', 'enemyData');
+    if (hexEnemy?.id === 'witch' && hexEnemy.threatTraits?.includes('hex')) {
+      const allPlayers = game.actors.filter(a => a.type === 'character2');
+      for (const player of allPlayers) {
+        const hFlag = player.getFlag('conan', 'hexDebuff');
+        if (hFlag?.sources?.includes(hexTokenDoc.id) && hFlag.stacks < 3) {
+          hFlag.stacks += 1;
+          await player.setFlag('conan', 'hexDebuff', hFlag);
+          ChatMessage.create({
+            speaker: { alias: hexEnemy.chatName || hexEnemy.name },
+            content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">Hex Deepens — ${player.name}</div></div><div style="text-align: center; padding: 8px; color: #9400D3; font-style: italic;">The curse tightens its grip... <strong>-${hFlag.stacks} Attack</strong></div></div>`
+          });
+          console.log(`%c[HEX] ${player.name} hex deepens to -${hFlag.stacks}`, 'color: #9400D3; font-weight: bold;');
+        }
+      }
+    }
+  }
+
+  // === ETERNAL SERVANT: Resurrect dead skeletons at start of necromancer's turn ===
+  const esCombatant = combat.combatant;
+  if (esCombatant?.token) {
+    const esTokenDoc = game.scenes.active?.tokens.get(esCombatant.token.id);
+    const esEnemy = esTokenDoc?.getFlag('conan', 'enemyData');
+    if (esEnemy?.id === 'necromancer' && esEnemy.threatTraits?.includes('eternalservant')) {
+      const necroId = esTokenDoc.id;
+      const deadSkeletons = canvas.scene.tokens.filter(t => {
+        return t.getFlag('conan', 'summonedBy') === necroId && t.getFlag('conan', 'dead');
+      });
+      if (deadSkeletons.length > 0) {
+        for (const skelDoc of deadSkeletons) {
+          await skelDoc.setFlag('conan', 'dead', false);
+          await skelDoc.setFlag('conan', 'wounded', false);
+          // Reset tint/alpha to alive state
+          await skelDoc.update({ 'texture.tint': null, alpha: 1.0 });
+          // Reset minion HP: clear wounded state so next hit uses threshold again
+        }
+        const necroName = esEnemy.chatName || esEnemy.name;
+        ChatMessage.create({
+          content: `<div class="enemy-msg theme-undead"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-skull"></i></div><div class="msg-titles"><div class="msg-name">Eternal Servant!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${necroName} raises a hand — ${deadSkeletons.length} skeleton${deadSkeletons.length > 1 ? 's claw' : ' claws'} back from the grave!</div></div></div>`,
+          speaker: { alias: esEnemy.name }
+        });
+        console.log(`%c[ETERNAL SERVANT] ${necroName} resurrected ${deadSkeletons.length} skeletons`, 'color: #90EE90; font-weight: bold;');
+      }
+    }
+  }
+
+  // === ERUPTION: Volcanist escalating self-destruct — warning messages, GM applies damage manually ===
+  if (esCombatant?.token) {
+    const erupTokenDoc = game.scenes.active?.tokens.get(esCombatant.token.id);
+    const erupEnemy = erupTokenDoc?.getFlag('conan', 'enemyData');
+    if (erupEnemy?.threatTraits?.includes('eruption') && !erupTokenDoc.getFlag('conan', 'dead')) {
+      const erupActor = esCombatant.actor;
+      const curHP = erupActor?.system?.lifePoints?.value ?? 0;
+      const maxHP = erupActor?.system?.lifePoints?.max ?? 1;
+      const hpPct = curHP / maxHP;
+
+      // Eruption chance: full health 5%, half health 50%, 10 or less LP 90%
+      let eruptChance;
+      if (curHP <= 10) eruptChance = 0.9;
+      else if (hpPct <= 0.5) eruptChance = 0.5;
+      else eruptChance = 0.05;
+
+      const eruptRoll = Math.random();
+      const erupName = erupEnemy.chatName || erupEnemy.name;
+      const chancePct = Math.round(eruptChance * 100);
+
+      if (eruptRoll < eruptChance) {
+        // ERUPTION! Roll 2d10, set lastDamageRoll, kill Volcanist — GM shift+clicks targets
+        const erupDmgRoll = await new Roll('2d10').evaluate();
+        const erupDmg = erupDmgRoll.total;
+
+        game.conan = game.conan || {};
+        game.conan.lastDamageRoll = erupDmg;
+        game.conan.lastDamageEffect = null;
+
+        // Kill the Volcanist
+        await erupActor.update({ 'system.lifePoints.value': 0 });
+        await erupTokenDoc.setFlag('conan', 'dead', true);
+        const hpFlag = erupTokenDoc.getFlag('conan', 'currentHP');
+        if (hpFlag !== undefined) await erupTokenDoc.setFlag('conan', 'currentHP', 0);
+        await erupTokenDoc.update({ 'texture.tint': '#660000', alpha: 0.5 });
+
+        ChatMessage.create({
+          content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-volcano"></i></div><div class="msg-titles"><div class="msg-name">ERUPTION!</div></div></div><div class="enemy-msg-body"><div style="color: #ff4444; text-align: center; font-weight: bold; font-size: 1.1em;">${erupName} ERUPTS!</div><div style="color: #ccc; text-align: center; font-style: italic; margin: 4px 0;">The air itself ignites — fire consumes everything nearby!</div><div class="roll-row" style="justify-content: center; margin-top: 6px;"><div class="roll-dice"><div class="die dmg">${erupDmgRoll.dice[0]?.results[0]?.result || '?'}</div><div class="die dmg">${erupDmgRoll.dice[0]?.results[1]?.result || '?'}</div></div><div class="roll-total" style="color: #ff4444;">${erupDmg} fire damage</div></div><div style="color: #ff6b6b; text-align: center; margin-top: 4px; font-size: 0.85em;">Shift+click targets in the area to apply damage.</div><div style="color: #ff6b6b; text-align: center; margin-top: 2px; font-style: italic;">${erupName} is consumed by the inferno.</div></div></div>`,
+          speaker: { alias: erupEnemy.name }
+        });
+        console.log(`%c[ERUPTION] ${erupName} ERUPTS for ${erupDmg}! GM shift+clicks to apply.`, 'color: #ff4500; font-weight: bold;');
+      } else {
+        // Escalating warning messages based on HP threshold
+        let warningMsg, warningIcon;
+        if (curHP <= 10) {
+          const critical = [
+            `${erupName}'s skin splits open — molten light pours from the wounds!`,
+            `The ground cracks beneath ${erupName} — magma bubbles at their feet!`,
+            `${erupName} screams — their body is barely holding the fire within!`,
+            `Waves of unbearable heat blast outward from ${erupName} — RUN!`,
+          ];
+          warningMsg = critical[Math.floor(Math.random() * critical.length)];
+          warningIcon = 'volcano';
+        } else if (hpPct <= 0.5) {
+          const half = [
+            `${erupName}'s veins glow like rivers of lava beneath the skin...`,
+            `The air around ${erupName} shimmers violently — heat distortion warps the light.`,
+            `Cracks of orange fire spread across ${erupName}'s body...`,
+            `${erupName} trembles — embers drift from their mouth with every breath.`,
+          ];
+          warningMsg = half[Math.floor(Math.random() * half.length)];
+          warningIcon = 'fire-flame-curved';
+        } else {
+          const calm = [
+            `A faint heat haze surrounds ${erupName}... something simmers beneath the surface.`,
+            `${erupName}'s eyes flicker with an inner fire — barely noticeable.`,
+            `The air near ${erupName} feels uncomfortably warm.`,
+            `Wisps of smoke curl from ${erupName}'s fingertips.`,
+          ];
+          warningMsg = calm[Math.floor(Math.random() * calm.length)];
+          warningIcon = 'temperature-high';
+        }
+
+        ChatMessage.create({
+          content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-${warningIcon}"></i></div><div class="msg-titles"><div class="msg-name">Eruption (${chancePct}%)</div></div></div><div class="enemy-msg-body"><div style="color: #ccc; text-align: center; font-style: italic;">${warningMsg}</div></div></div>`,
+          speaker: { alias: erupEnemy.name }
+        });
+        console.log(`%c[ERUPTION] ${erupName} holds (${chancePct}% chance)`, 'color: #ff8c00; font-weight: bold;');
+      }
     }
   }
 

@@ -267,6 +267,35 @@ const THREAT_TRAITS_STEPPE = [
   { id: 'untamed',  name: 'Untamed',   description: 'After melee damage, horse auto-attacks (1d6+3 attack, 1d4+2 damage).' },
 ];
 
+const THREAT_TRAITS_NECRO = [
+  { id: 'eternalservant', name: 'Eternal Servant', description: 'On necromancer\'s turn: all killed skeletons are resurrected.' },
+  { id: 'deathless',      name: 'Deathless',       description: 'A killing blow is redirected to a living skeleton instead. The skeleton dies but may return via Eternal Servant.' },
+  { id: 'soulharvest',    name: 'Soul Harvest',    description: 'Whenever a skeleton dies, the necromancer heals 1D6 LP.' },
+  { id: 'bonearmor',      name: 'Bone Armor',      description: 'When struck, bone shards reflect 1 damage back to the attacker.' },
+];
+
+const THREAT_TRAITS_SUMMONER = [
+  { id: 'inferno',    name: 'Inferno',    description: 'Hellfire sets targets ablaze. Burns for 1d4 damage each round (max 3). Random chance to extinguish each round.' },
+  { id: 'damnation',  name: 'Damnation',  description: 'Hellfire deals 15 damage instead of 10.' },
+  { id: 'volatile',   name: 'Volatile',   description: 'On death: explodes for 1d8 fire damage to the killer.' },
+  { id: 'backdraft',  name: 'Backdraft',  description: 'Melee attackers take 1d4 fire damage when they strike.' },
+  { id: 'eruption',   name: 'Eruption',   description: 'Ticking time bomb. Each round: chance to erupt scaling with wounds (5% full → 50% half → 90% critical). Eruption deals 2d10 fire damage to everyone in the area and kills the Volcanist.' },
+];
+
+// Summoner tier images — override portrait + token per skull tier
+const SUMMONER_TIER_IMAGES = {
+  1: { portrait: 'systems/conan/images/enemies/summoner/pyre_portrait.png',        token: 'systems/conan/images/enemies/summoner/pyre_token.png' },
+  2: { portrait: 'systems/conan/images/enemies/summoner/burning_one_portrait.png',  token: 'systems/conan/images/enemies/summoner/burning_one_token.png' },
+  3: { portrait: 'systems/conan/images/enemies/summoner/volcanist_portrait.png',    token: 'systems/conan/images/enemies/summoner/volcanist_token.png' },
+};
+
+const THREAT_TRAITS_WITCH = [
+  { id: 'glamour',    name: 'Glamour',     description: 'Sorcery (1 LP): Blinds a player until end of their turn. Attacks auto-miss unless Flex triggers. 1 SP to overcome.' },
+  { id: 'beastmaster', name: 'Beastmaster', description: 'Call Beast summons 2 beasts instead of 1.' },
+  { id: 'feralbond',  name: 'Feral Bond',  description: 'Summoned beasts gain +2 attack and +2 damage.' },
+  { id: 'hex',        name: 'Hex',         description: 'Sorcery (1 LP): Curses a player with -1 attack. Stacks up to 3. Removed when witch dies.' },
+];
+
 // Master lookup: enemy ID → trait pool
 const THREAT_POOLS = {
   'guard':              THREAT_TRAITS_GUARDS,
@@ -290,10 +319,13 @@ const THREAT_POOLS = {
   'steppe-rider-youth': THREAT_TRAITS_STEPPE,
   'steppe-rider':       THREAT_TRAITS_STEPPE,
   'steppe-rider-khan':  THREAT_TRAITS_STEPPE,
+  'witch':              THREAT_TRAITS_WITCH,
+  'necromancer':        THREAT_TRAITS_NECRO,
+  'summoner':           THREAT_TRAITS_SUMMONER,
 };
 
 // Flat union for trait badge lookups (resolves any trait ID regardless of pool)
-const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE];
+const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER];
 
 // Hyborian name pool — gendered for flavor text pronouns
 const HYBORIAN_NAMES_M = [
@@ -384,6 +416,17 @@ function pickBarbarianName() {
   return { name: pool[Math.floor(Math.random() * pool.length)], gender: isFemale ? 'f' : 'm' };
 }
 
+// Summoner names — fire-themed, male only, ancient Middle Eastern / Stygian feel
+const SUMMONER_NAMES = [
+  'Azhar','Balaar','Cindar','Dashar','Embrus','Fahren','Ghazir','Hadrak','Ignaar','Jahal',
+  'Kashar','Lazik','Moltar','Nazir','Obsidar','Pyreth','Qasim','Rashaan','Sultar','Tephran',
+  'Urzak','Vulkaan','Waheed','Xandrak','Yazeed','Zahhak',
+  'Ashran','Brimaar','Charral','Dharak','Elazar','Furnaal','Gorshan','Hazrak','Immolar','Jalaar',
+];
+function pickSummonerName() {
+  return { name: SUMMONER_NAMES[Math.floor(Math.random() * SUMMONER_NAMES.length)], gender: 'm' };
+}
+
 const THREAT_TIERS = [
   { tier: 0, weight: 40, prefix: '' },         // Normal — 40%
   { tier: 1, weight: 30, prefix: 'Seasoned' }, // 30%
@@ -414,6 +457,9 @@ const THREAT_NAME_MAP = {
   'steppe-rider-youth': { 0: 'Steppe Rider Youth',  1: 'Wind Youth',       2: 'Storm Youth',       3: 'Tempest Youth' },
   'steppe-rider':       { 0: 'Steppe Rider',        1: 'Wind Rider',       2: 'Storm Rider',       3: 'Tempest Rider' },
   'steppe-rider-khan':  { 0: 'Steppe Rider Khan',   1: 'Wind Khan',        2: 'Storm Khan',        3: 'Tempest Khan' },
+  'witch':              { 0: 'Witch',               1: 'Hedge Witch',      2: 'Crone',             3: 'Hag' },
+  'necromancer':        { 0: 'Necromancer',         1: 'Bone Caller',      2: 'Death Speaker',    3: 'Lich' },
+  'summoner':           { 0: 'Torch',               1: 'Pyre',             2: 'Burning One',      3: 'Volcanist' },
 };
 
 function rollThreatTier() {
@@ -7349,6 +7395,52 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
         armorRating: enemyBase.ar ? randomInRange(enemyBase.ar.min, enemyBase.ar.max) : null
       };
       isSummon = true;
+
+      // Feral Bond trait: summoned beasts get +2 attack and +2 damage
+      if (summon.feralBond) {
+        enemy.stats.might.value = (enemy.stats.might.value || 0) + 2;
+        enemy.stats.edge.value = (enemy.stats.edge.value || 0) + 2;
+        // Boost damage formulas (+2 to the bonus in each weapon)
+        const boostDmg = (atk) => {
+          if (!atk) return atk;
+          const arr = Array.isArray(atk) ? atk : [atk];
+          arr.forEach(w => {
+            if (/\+(\d+)/.test(w.damage)) {
+              w.damage = w.damage.replace(/\+(\d+)/, (_, n) => `+${parseInt(n) + 2}`);
+            } else {
+              w.damage = w.damage + '+2';
+            }
+          });
+          return arr.length === 1 ? arr[0] : arr;
+        };
+        enemy.attacks.melee = boostDmg(enemy.attacks.melee);
+        enemy.attacks.ranged = boostDmg(enemy.attacks.ranged);
+        enemy.feralBond = true;
+        enemy.name = `Feral ${enemy.name}`;
+        console.log('Conan | Feral Bond: +2 Might/Edge/Damage on', enemy.name);
+      }
+
+      // Command the Dead: summoned skeletons get +1 attack and +1 damage
+      if (summon.commandDead) {
+        enemy.stats.might.value = (enemy.stats.might.value || 0) + 1;
+        const boostDmgCmd = (atk) => {
+          if (!atk) return atk;
+          const arr = Array.isArray(atk) ? atk : [atk];
+          arr.forEach(w => {
+            if (/\+(\d+)/.test(w.damage)) {
+              w.damage = w.damage.replace(/\+(\d+)/, (_, n) => `+${parseInt(n) + 1}`);
+            } else {
+              w.damage = w.damage + '+1';
+            }
+          });
+          return arr.length === 1 ? arr[0] : arr;
+        };
+        enemy.attacks.melee = boostDmgCmd(enemy.attacks.melee);
+        enemy.attacks.ranged = boostDmgCmd(enemy.attacks.ranged);
+        enemy.commandDead = true;
+        console.log('Conan | Command the Dead: +1 Might/Damage on', enemy.name);
+      }
+
       console.log('Conan | Summoning:', enemy.name, '(friendly) by', summon.casterName);
 
       // Summon limit check: if maxSummons is set, count existing tokens from this cast
@@ -7390,6 +7482,12 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     threatTier = rollThreatTier();
     threatTraits = selectTraits(threatTier, traitPool);
 
+    // Volcanist (tier 3 summoner): swap Volatile → Eruption
+    if (enemy.id === 'summoner' && threatTier === 3) {
+      const volIdx = threatTraits.indexOf('volatile');
+      if (volIdx !== -1) threatTraits[volIdx] = 'eruption';
+    }
+
     // Apply name prefix from tier
     const nameMap = THREAT_NAME_MAP[enemy.id];
     if (nameMap && nameMap[threatTier]) {
@@ -7424,6 +7522,13 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     if (threatTraits.includes('ironwill')) {
       enemy.sorceryDefense = (enemy.sorceryDefense || 0) + 2;
     }
+    // Witch traits: inject ability rules at spawn
+    if (threatTraits.includes('glamour')) {
+      enemy.rules = [...(enemy.rules || []), { name: 'Glamour', description: 'Sorcery (1 LP): Blinds a player until end of their turn. Attacks auto-miss unless Flex triggers. 1 SP to overcome.' }];
+    }
+    if (threatTraits.includes('hex')) {
+      enemy.rules = [...(enemy.rules || []), { name: 'Hex', description: 'Sorcery (1 LP): Curses a player with -1 attack. Stacks up to 3. Removed when witch dies.' }];
+    }
 
     if (threatTier > 0) {
       console.log(`Conan | Threat Engine: ${enemy.name} — Tier ${threatTier} (${'💀'.repeat(threatTier)}), Traits: [${threatTraits.join(', ')}]`);
@@ -7432,6 +7537,12 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
 
   // Get drop position
   const dropPosition = canvas.grid.getSnappedPosition(data.x, data.y);
+
+  // Override images for tiered enemies (summoner gets unique art per skull tier)
+  if (enemy.id === 'summoner' && threatTier > 0 && SUMMONER_TIER_IMAGES[threatTier]) {
+    enemy.portraitImg = SUMMONER_TIER_IMAGES[threatTier].portrait;
+    enemy.tokenImg = SUMMONER_TIER_IMAGES[threatTier].token;
+  }
 
   // Use portrait for actor, token image for token texture
   const portraitImg = enemy.portraitImg || enemy.tokenImg || 'icons/svg/mystery-man.svg';
@@ -7444,10 +7555,14 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   const PIRATE_ENEMY_IDS = ['pirate', 'pirate-mate', 'pirate-captain'];
   const BARBARIAN_ENEMY_IDS = ['barbarian-youth', 'barbarian', 'barbarian-chieftain'];
   const STEPPE_ENEMY_IDS = ['steppe-rider-youth', 'steppe-rider', 'steppe-rider-khan'];
+  const WITCH_ENEMY_IDS = ['witch'];
+  const NECRO_ENEMY_IDS = ['necromancer'];
+  const SUMMONER_ENEMY_IDS = ['summoner'];
   const chatNameData = PICT_ENEMY_IDS.includes(enemy.id) ? pickPictName()
     : CULTIST_ENEMY_IDS.includes(enemy.id) ? pickCultistName()
     : BARBARIAN_ENEMY_IDS.includes(enemy.id) ? pickBarbarianName()
-    : [...NAMED_ENEMY_IDS, ...PIRATE_ENEMY_IDS, ...STEPPE_ENEMY_IDS].includes(enemy.id) ? pickHyborianName() : null;
+    : SUMMONER_ENEMY_IDS.includes(enemy.id) ? pickSummonerName()
+    : [...NAMED_ENEMY_IDS, ...PIRATE_ENEMY_IDS, ...STEPPE_ENEMY_IDS, ...WITCH_ENEMY_IDS, ...NECRO_ENEMY_IDS].includes(enemy.id) ? pickHyborianName() : null;
   const chatName = chatNameData?.name || null;
   const chatGender = chatNameData?.gender || null;
 
@@ -7549,6 +7664,11 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     // Summon cast tracking: store castId for summon limit enforcement
     if (isSummon && data.summon?.castId) {
       await createdToken.setFlag('conan', 'summonCastId', data.summon.castId);
+    }
+
+    // Track which necromancer summoned this skeleton (for Bone Armor counting)
+    if (isSummon && data.summon?.summonerTokenId) {
+      await createdToken.setFlag('conan', 'summonedBy', data.summon.summonerTokenId);
     }
 
     // Threat Engine: set armoredLife flag for Armored minions
@@ -7684,6 +7804,23 @@ Hooks.on('deleteToken', async (tokenDoc, options, userId) => {
       if (t.actor?.getFlag('conan', 'warCryBuff')?.source === deletedTokenId) {
         await t.actor.unsetFlag('conan', 'warCryBuff');
         console.log(`Conan | Removed War Cry buff from "${t.name}" (champion deleted)`);
+      }
+    }
+  }
+
+  // --- Clean up Hex effects (witch death removes all hexes she cast) ---
+  const deletedEnemy = tokenDoc.getFlag('conan', 'enemyData');
+  if (deletedEnemy?.id === 'witch') {
+    const allActors = game.actors.filter(a => a.type === 'character2');
+    for (const playerActor of allActors) {
+      const hexFlag = playerActor.getFlag('conan', 'hexDebuff');
+      if (hexFlag?.sources?.includes(deletedTokenId)) {
+        await playerActor.unsetFlag('conan', 'hexDebuff');
+        console.log(`Conan | Removed Hex from "${playerActor.name}" (witch killed)`);
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: playerActor }),
+          content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${playerActor.name} — Hex Broken!</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">The witch falls and the curse shatters — ${playerActor.name}'s strength returns!</div></div>`
+        });
       }
     }
   }
@@ -7967,6 +8104,21 @@ function showEnemyRollDialog(enemyData, token = null) {
         tooltip = bellowUsed
           ? ' title="Bellow for Blood — already used this combat"'
           : ' title="Once per combat: +1 Damage to all Barbarians. Roar: heals 1 wound / 8 LP"';
+      } else if (r.name === 'White Magic') {
+        stateClass = 'call-beast-btn';
+        tooltip = ' title="Call Beast — summon a beast ally onto the battlefield"';
+      } else if (r.name === 'Master of the Dead') {
+        stateClass = 'necro-btn';
+        tooltip = ' title="Raise Dead or Death Scream — dark necromancy"';
+      } else if (r.name === 'Demonic Darkness') {
+        stateClass = 'summoner-btn';
+        tooltip = ' title="Demonic Ward, Hellfire, or Summon Fiend — dark sorcery"';
+      } else if (r.name === 'Glamour') {
+        stateClass = 'glamour-btn';
+        tooltip = ' title="Sorcery (1 LP): Blind a player — attacks auto-miss unless Flex saves them"';
+      } else if (r.name === 'Hex') {
+        stateClass = 'hex-btn';
+        tooltip = ' title="Sorcery (1 LP): -1 attack on a player. Stacks up to 3. Removed on witch death."';
       }
       return `<button type="button" class="ability-btn ${stateClass}" data-rule-index="${i}" data-rule-name="${r.name}"${tooltip}><i class="fas fa-bolt"></i> ${r.name}</button>`;
     }).join('');
@@ -8212,8 +8364,20 @@ function showEnemyRollDialog(enemyData, token = null) {
           extraAttrs = bellowUsed
             ? ' title="Bellow for Blood — already used this combat"'
             : ' title="Once per combat: +1 Damage to all Barbarians. Roar: heals 1 wound / 8 LP"';
+        } else if (r.name === 'Glamour') {
+          stateClass = 'glamour-btn';
+          extraAttrs = ' title="Sorcery (1 LP): Blind a player — attacks auto-miss unless Flex saves them"';
+        } else if (r.name === 'Hex') {
+          stateClass = 'hex-btn';
+          extraAttrs = ' title="Sorcery (1 LP): -1 attack on a player. Stacks up to 3. Removed on witch death."';
+        } else if (r.name === 'Master of the Dead') {
+          stateClass = 'necro-btn';
+          extraAttrs = ' title="Raise Dead or Death Scream — dark necromancy"';
+        } else if (r.name === 'Demonic Darkness') {
+          stateClass = 'summoner-btn';
+          extraAttrs = ' title="Demonic Ward, Hellfire, or Summon Fiend — dark sorcery"';
         }
-        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : '⚔';
+        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : r.name === 'Glamour' ? '👁' : r.name === 'Hex' ? '🔮' : r.name === 'White Magic' ? '🌿' : r.name === 'Master of the Dead' ? '💀' : r.name === 'Demonic Darkness' ? '🔥' : '⚔';
         return `<button type="button" class="ability-btn ${stateClass}" data-rule-index="${i}" data-rule-name="${r.name}"${extraAttrs}>${icon} ${r.name}<div class="ability-tooltip"><strong>${r.name}:</strong> ${r.description}</div></button>`;
       }).join('');
     }
@@ -10119,6 +10283,207 @@ function showEnemyRollDialog(enemyData, token = null) {
           return;
         }
 
+        // === GLAMOUR (Witch — Blind a player) ===
+        if (rule.name === 'Glamour' && isPlaced && token) {
+          const witchName = enemyData.chatName || enemyData.name;
+
+          // LP cost check (1 LP sorcery)
+          const maxLP = enemyData.lifePoints || 0;
+          const sceneTokenG = game.scenes.active?.tokens.get(token.id);
+          const currentLP = sceneTokenG?.actor?.system?.lifePoints?.value ?? (token.getFlag('conan', 'currentHP') ?? maxLP);
+          if (currentLP <= 1) {
+            ui.notifications.warn(`${enemyData.name} does not have enough LP to cast Glamour.`);
+            return;
+          }
+
+          // Enter targeting mode — GM clicks a player token
+          ui.notifications.info('GLAMOUR: Click a player token to blind them.');
+          const btn = ev.currentTarget;
+          btn.classList.add('ability-targeting');
+          document.body.style.cursor = 'crosshair';
+
+          const glamourClickHandler = async (controlledToken, controlled) => {
+            if (!controlled) return;
+            const targetActor = controlledToken.actor;
+            if (!targetActor || targetActor.type !== 'character2') {
+              ui.notifications.warn('Glamour can only target player characters.');
+              return;
+            }
+
+            // Clean up targeting
+            Hooks.off('controlToken', glamourClickHandler);
+            btn.classList.remove('ability-targeting');
+            document.body.style.cursor = '';
+
+            // Pay 1 LP — DUAL LP WRITE
+            const newLP = Math.max(0, currentLP - 1);
+            if (sceneTokenG) {
+              await sceneTokenG.setFlag('conan', 'currentHP', newLP);
+              if (sceneTokenG.actor) await sceneTokenG.actor.update({ 'system.lifePoints.value': newLP });
+            }
+
+            // Apply blinded condition + glamour flag to target
+            await targetActor.update({ 'system.conditions.blinded': true });
+            await targetActor.setFlag('conan', 'glamourDebuff', { active: true, source: token.id, witchName: witchName });
+
+            const targetName = targetActor.name;
+            const GLAMOUR_FLAVOR = [
+              `${witchName}'s eyes flash with eldritch light — ${targetName}'s vision dissolves into darkness!`,
+              `A whispered incantation from ${witchName} and ${targetName}'s world goes black!`,
+              `${witchName} weaves fingers through the air — shadows crawl across ${targetName}'s eyes!`,
+              `${witchName} breathes a curse and ${targetName} is swallowed by impenetrable gloom!`,
+            ];
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><i class="fas fa-eye-slash" style="font-size: 24px; color: #708090;"></i></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Glamour — ${targetName} Blinded!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${GLAMOUR_FLAVOR[Math.floor(Math.random() * GLAMOUR_FLAVOR.length)]}</div>
+                    <div style="text-align: center; margin-top: 8px;">
+                      <img src="systems/conan/images/icons/blinded_icon.png" alt="Blinded" style="width: 48px; height: 48px; filter: drop-shadow(0 0 6px rgba(112,128,144,0.8));"/>
+                    </div>
+                    <div class="roll-row" style="justify-content: center; margin-top: 6px;">
+                      <span class="mech-tag debuff"><i class="fas fa-eye-slash"></i> Blinded</span>
+                      <span class="mech-tag"><i class="fas fa-droplet"></i> 1 LP</span>
+                    </div>
+                    <div style="color: #708090; text-align: center; margin-top: 4px; font-size: 0.85em;">Attacks auto-miss unless Flex triggers. Spend 1 SP to overcome. Expires end of turn.</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Glamour',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: enemyData.stats?.wits?.die || 'D6'
+              }}}
+            });
+
+            console.log(`%c[GLAMOUR] ${witchName} blinds ${targetName}`, 'color: #708090; font-weight: bold;');
+          };
+
+          Hooks.on('controlToken', glamourClickHandler);
+
+          // ESC to cancel
+          const escHandler = (e) => {
+            if (e.key === 'Escape') {
+              Hooks.off('controlToken', glamourClickHandler);
+              document.removeEventListener('keydown', escHandler);
+              btn.classList.remove('ability-targeting');
+              document.body.style.cursor = '';
+              ui.notifications.info('Glamour cancelled.');
+            }
+          };
+          document.addEventListener('keydown', escHandler);
+          return;
+        }
+
+        // === HEX (Witch — -1 attack on a player, stacks to 3, removed on witch death) ===
+        if (rule.name === 'Hex' && isPlaced && token) {
+          const hexWitchName = enemyData.chatName || enemyData.name;
+
+          // LP cost check (1 LP sorcery)
+          const hexMaxLP = enemyData.lifePoints || 0;
+          const sceneTokenH = game.scenes.active?.tokens.get(token.id);
+          const hexCurrentLP = sceneTokenH?.actor?.system?.lifePoints?.value ?? (token.getFlag('conan', 'currentHP') ?? hexMaxLP);
+          if (hexCurrentLP <= 1) {
+            ui.notifications.warn(`${enemyData.name} does not have enough LP to cast Hex.`);
+            return;
+          }
+
+          ui.notifications.info('HEX: Click a player token to curse them.');
+          const hexBtn = ev.currentTarget;
+          hexBtn.classList.add('ability-targeting');
+          document.body.style.cursor = 'crosshair';
+
+          const hexClickHandler = async (controlledToken, controlled) => {
+            if (!controlled) return;
+            const hexTargetActor = controlledToken.actor;
+            if (!hexTargetActor || hexTargetActor.type !== 'character2') {
+              ui.notifications.warn('Hex can only target player characters.');
+              return;
+            }
+
+            Hooks.off('controlToken', hexClickHandler);
+            document.removeEventListener('keydown', hexEscHandler);
+            hexBtn.classList.remove('ability-targeting');
+            document.body.style.cursor = '';
+
+            // Pay 1 LP — DUAL LP WRITE
+            const hexNewLP = Math.max(0, hexCurrentLP - 1);
+            if (sceneTokenH) {
+              await sceneTokenH.setFlag('conan', 'currentHP', hexNewLP);
+              if (sceneTokenH.actor) await sceneTokenH.actor.update({ 'system.lifePoints.value': hexNewLP });
+            }
+
+            // Stack hex debuff (up to 3)
+            const hexFlag = hexTargetActor.getFlag('conan', 'hexDebuff') || { stacks: 0, sources: [] };
+            if (hexFlag.stacks >= 3) {
+              ui.notifications.warn(`${hexTargetActor.name} already has maximum Hex stacks (3).`);
+              return;
+            }
+            hexFlag.stacks += 1;
+            if (!hexFlag.sources.includes(token.id)) hexFlag.sources.push(token.id);
+            await hexTargetActor.setFlag('conan', 'hexDebuff', hexFlag);
+
+            const hexTargetName = hexTargetActor.name;
+            const HEX_FLAVOR = [
+              `${hexWitchName} points a gnarled finger at ${hexTargetName} — dark energy coils around their arms!`,
+              `${hexWitchName} hisses ancient words and ${hexTargetName} feels their strength drain away!`,
+              `A sickly green light leaps from ${hexWitchName}'s hand — ${hexTargetName}'s strikes grow sluggish!`,
+              `${hexWitchName}'s curse settles over ${hexTargetName} like a shroud of weakness!`,
+            ];
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><i class="fas fa-hand-sparkles" style="font-size: 24px; color: #9400D3;"></i></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Hex — ${hexTargetName} Cursed!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${HEX_FLAVOR[Math.floor(Math.random() * HEX_FLAVOR.length)]}</div>
+                    <div class="roll-row" style="justify-content: center; margin-top: 6px;">
+                      <span class="mech-tag debuff"><i class="fas fa-hand-sparkles"></i> Hex -${hexFlag.stacks} Attack</span>
+                      <span class="mech-tag"><i class="fas fa-droplet"></i> 1 LP</span>
+                    </div>
+                    <div style="color: #9400D3; text-align: center; margin-top: 4px; font-size: 0.85em;">-${hexFlag.stacks} to all attack rolls. Kill the witch to remove.</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Hex',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: enemyData.stats?.wits?.die || 'D6'
+              }}}
+            });
+            console.log(`%c[HEX] ${hexWitchName} hexes ${hexTargetName} (stack ${hexFlag.stacks})`, 'color: #9400D3; font-weight: bold;');
+          };
+
+          Hooks.on('controlToken', hexClickHandler);
+          const hexEscHandler = (e) => {
+            if (e.key === 'Escape') {
+              Hooks.off('controlToken', hexClickHandler);
+              document.removeEventListener('keydown', hexEscHandler);
+              hexBtn.classList.remove('ability-targeting');
+              document.body.style.cursor = '';
+              ui.notifications.info('Hex cancelled.');
+            }
+          };
+          document.addEventListener('keydown', hexEscHandler);
+          return;
+        }
+
         // === WHITE MAGIC (Witch) ===
         if (rule.name === 'White Magic') {
           const witchSpells = [
@@ -10156,31 +10521,22 @@ function showEnemyRollDialog(enemyData, token = null) {
 
           if (!pickedSpell) return;
 
-          // === CALL BEAST (enemy version) ===
+          // === CALL BEAST (enemy version — no LP cost, draggable summon badge) ===
           if (pickedSpell === 'call-beast') {
-            const beasts = [
-              { id: 'wild-dog', name: 'Wild Dog', lp: 3 },
-              { id: 'hyena', name: 'Hyena', lp: 4 },
-              { id: 'wolf', name: 'Wolf', lp: 6 },
-              { id: 'giant-serpent', name: 'Giant Serpent', lp: 7 },
-              { id: 'crocodile', name: 'Crocodile', lp: 8 },
-              { id: 'lion', name: 'Lion', lp: 9 },
-              { id: 'bear', name: 'Bear', lp: 10 }
+            const CALL_BEASTS = [
+              { id: 'wild-dog', name: 'Wild Dog', category: 'beasts', group: 'wild-animals' },
+              { id: 'hyena', name: 'Hyena', category: 'beasts', group: 'wild-animals' },
+              { id: 'wolf', name: 'Wolf', category: 'beasts', group: 'wild-animals' },
+              { id: 'giant-serpent', name: 'Giant Serpent', category: 'beasts', group: 'giant-serpents' },
+              { id: 'crocodile', name: 'Crocodile', category: 'beasts', group: 'wild-animals' },
+              { id: 'lion', name: 'Lion', category: 'beasts', group: 'wild-animals' },
+              { id: 'bear', name: 'Bear', category: 'beasts', group: 'wild-animals' }
             ];
-            const maxLP = enemyData.lifePoints || 0;
-            // DUAL LP: Read from synthetic actor first (token bar source), fall back to currentHP flag (card source)
-            // Enemy LP lives in TWO places: actor.system.lifePoints.value (token bar) + token.flags.conan.currentHP (enemy card)
-            const sceneTokenCB = isPlaced ? game.scenes.active?.tokens.get(token.id) : null;
-            const currentLP = sceneTokenCB?.actor?.system?.lifePoints?.value ?? (isPlaced ? (token.getFlag('conan', 'currentHP') ?? maxLP) : maxLP);
 
             let beastHtml = `<div style="font-family: 'Montserrat', system-ui, sans-serif; padding: 8px; background: linear-gradient(180deg, #1B1B20 0%, #0B0B0D 100%); color: #FFF;">`;
-            beastHtml += `<p style="margin: 0 0 6px; color: #ccc; font-size: 0.9em;">Current LP: <strong style="color: #ff6666;">${currentLP}</strong></p>`;
-            for (const beast of beasts) {
-              const canAfford = currentLP > beast.lp;
-              const opacity = canAfford ? '1' : '0.4';
-              const cursor = canAfford ? 'pointer' : 'not-allowed';
-              beastHtml += `<button type="button" class="enemy-beast-pick" data-beast-id="${beast.id}" style="display: flex; justify-content: space-between; width: 100%; padding: 6px 10px; margin-bottom: 4px; background: rgba(50,80,50,0.3); border: 1px solid #4a6a4a; border-radius: 4px; color: #ccc; cursor: ${cursor}; opacity: ${opacity};"${canAfford ? '' : ' disabled'}>`;
-              beastHtml += `<span>${beast.name}</span><span style="color: #ff8888; font-weight: bold;">${beast.lp} LP</span></button>`;
+            for (const beast of CALL_BEASTS) {
+              beastHtml += `<button type="button" class="enemy-beast-pick" data-beast-id="${beast.id}" style="display: flex; justify-content: space-between; width: 100%; padding: 8px 12px; margin-bottom: 4px; background: rgba(50,80,50,0.3); border: 1px solid #4a6a4a; border-radius: 4px; color: #ccc; cursor: pointer;">`;
+              beastHtml += `<span>${beast.name}</span></button>`;
             }
             beastHtml += `</div>`;
 
@@ -10192,8 +10548,7 @@ function showEnemyRollDialog(enemyData, token = null) {
                 default: 'cancel',
                 render: (html) => {
                   html.find('.enemy-beast-pick').on('click', function() {
-                    if (this.disabled) return;
-                    resolve(beasts.find(b => b.id === this.dataset.beastId));
+                    resolve(CALL_BEASTS.find(b => b.id === this.dataset.beastId));
                     d.close();
                   });
                 },
@@ -10204,27 +10559,54 @@ function showEnemyRollDialog(enemyData, token = null) {
 
             if (!selectedBeast) return;
 
-            // DUAL LP WRITE: Must update BOTH places or token bar and enemy card get out of sync
-            // 1. currentHP flag → enemy card reads this for display
-            // 2. actor.system.lifePoints.value → token bar reads this (bar1.attribute = 'lifePoints')
-            if (isPlaced && token) {
-              const newLP = Math.max(0, currentLP - selectedBeast.lp);
-              const sceneToken = game.scenes.active?.tokens.get(token.id);
-              if (sceneToken) {
-                await sceneToken.setFlag('conan', 'currentHP', newLP);
-                if (sceneToken.actor) await sceneToken.actor.update({ 'system.lifePoints.value': newLP });
-              }
+            // Trait checks
+            const isBeastmaster = enemyData.threatTraits?.includes('beastmaster');
+            const hasFeralBond = enemyData.threatTraits?.includes('feralbond');
+            const summonCount = isBeastmaster ? 2 : 1;
+
+            // Build draggable summon chat card
+            const witchName = enemyData.chatName || enemyData.name;
+            const portraitSrc = enemyData.portraitImg || enemyData.tokenImg || 'icons/svg/mystery-man.svg';
+            const summonPayload = {
+              enemyId: selectedBeast.id,
+              category: selectedBeast.category,
+              group: selectedBeast.group,
+              casterName: witchName
+            };
+            if (hasFeralBond) summonPayload.feralBond = true;
+            const summonData = JSON.stringify(summonPayload).replace(/"/g, '&quot;');
+
+            const CALL_FLAVOR = [
+              `${witchName} whispers words of binding — something stirs in the wilderness!`,
+              `${witchName}'s eyes glow as an ancient pact is invoked!`,
+              `A guttural chant rises from ${witchName}'s throat — nature answers the call!`,
+            ];
+
+            // Build summon badges (1 or 2 depending on Beastmaster)
+            let badgeHtml = '';
+            for (let i = 0; i < summonCount; i++) {
+              badgeHtml += `<img src="systems/conan/images/icons/call_beast_icon.png" class="spell-summon-badge" alt="Call Beast" data-summon="${summonData}" title="Drag onto the map to place ${selectedBeast.name} #${i + 1}" style="width: 48px; height: 48px; cursor: grab; border: 2px solid #4a6a4a; border-radius: 8px; background: #1a2a1a; margin: 0 4px;"/>`;
             }
 
-            // Post spell cast message with Counter Ward flag
-            ChatMessage.create({
+            let traitNotes = '';
+            if (isBeastmaster) traitNotes += `<div style="color: #FFD700; text-align: center; font-size: 0.85em;">Beastmaster — two beasts answer the call!</div>`;
+            if (hasFeralBond) traitNotes += `<div style="color: #ff6b6b; text-align: center; font-size: 0.85em;">Feral Bond — +2 Attack, +2 Damage!</div>`;
+
+            await ChatMessage.create({
               speaker: { alias: enemyData.name },
               content: `
-                <div class="conan-enemy-roll ability-use">
-                  <div class="roll-header">${eName} — Call Beast</div>
-                  <div class="roll-section ability-desc">
-                    ${enemyData.name} summons a <strong>${selectedBeast.name}</strong>!
-                    <div style="margin-top: 4px; color: #ff8888;">Cost: ${selectedBeast.lp} LP</div>
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><img src="${portraitSrc}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"/></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Call Beast — ${selectedBeast.name}${isBeastmaster ? ' ×2' : ''}!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${CALL_FLAVOR[Math.floor(Math.random() * CALL_FLAVOR.length)]}</div>
+                    <div style="text-align: center; margin-top: 8px;">${badgeHtml}</div>
+                    ${traitNotes}
+                    <div style="color: #2d6b2d; text-align: center; margin-top: 4px; font-weight: bold;">Drag the icon${isBeastmaster ? 's' : ''} onto the map to summon.</div>
                   </div>
                 </div>`,
               flags: { conan: { enemySpellCast: {
@@ -10235,6 +10617,8 @@ function showEnemyRollDialog(enemyData, token = null) {
                 enemyWitsDie: enemyData.stats?.wits?.die || 'D6'
               }}}
             });
+
+            console.log(`%c[CALL BEAST] ${witchName} summons ${summonCount}× ${selectedBeast.name}${hasFeralBond ? ' (Feral Bond)' : ''}`, 'color: #7fff7f; font-weight: bold;');
             return;
           }
 
@@ -10283,6 +10667,313 @@ function showEnemyRollDialog(enemyData, token = null) {
           }
 
           return; // spell picked but not handled (shouldn't happen)
+        }
+
+        // === MASTER OF THE DEAD (Necromancer — Raise Dead / Death Scream picker) ===
+        if (rule.name === 'Master of the Dead') {
+          const necroSpells = [
+            { id: 'raise-dead', name: 'Raise Dead', icon: 'systems/conan/images/icons/raise_dead_icon.png', cost: 'No cost', desc: 'Raise 4 Skeleton Warriors to fight as your allies.' },
+            { id: 'death-scream', name: 'Death Scream', icon: 'systems/conan/images/icons/death_scream_icon.png', cost: 'No cost', desc: 'Hits all who can hear — ignores AR.' }
+          ];
+
+          let pickerHtml = `<div style="font-family: 'Montserrat', system-ui, sans-serif; padding: 12px; background: linear-gradient(180deg, #1B1B20 0%, #0B0B0D 100%); color: #FFF;">`;
+          pickerHtml += `<div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.5); margin-bottom: 10px;">${enemyData.name} — Master of the Dead</div>`;
+          pickerHtml += `<div style="display: flex; flex-direction: column; gap: 6px;">`;
+          for (const sp of necroSpells) {
+            pickerHtml += `<button type="button" class="necro-spell-pick" data-spell-id="${sp.id}" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(100,200,100,0.1); border: 1px solid rgba(100,200,100,0.3); border-radius: 4px; cursor: pointer; color: #FFF; text-align: left;">`;
+            pickerHtml += `<img src="${sp.icon}" style="width: 36px; height: 36px; filter: drop-shadow(0 0 4px rgba(100,200,100,0.6));">`;
+            pickerHtml += `<div><div style="font-weight: 700;">${sp.name}</div><div style="font-size: 11px; color: rgba(255,255,255,0.6);">${sp.desc} <span style="color: #88cc88;">(${sp.cost})</span></div></div>`;
+            pickerHtml += `</button>`;
+          }
+          pickerHtml += `</div></div>`;
+
+          const pickedNecroSpell = await new Promise((resolve) => {
+            const d = new Dialog({
+              title: `${enemyData.name} — Choose Spell`,
+              content: pickerHtml,
+              buttons: { cancel: { label: 'Cancel', callback: () => resolve(null) } },
+              default: 'cancel',
+              render: (html) => {
+                html.find('.necro-spell-pick').on('click', function() {
+                  resolve(this.dataset.spellId);
+                  d.close();
+                });
+              },
+              close: () => resolve(null)
+            }, { width: 340 });
+            d.render(true);
+          });
+
+          if (!pickedNecroSpell) return;
+
+          // === RAISE DEAD (enemy version — no LP cost, 4 draggable skeleton badges) ===
+          if (pickedNecroSpell === 'raise-dead') {
+            const necroName = enemyData.chatName || enemyData.name;
+            const portraitSrc = enemyData.portraitImg || enemyData.tokenImg || 'icons/svg/mystery-man.svg';
+            const castId = `raise-dead-${Date.now()}`;
+            const summonPayload = {
+              enemyId: 'skeleton-warrior',
+              category: 'undead',
+              group: 'skeletons',
+              casterName: necroName,
+              castId: castId,
+              maxSummons: 4,
+              commandDead: true,
+              summonerTokenId: token?.id || null
+            };
+            const summonData = JSON.stringify(summonPayload).replace(/"/g, '&quot;');
+
+            const RAISE_FLAVOR = [
+              `${necroName} speaks words that should not be spoken — the ground splits and the dead claw upward!`,
+              `${necroName}'s eyes burn with eldritch light as skeletal hands burst from the earth!`,
+              `A terrible chant echoes across the battlefield — the dead answer ${necroName}'s call!`,
+            ];
+
+            const badgeHtml = `<img src="systems/conan/images/icons/raise_dead_icon.png" class="spell-summon-badge" alt="Raise Dead" data-summon="${summonData}" title="Drag onto the map to place Skeleton Warriors (×4)" style="width: 48px; height: 48px; cursor: grab; border: 2px solid #4a6a4a; border-radius: 8px; background: #1a2a1a;"/>`;
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><img src="${portraitSrc}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"/></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Raise Dead — 4 Skeleton Warriors!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${RAISE_FLAVOR[Math.floor(Math.random() * RAISE_FLAVOR.length)]}</div>
+                    <div style="text-align: center; margin-top: 8px;">${badgeHtml}</div>
+                    <div style="color: #2d6b2d; text-align: center; margin-top: 4px; font-weight: bold;">Drag onto the map to summon (×4).</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Raise Dead',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: enemyData.stats?.wits?.die || 'D6'
+              }}}
+            });
+
+            console.log(`%c[RAISE DEAD] ${necroName} summons 4× Skeleton Warrior`, 'color: #7fff7f; font-weight: bold;');
+            return;
+          }
+
+          // === DEATH SCREAM (enemy version — single use, roll damage, ignores AR) ===
+          if (pickedNecroSpell === 'death-scream') {
+            const necroName = enemyData.chatName || enemyData.name;
+            const witsDie = enemyData.stats?.wits?.die || 'D10';
+            const dmgRoll = await new Roll(`1${witsDie}+2`).evaluate();
+            const dmgTotal = dmgRoll.total;
+
+            game.conan = game.conan || {};
+            game.conan.lastDamageRoll = dmgTotal;
+            game.conan.lastDamageEffect = { type: 'death-scream', ignoresAR: true };
+
+            const portraitSrc = enemyData.portraitImg || enemyData.tokenImg || 'icons/svg/mystery-man.svg';
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><img src="${portraitSrc}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"/></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Death Scream!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${necroName} unleashes a soul-rending shriek that tears at the living!</div>
+                    <div class="roll-section damage"><div class="roll-result">= ${dmgTotal}</div></div>
+                    <div style="color: #ff6b6b; text-align: center; font-size: 0.85em;">Ignores AR — Shift+click targets to apply.</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Death Scream',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: witsDie
+              }}}
+            });
+            console.log(`%c[DEATH SCREAM] ${necroName} — ${dmgTotal} damage (1${witsDie}+2, ignores AR)`, 'color: #ff4444; font-weight: bold;');
+            return;
+          }
+
+          return;
+        }
+
+        // === DEMONIC DARKNESS (Summoner — Demonic Ward / Hellfire / Summon Fiend picker) ===
+        if (rule.name === 'Demonic Darkness') {
+          const summonerSpells = [
+            { id: 'demonic-ward', name: 'Demonic Ward', icon: 'systems/conan/images/icons/demonic_ward_icon.png', cost: 'No cost', desc: 'Halve all non-sorcery damage.' },
+            { id: 'hellfire', name: 'Hellfire', icon: 'systems/conan/images/icons/hellfire_icon.png', cost: 'No cost', desc: 'Ranged sorcery attack.' },
+            { id: 'summon-fiend', name: 'Summon Fiend', icon: 'systems/conan/images/icons/summon_fiend_icon.png', cost: 'No cost', desc: 'Summon a demon to the battlefield.' }
+          ];
+
+          let pickerHtml = `<div style="font-family: 'Montserrat', system-ui, sans-serif; padding: 12px; background: linear-gradient(180deg, #1B1B20 0%, #0B0B0D 100%); color: #FFF;">`;
+          pickerHtml += `<div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.5); margin-bottom: 10px;">${enemyData.name} — Demonic Darkness</div>`;
+          pickerHtml += `<div style="display: flex; flex-direction: column; gap: 6px;">`;
+          for (const sp of summonerSpells) {
+            pickerHtml += `<button type="button" class="summoner-spell-pick" data-spell-id="${sp.id}" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(200,60,60,0.15); border: 1px solid rgba(200,60,60,0.4); border-radius: 4px; cursor: pointer; color: #FFF; text-align: left;">`;
+            pickerHtml += `<img src="${sp.icon}" style="width: 36px; height: 36px; filter: drop-shadow(0 0 4px rgba(200,60,60,0.6));">`;
+            pickerHtml += `<div><div style="font-weight: 700;">${sp.name}</div><div style="font-size: 11px; color: rgba(255,255,255,0.6);">${sp.desc} <span style="color: #ff8888;">(${sp.cost})</span></div></div>`;
+            pickerHtml += `</button>`;
+          }
+          pickerHtml += `</div></div>`;
+
+          const pickedSummonerSpell = await new Promise((resolve) => {
+            const d = new Dialog({
+              title: `${enemyData.name} — Choose Spell`,
+              content: pickerHtml,
+              buttons: { cancel: { label: 'Cancel', callback: () => resolve(null) } },
+              default: 'cancel',
+              render: (html) => {
+                html.find('.summoner-spell-pick').on('click', function() {
+                  resolve(this.dataset.spellId);
+                  d.close();
+                });
+              },
+              close: () => resolve(null)
+            }, { width: 340 });
+            d.render(true);
+          });
+
+          if (!pickedSummonerSpell) return;
+
+          // === DEMONIC WARD (enemy version — toggle 50% non-sorcery damage reduction) ===
+          if (pickedSummonerSpell === 'demonic-ward') {
+            if (!isPlaced || !token) return;
+            const wardActive = token.actor?.getFlag('conan', 'demonicWard');
+            const summonerName = enemyData.chatName || enemyData.name;
+
+            if (wardActive) {
+              // Dismiss ward
+              await token.actor.setFlag('conan', 'demonicWard', false);
+              ChatMessage.create({
+                content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-shield-alt"></i></div><div class="msg-titles"><div class="msg-name">Demonic Ward Dismissed</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${summonerName}'s ward sigils fade into nothing.</div></div></div>`,
+                speaker: { alias: enemyData.name }
+              });
+            } else {
+              // Activate ward
+              await token.actor.setFlag('conan', 'demonicWard', true);
+              ChatMessage.create({
+                content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-shield-alt"></i></div><div class="msg-titles"><div class="msg-name">Demonic Ward!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">Dark sigils burn across ${summonerName}'s skin — non-sorcery damage halved!</div></div></div>`,
+                speaker: { alias: enemyData.name }
+              });
+            }
+            return;
+          }
+
+          // === HELLFIRE (enemy version — sorcery attack roll, Wits die + Wits value) ===
+          if (pickedSummonerSpell === 'hellfire') {
+            const summonerName = enemyData.chatName || enemyData.name;
+            const hasDamnation = enemyData.threatTraits?.includes('damnation');
+            const hasInferno = enemyData.threatTraits?.includes('inferno');
+
+            // Attack roll: WitsDie + Wits value
+            const witsValue = enemyData.stats?.wits?.value ?? 0;
+            const witsDie = enemyData.stats?.wits?.die || 'D10';
+            const atkRoll = await new Roll(`1${witsDie.toLowerCase()}`).evaluate();
+            const atkTotal = atkRoll.total + witsValue;
+
+            // Damage: base 10 (or 15 with Damnation)
+            const baseDmg = hasDamnation ? 15 : 10;
+            const totalDmg = baseDmg;
+
+            // Modifiers
+            let atkModifiers = '';
+            if (hasDamnation) atkModifiers += `<div class="msg-modifier">Damnation: Hellfire burns hotter — 15 damage!</div>`;
+            if (hasInferno) atkModifiers += `<div class="msg-modifier">Inferno: Target catches fire on hit!</div>`;
+
+            // Build damage display
+            let dmgBonuses = '';
+            if (hasDamnation) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">5</span>`;
+
+            const messageContent = msgCard('fire', 'Hellfire — Sorcery Attack', `
+                ${atkModifiers}
+                <div class="roll-row">
+                  <div class="roll-dice"><div class="die stat">${atkRoll.total}</div></div>
+                  <span class="roll-plus">+</span>
+                  <span class="roll-value">Wits ${witsValue}</span>
+                  <div class="roll-total">${atkTotal}</div>
+                </div>
+                <div class="roll-row">
+                  <div class="roll-dice"><div class="die dmg">10</div></div>
+                  ${dmgBonuses}
+                  <div class="roll-total">${totalDmg}</div>
+                </div>
+            `);
+
+            game.conan = game.conan || {};
+            game.conan.lastDamageRoll = totalDmg;
+            game.conan.lastDamageEffect = { type: 'inferno', inferno: hasInferno };
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: messageContent,
+              rolls: [atkRoll],
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Hellfire',
+                tokenId: token?.id || null,
+                enemyWits: witsValue,
+                enemyWitsDie: witsDie
+              }}}
+            });
+            console.log(`%c[HELLFIRE] ${summonerName} — Atk ${atkTotal} (${atkRoll.total}+${witsValue}), Dmg ${totalDmg}${hasDamnation ? ' (Damnation)' : ''}${hasInferno ? ' (Inferno)' : ''}`, 'color: #ff4444; font-weight: bold;');
+            return;
+          }
+
+          // === SUMMON FIEND (enemy version — drag-to-canvas fiend) ===
+          if (pickedSummonerSpell === 'summon-fiend') {
+            const summonerName = enemyData.chatName || enemyData.name;
+            const portraitSrc = enemyData.portraitImg || enemyData.tokenImg || 'icons/svg/mystery-man.svg';
+            const summonPayload = {
+              enemyId: 'fiend',
+              category: 'demons',
+              group: 'lesser-demons',
+              casterName: summonerName
+            };
+            const summonData = JSON.stringify(summonPayload).replace(/"/g, '&quot;');
+
+            const FIEND_FLAVOR = [
+              `${summonerName} tears a rift between worlds — a Fiend claws its way through!`,
+              `Dark sigils burn in the air as ${summonerName} summons a servant from the pit!`,
+              `The air splits with a howl — a Fiend answers ${summonerName}'s call!`,
+            ];
+
+            const badgeHtml = `<img src="systems/conan/images/icons/summon_fiend_icon.png" class="spell-summon-badge" alt="Summon Fiend" data-summon="${summonData}" title="Drag onto the map to place a Fiend" style="width: 48px; height: 48px; cursor: grab; border: 2px solid #8b2020; border-radius: 8px; background: #1a0a0a;"/>`;
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><img src="${portraitSrc}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"/></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Summon Fiend!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${FIEND_FLAVOR[Math.floor(Math.random() * FIEND_FLAVOR.length)]}</div>
+                    <div style="text-align: center; margin-top: 8px;">${badgeHtml}</div>
+                    <div style="color: #2d6b2d; text-align: center; margin-top: 4px; font-weight: bold;">Drag onto the map to summon.</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Summon Fiend',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: enemyData.stats?.wits?.die || 'D10'
+              }}}
+            });
+            console.log(`%c[SUMMON FIEND] ${summonerName} summons a Fiend`, 'color: #ff4444; font-weight: bold;');
+            return;
+          }
+
+          return;
         }
 
         // === BLOOD SACRIFICE (Cultist Minions) ===

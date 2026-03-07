@@ -90,7 +90,8 @@
         "blinded": false,
         "prone": false,
         "grappled": false,
-        "bleeding": false
+        "bleeding": false,
+        "burning": false
       },
       "inventory": {},
       "mount": {
@@ -184,7 +185,8 @@
         "blinded": false,
         "prone": false,
         "grappled": false,
-        "bleeding": false
+        "bleeding": false,
+        "burning": false
       }
     },
     "tools": {

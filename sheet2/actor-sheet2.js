@@ -1910,6 +1910,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     context.system.isProne = context.system.conditions?.prone || false;
     context.system.isGrappled = context.system.conditions?.grappled || false;
     context.system.isBleeding = context.system.conditions?.bleeding || false;
+    context.system.isBurning = context.system.conditions?.burning || false;
 
     // Check if any conditions are active for template rendering
     context.hasActiveConditions = context.system.isEncumbered ||
@@ -1917,7 +1918,8 @@ export default class ConanActorSheet2 extends ActorSheet {
       context.system.isUnconscious || context.system.isStunned ||
       context.system.isBound || context.system.isFrightened ||
       context.system.isBlinded || context.system.isProne ||
-      context.system.isGrappled || context.system.isBleeding;
+      context.system.isGrappled || context.system.isBleeding ||
+      context.system.isBurning;
 
     // ==========================================
     // BUFFS/DEBUFFS DETECTION & MECHANICAL EFFECTS
@@ -7949,6 +7951,11 @@ export default class ConanActorSheet2 extends ActorSheet {
     const poisonPenalty = (poisonEffects?.active && poisonEffects.effects?.checksDown) ? -1 : 0;
     if (poisonPenalty !== 0) baseAttackFormula += ` - 1`;
 
+    // Hex: -1 per stack to attacks (from witch Hex trait)
+    const hexDebuff = this.actor.getFlag('conan', 'hexDebuff');
+    const hexPenalty = hexDebuff?.stacks || 0;
+    if (hexPenalty > 0) baseAttackFormula += ` - ${hexPenalty}`;
+
     // Roll the base attack once (same dice result for both target types)
     const attackRoll = new Roll(baseAttackFormula, this.actor.getRollData());
     await attackRoll.evaluate();
@@ -7966,6 +7973,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     const attackFlexType = weapon.type === 'melee' ? 'melee_hit' : 'ranged_hit';
     const attackFlexData = await this._rollFlexDie(attackFlexType, true); // Suppress auto-celebration
     const cruelFate = this._checkCruelFate(attackRoll);
+
+    // Glamour blind check — attacks auto-miss unless flex saves them
+    const glamourBlind = this.actor.system.conditions?.blinded && this.actor.getFlag('conan', 'glamourDebuff')?.active;
 
     // Store damage info for button (damage rolled separately)
     const damageBonus = originBonuses.damage?.[weapon.type] || 0;
@@ -8026,6 +8036,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (leaderOfMenBonus > 0) attackBreakdownLines.push({ label: 'Leader of Men', value: `+${leaderOfMenBonus}`, isSkill: true });
     if (attackSoulBonus > 0) attackBreakdownLines.push({ label: 'Captured Soul', value: `+${attackSoulBonus}`, isSkill: true });
     if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-1`, isPoison: true });
+    if (hexPenalty > 0) attackBreakdownLines.push({ label: `Hex (×${hexPenalty})`, value: `-${hexPenalty}`, isPoison: true });
     if (windsOfFate !== 0) attackBreakdownLines.push({ label: 'Winds of Fate', value: windsOfFate > 0 ? `+${windsOfFate}` : `${windsOfFate}`, isFate: true });
 
     // Build attack breakdown HTML
@@ -8136,6 +8147,37 @@ export default class ConanActorSheet2 extends ActorSheet {
         isPoisoned: weapon.isPoisoned || false,
         unseenStrikeDamageBonus: unseenStrikeBonus.damage || 0
       };
+    }
+
+    // === GLAMOUR BLIND: auto-miss unless flex triggers ===
+    if (glamourBlind && !attackFlexData.triggered) {
+      const BLIND_MISS = [
+        `${this.actor.name} swings wildly into the darkness — steel finds only air!`,
+        `Blinded and desperate, ${this.actor.name} lashes out at shadows!`,
+        `${this.actor.name} strikes blind — the blade cuts nothing but empty space!`,
+        `Darkness swallows ${this.actor.name}'s senses — the attack goes wide!`,
+        `${this.actor.name} fights by sound alone — and misses!`,
+      ];
+      const blindContent = `<div class="conan-roll" style="border-color: ${ownerColor};">` +
+        `<div class="roll-header">` +
+        `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">` +
+        `<div class="roll-title">${weapon.name} Attack — BLINDED!</div>` +
+        `</div>` +
+        `<div style="text-align: center; margin: 8px 0;">` +
+        `<img src="systems/conan/images/icons/blinded_icon.png" alt="Blinded" style="width: 36px; height: 36px; filter: drop-shadow(0 0 4px rgba(112,128,144,0.6)); vertical-align: middle;"/>` +
+        `</div>` +
+        `<div style="color: #708090; text-align: center; font-style: italic; padding: 4px 8px;">${BLIND_MISS[Math.floor(Math.random() * BLIND_MISS.length)]}</div>` +
+        `<div class="flex-result"><strong>Flex Die (${attackFlexData.die}):</strong> ${attackFlexData.result}</div>` +
+        `<div style="color: #ff6666; text-align: center; font-weight: bold; padding: 4px;">MISS — Glamour blinds the attack!</div>` +
+        `</div>`;
+
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: blindContent,
+        rolls: [attackRoll, attackFlexData.roll],
+        rollMode: game.settings.get('core', 'rollMode')
+      });
+      return;
     }
 
     // If flex triggered, show flex choice card
@@ -15220,7 +15262,8 @@ export default class ConanActorSheet2 extends ActorSheet {
       blinded: { on: 'is blinded', off: 'regains their sight' },
       prone: { on: 'is knocked prone', off: 'gets back up' },
       grappled: { on: 'is grappled', off: 'breaks free from the grapple' },
-      bleeding: { on: 'starts bleeding', off: 'stops the bleeding' }
+      bleeding: { on: 'starts bleeding', off: 'stops the bleeding' },
+      burning: { on: 'catches fire', off: 'extinguishes the flames' }
     };
 
     // Find which condition was clicked
@@ -15249,9 +15292,34 @@ export default class ConanActorSheet2 extends ActorSheet {
           }
         }
 
+        // Glamour Blind: dismissing costs 1 SP
+        if (conditionKey === 'blinded' && currentState === true) {
+          const glamourFlag = this.actor.getFlag('conan', 'glamourDebuff');
+          if (glamourFlag?.active) {
+            const currentSP = this.actor.system.stamina || 0;
+            if (currentSP < 1) {
+              ui.notifications.warn('Not enough Stamina Points to overcome Glamour! (1 SP required)');
+              await this.actor.update({ 'system.conditions.blinded': true }); // revert
+              break;
+            }
+            await this.actor.update({ 'system.stamina': currentSP - 1 });
+            await this.actor.unsetFlag('conan', 'glamourDebuff');
+
+            ChatMessage.create({
+              speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+              content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${this.actor.name} — Overcomes Glamour!</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">With sheer force of will, ${this.actor.name} shakes off the blinding sorcery!</div><div style="text-align: center; color: #ff8888;">Cost: 1 SP</div></div>`
+            });
+          }
+        }
+
         // Poison: toggling OFF clears all poison effects
         if (conditionKey === 'poisoned' && currentState === true) {
           await this.actor.unsetFlag('conan', 'poisonEffects');
+        }
+
+        // Burning: toggling OFF clears burningDebuff flag (free dismiss)
+        if (conditionKey === 'burning' && currentState === true) {
+          await this.actor.unsetFlag('conan', 'burningDebuff');
         }
 
         // Poison: GM toggling ON triggers severity roll + secret effects (traps, environmental, narrative)

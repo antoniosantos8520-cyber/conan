@@ -122,6 +122,11 @@
                   <img src="systems/conan/images/icons/bleeding_icon.png" alt="Bleeding"/>
                 </div>
                 {{/if}}
+                {{#if system.isBurning}}
+                <div class="sheet2-conditionIcon condition-burning" title="BURNING: Engulfed in hellfire! 1d4 damage per round.">
+                  <img src="systems/conan/images/icons/burning_icon.png" alt="Burning"/>
+                </div>
+                {{/if}}
               </div>
               {{/if}}
             </div>
@@ -250,6 +255,9 @@
                 </button>
                 <button type="button" class="sheet2-btsConditionBtn condition-toggle-bleeding {{#if system.isBleeding}}active{{/if}}" title="Bleeding">
                   <img src="systems/conan/images/icons/bleeding_icon.png" alt=""/>
+                </button>
+                <button type="button" class="sheet2-btsConditionBtn condition-toggle-burning {{#if system.isBurning}}active{{/if}}" title="Burning">
+                  <img src="systems/conan/images/icons/burning_icon.png" alt=""/>
                 </button>
               </div>
               <label class="sheet2-btsLabel" style="margin-top: 6px;">Pronouns</label>
