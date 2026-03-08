@@ -4557,14 +4557,20 @@ export default class HowardSheet extends ActorSheet {
             const coverImage = html.find('input[name="coverImage"]').val() || "";
             const id = `tale-${Date.now()}`;
 
-            // Create tale with one default splash page
+            // Create tale with one blank page
             const firstPageId = `page-${Date.now()}`;
             const pages = {
               [firstPageId]: {
                 id: firstPageId,
                 pageNumber: 0,
-                template: 'splash',
-                panels: this._createDefaultPanels('splash')
+                panels: {},
+                images: {},
+                textBlocks: {},
+                speechBubbles: {},
+                enemies: [],
+                checks: {},
+                hiddenElements: {},
+                gmNotes: { title: '', notes: '' }
               }
             };
 
