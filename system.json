@@ -2,7 +2,7 @@
   "id": "conan",
   "title": "Blood and Steel",
   "description": "A Foundry VTT system for Conan: The Hyborian Age (Monolith Edition)",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "compatibility": {
     "minimum": "11",
     "verified": "13"
@@ -36,5 +36,5 @@
   "license": "LICENSE",
   "url": "https://github.com/antoniosantos8520-cyber/conan",
   "manifest": "https://raw.githubusercontent.com/antoniosantos8520-cyber/conan/main/system.json",
-  "download": "https://github.com/antoniosantos8520-cyber/conan/releases/download/v0.9.1/conan.zip"
+  "download": "https://github.com/antoniosantos8520-cyber/conan/releases/download/v0.9.2/conan.zip"
 }
