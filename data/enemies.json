@@ -678,6 +678,92 @@
               ]
             }
           ]
+        },
+        "silk-vipers": {
+          "name": "Silk Vipers",
+          "description": "Behind silken veils and perfumed curtains, the women of the harem wage wars no blade can win. They kill with a glance, a whisper, a tender touch.",
+          "enemies": [
+            {
+              "id": "handmaiden",
+              "name": "Handmaiden",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D4" },
+                "edge": { "value": 4, "die": "D6" },
+                "grit": { "value": 2, "die": "D4" },
+                "wits": { "value": 3, "die": "D4" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 9 },
+                "sorcery": { "min": 8, "max": 9 }
+              },
+              "threshold": 6,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Poisoned Knife", "range": "Touch", "damage": "1D4+4" },
+                "ranged": { "name": "Silk Whip", "range": "Close", "damage": "1D4+2", "garroteOnly": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Poisoned Blade", "description": "When a Handmaiden inflicts damage with a melee attack, the target becomes Poisoned." }
+              ]
+            },
+            {
+              "id": "bride",
+              "name": "Bride",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D6" },
+                "grit": { "value": 4, "die": "D6" },
+                "wits": { "value": 3, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 10 },
+                "sorcery": { "min": 10, "max": 10 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Silk Whip", "range": "Close", "damage": "1D4+3" },
+                "ranged": null
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Stunning Lash", "description": "When a Bride inflicts damage with her Silk Whip, the target becomes Stunned." },
+                { "name": "Garrote", "description": "A Bride with the Garrote trait binds her target. The target becomes Bound — unable to move and taking 1D4 damage at the start of each turn until freed." }
+              ]
+            },
+            {
+              "id": "enchantress",
+              "name": "Enchantress",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 6, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 11, "max": 12 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 2, "max": 2 },
+              "attacks": {
+                "melee": { "name": "Scimitar", "range": "Close", "damage": "1D6+4" },
+                "ranged": { "name": "Silk Whip", "range": "Close", "damage": "1D4+3", "garroteOnly": true }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Lust", "description": "The Enchantress casts a spell of overwhelming desire. The target becomes Blinded — they can see nothing but the object of their longing." },
+                { "name": "Tender Mercy", "description": "The Enchantress whispers honeyed falsehoods that mend flesh. Heals 2D4+2 Life Points to target allies." }
+              ]
+            }
+          ]
         }
       }
     },

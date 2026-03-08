@@ -5419,7 +5419,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollAttribute(event, options = {}) {
     event?.preventDefault?.();
-    const { isReroll = false, forceAttribute = null, eyesOfTheRaven = false } = options;
+    const { isReroll = false, forceAttribute = null, eyesOfTheRaven = false, howardCheckInstance = null } = options;
 
     const element = event?.currentTarget;
     const attribute = forceAttribute || element?.dataset?.attribute;
@@ -5597,7 +5597,8 @@ export default class ConanActorSheet2 extends ActorSheet {
     // If flex triggered, show flex choice card
     if (flexData.triggered) {
       // Build normal content for stamina choice fallback (no flex die shown)
-      let normalContent = `<div class="conan-roll" style="border-color: ${ownerColor};">`;
+      const hciAttr = howardCheckInstance ? ` data-howard-check="${howardCheckInstance}"` : '';
+      let normalContent = `<div class="conan-roll" style="border-color: ${ownerColor};"${hciAttr}>`;
       normalContent += `<div class="roll-header">`;
       normalContent += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
       normalContent += `<div class="roll-title">${attrData.label} Roll</div>`;
@@ -5648,7 +5649,8 @@ export default class ConanActorSheet2 extends ActorSheet {
       });
     } else {
       // No flex - show normal skill roll card with flex die in breakdown
-      let content = `<div class="conan-roll" style="border-color: ${ownerColor};">`;
+      const hciAttr2 = howardCheckInstance ? ` data-howard-check="${howardCheckInstance}"` : '';
+      let content = `<div class="conan-roll" style="border-color: ${ownerColor};"${hciAttr2}>`;
       content += `<div class="roll-header">`;
       content += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
       content += `<div class="roll-title">${attrData.label} Roll</div>`;
@@ -7956,6 +7958,11 @@ export default class ConanActorSheet2 extends ActorSheet {
     const hexPenalty = hexDebuff?.stacks || 0;
     if (hexPenalty > 0) baseAttackFormula += ` - ${hexPenalty}`;
 
+    // Lotus Dust: -1 per stack to attacks (from Silk Viper lotusdust trait)
+    const lotusDustDebuff = this.actor.getFlag('conan', 'lotusDustDebuff');
+    const lotusDustPenalty = lotusDustDebuff?.stacks || 0;
+    if (lotusDustPenalty > 0) baseAttackFormula += ` - ${lotusDustPenalty}`;
+
     // Roll the base attack once (same dice result for both target types)
     const attackRoll = new Roll(baseAttackFormula, this.actor.getRollData());
     await attackRoll.evaluate();
@@ -8037,6 +8044,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (attackSoulBonus > 0) attackBreakdownLines.push({ label: 'Captured Soul', value: `+${attackSoulBonus}`, isSkill: true });
     if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-1`, isPoison: true });
     if (hexPenalty > 0) attackBreakdownLines.push({ label: `Hex (×${hexPenalty})`, value: `-${hexPenalty}`, isPoison: true });
+    if (lotusDustPenalty > 0) attackBreakdownLines.push({ label: `Lotus Dust (×${lotusDustPenalty})`, value: `-${lotusDustPenalty}`, isPoison: true });
     if (windsOfFate !== 0) attackBreakdownLines.push({ label: 'Winds of Fate', value: windsOfFate > 0 ? `+${windsOfFate}` : `${windsOfFate}`, isFate: true });
 
     // Build attack breakdown HTML
@@ -15309,6 +15317,18 @@ export default class ConanActorSheet2 extends ActorSheet {
               speaker: ChatMessage.getSpeaker({ actor: this.actor }),
               content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${this.actor.name} — Overcomes Glamour!</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">With sheer force of will, ${this.actor.name} shakes off the blinding sorcery!</div><div style="text-align: center; color: #ff8888;">Cost: 1 SP</div></div>`
             });
+          }
+        }
+
+        // Bound (Garrote): GM can freely dismiss from condition bar
+        if (conditionKey === 'bound' && currentState === true) {
+          const boundFlag = this.actor.getFlag('conan', 'boundDebuff');
+          if (boundFlag?.active) {
+            await this.actor.unsetFlag('conan', 'boundDebuff');
+            if (boundFlag.tokenId) {
+              const boundTokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
+              if (boundTokenDoc) await boundTokenDoc.update({ locked: false });
+            }
           }
         }
 

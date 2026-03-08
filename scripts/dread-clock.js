@@ -106,6 +106,12 @@ function _buildClockSVG(hour) {
     ? `<g class="dread-skull-reset" style="cursor:pointer"><circle cx="${cx}" cy="${cy}" r="22" fill="transparent"/><text x="${cx}" y="${cy + 2}" class="dread-skull dread-skull-active">☠</text></g>`
     : `<text x="${cx}" y="${cy + 2}" class="dread-skull">☠</text>`;
 
+  // Threat threshold display (GM only, below skull)
+  const threshold = game.settings?.get('conan', 'dreadClockThreshold') ?? 8;
+  const thresholdText = game.user?.isGM
+    ? `<text x="${cx}" y="${cy + 22}" class="dread-threshold-text">${threshold}+</text>`
+    : '';
+
   // Dawn/dusk labels
   const duskX = polarX(angleForHour(0), r - 18), duskY = polarY(angleForHour(0), r - 18);
   const dawnX = polarX(angleForHour(11), r - 18), dawnY = polarY(angleForHour(11), r - 18);
@@ -141,6 +147,7 @@ function _buildClockSVG(hour) {
 
       <!-- Skull center -->
       ${skull}
+      ${thresholdText}
 
       <!-- Marker -->
       <circle cx="${mx}" cy="${my}" r="${markerR}" class="${markerClass}" filter="url(#dreadGlow)"/>
@@ -154,6 +161,16 @@ function _buildContent(hour) {
   const isDawn = hour === 11;
   const svg = _buildClockSVG(hour);
 
+  const threshold = game.settings.get('conan', 'dreadClockThreshold');
+
+  // Corner buttons around the clock face (GM only)
+  const cornerBtns = game.user.isGM ? `
+    <button class="dread-corner dread-corner-tl dread-threat-minus" title="Reduce threat (harder to trigger)">−</button>
+    <button class="dread-corner dread-corner-tr dread-threat-plus" title="Increase threat (easier to trigger)">+</button>
+    <button class="dread-corner dread-corner-bl dread-threat-roll" title="Roll d8 vs ${threshold}+">⚄</button>
+    <button class="dread-corner dread-corner-br dread-threat-reset" title="Reset threshold to 8">↺</button>
+  ` : '';
+
   const gmControls = game.user.isGM ? `
     <div class="dread-controls">
       <button class="dread-btn dread-btn-retreat" ${hour === 0 ? 'disabled' : ''}>◄ Retreat</button>
@@ -163,7 +180,10 @@ function _buildContent(hour) {
 
   return `
     <div class="dread-clock-container${isDawn ? ' dread-dawn' : ''}">
-      ${svg}
+      <div class="dread-clock-ring">
+        ${svg}
+        ${cornerBtns}
+      </div>
       <div class="dread-hour-label">${h.label}</div>
       <div class="dread-dawn-text">${_dawnText(hour)}</div>
       ${gmControls}
@@ -207,6 +227,46 @@ async function _sendResetMessage() {
   });
 }
 
+// Roll the Headsman threat check
+async function _rollThreatCheck() {
+  const threshold = game.settings.get('conan', 'dreadClockThreshold');
+  const roll = await new Roll('1d8').evaluate();
+  const triggered = roll.total >= threshold;
+
+  const content = `
+    <div class="dread-chat-toll dread-sky-5">
+      <div class="dread-chat-bell">${triggered ? '☠' : '🎲'}</div>
+      <div class="dread-chat-text dread-chat-roll-result ${triggered ? 'dread-chat-triggered' : 'dread-chat-safe'}">
+        ${triggered
+          ? `<span class="dread-roll-value">${roll.total}</span> — The Headsman appears.`
+          : `<span class="dread-roll-value">${roll.total}</span> — The streets are quiet... for now.`
+        }
+      </div>
+      <div class="dread-chat-time">d8 vs ${threshold}+</div>
+    </div>
+  `;
+
+  await ChatMessage.create({
+    content,
+    speaker: { alias: 'The Bells of Toragis' },
+    whisper: []
+  });
+
+  // If triggered, reset threshold back to 8
+  if (triggered) {
+    await game.settings.set('conan', 'dreadClockThreshold', 8);
+  }
+}
+
+// Refresh the clock UI after threshold change
+function _refreshClock() {
+  if (!_dreadDialog?.rendered) return;
+  const hour = game.settings.get('conan', 'dreadClockHour');
+  const el = _dreadDialog.element;
+  el.find('.dread-clock-container').replaceWith(_buildContent(hour));
+  _bindGMControls(el);
+}
+
 // Bind all GM controls on a dialog element
 function _bindGMControls(el) {
   if (!game.user.isGM) return;
@@ -229,6 +289,31 @@ function _bindGMControls(el) {
   el.find('.dread-skull-reset').click(async () => {
     await game.settings.set('conan', 'dreadClockHour', 0);
     await _sendResetMessage();
+  });
+
+  // Threat corner buttons
+  el.find('.dread-threat-minus').click(async () => {
+    const cur = game.settings.get('conan', 'dreadClockThreshold');
+    if (cur >= 8) return;
+    await game.settings.set('conan', 'dreadClockThreshold', cur + 1);
+    _refreshClock();
+  });
+
+  el.find('.dread-threat-plus').click(async () => {
+    const cur = game.settings.get('conan', 'dreadClockThreshold');
+    if (cur <= 1) return;
+    await game.settings.set('conan', 'dreadClockThreshold', cur - 1);
+    _refreshClock();
+  });
+
+  el.find('.dread-threat-roll').click(async () => {
+    await _rollThreatCheck();
+    _refreshClock();
+  });
+
+  el.find('.dread-threat-reset').click(async () => {
+    await game.settings.set('conan', 'dreadClockThreshold', 8);
+    _refreshClock();
   });
 }
 
@@ -263,12 +348,9 @@ export function dreadClock() {
   _dreadDialog.render(true);
 }
 
-// Hook: re-render any open clock dialog when the setting changes (live sync)
+// Hook: re-render any open clock dialog when settings change (live sync)
 Hooks.on('updateSetting', (setting) => {
-  if (setting.key === 'conan.dreadClockHour' && _dreadDialog?.rendered) {
-    const hour = game.settings.get('conan', 'dreadClockHour');
-    const el = _dreadDialog.element;
-    el.find('.dread-clock-container').replaceWith(_buildContent(hour));
-    _bindGMControls(el);
+  if ((setting.key === 'conan.dreadClockHour' || setting.key === 'conan.dreadClockThreshold') && _dreadDialog?.rendered) {
+    _refreshClock();
   }
 });

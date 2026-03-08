@@ -55,6 +55,9 @@
           <button type="button" class="howard-topbar-btn howard-pres-notes-btn" title="GM Notes for this page">
             <i class="fas fa-book"></i>
           </button>
+          <button type="button" class="howard-topbar-btn howard-pres-rollcall-btn" title="Roll Call — ad-hoc skill check">
+            <i class="fas fa-dice-d20"></i>
+          </button>
           {{else}}
           <button type="button" class="howard-topbar-btn howard-play-btn" title="Switch to Presentation mode">
             <i class="fas fa-tv"></i> Present
@@ -157,7 +160,7 @@
 
             {{!-- Text blocks --}}
             {{#each currentTextBlocks as |tb|}}
-            <div class="howard-text-block howard-text-freeform {{#if tb.isHiddenForPresentation}}howard-pres-hidden{{/if}} {{#if tb.isRevealed}}howard-tb-revealed{{/if}}" data-tb-id="{{tb.id}}"
+            <div class="howard-text-block howard-text-freeform {{#if tb.transparent}}howard-tb-transparent{{/if}} {{#if tb.isHiddenForPresentation}}howard-pres-hidden{{/if}} {{#if tb.isRevealed}}howard-tb-revealed{{/if}}" data-tb-id="{{tb.id}}"
                  style="left: {{tb.x}}%; top: {{tb.y}}%; width: {{tb.width}}%; height: {{tb.height}}%; z-index: {{tb.zIndex}};">
               <div class="howard-text-block-content howard-tb-style-{{tb.style}}">{{tb.content}}</div>
               {{#if ../isGM}}<div class="howard-pres-controls">
@@ -193,7 +196,7 @@
             {{#each currentChecks as |chk|}}
             <div class="howard-check-marker {{#if chk.fired}}howard-check-fired{{/if}}" data-check-id="{{chk.id}}"
                  style="left: {{chk.posX}}%; top: {{chk.posY}}%;"
-                 title="{{chk.skillName}} DC {{chk.dc}}&#10;{{chk.prompt}}">
+                 title="{{chk.skillName}} DC {{chk.dc}}">
               <i class="fas fa-dice-d20"></i>
             </div>
             {{/each}}
@@ -276,7 +279,7 @@
                     <label style="width:40px;font-size:11px;">DC</label>
                     <input type="number" class="howard-check-edit-dc" value="{{checkEditData.dc}}" min="1" max="30" style="width:60px;" />
                   </div>
-                  <textarea class="howard-check-edit-prompt" rows="3" placeholder="Description...">{{checkEditData.prompt}}</textarea>
+                  <textarea class="howard-check-edit-prompt" rows="3" placeholder="Revealed on success...">{{checkEditData.prompt}}</textarea>
                 </div>
                 <div class="howard-check-edit-actions">
                   <button type="button" class="howard-forge-card-btn howard-check-edit-move" title="Move on page">
@@ -296,7 +299,7 @@
               <div class="howard-check-icon-row">
                 {{#each currentChecks as |check|}}
                 <div class="howard-check-icon {{#if check.fired}}howard-check-icon-fired{{/if}}" data-check-id="{{check.id}}"
-                     title="{{check.skillName}} DC {{check.dc}}&#10;{{check.prompt}}">
+                     title="{{check.skillName}} DC {{check.dc}}">
                   <i class="fas fa-dice-d20"></i>
                 </div>
                 {{/each}}
@@ -512,6 +515,9 @@
                       </button>
                       <button type="button" class="howard-forge-card-btn howard-text-edit" title="Edit text">
                         <i class="fas fa-pen"></i>
+                      </button>
+                      <button type="button" class="howard-forge-card-btn howard-text-transparent-toggle {{#if tb.transparent}}active{{/if}}" title="Toggle transparent (no border/background)">
+                        <i class="fas fa-border-none"></i>
                       </button>
                       <button type="button" class="howard-forge-card-btn howard-text-delete" title="Delete">
                         <i class="fas fa-trash"></i>

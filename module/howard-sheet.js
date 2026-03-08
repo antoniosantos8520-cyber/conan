@@ -342,6 +342,7 @@ export default class HowardSheet extends ActorSheet {
               zIndex: tb.zIndex ?? tb.layerNum ?? 10,
               content: tb.content || '',
               style: tb.style || 'caption',
+              transparent: !!tb.transparent,
               hasContent: !!(tb.content?.trim()),
               preview: (tb.content || '').substring(0, 40) || '(empty)'
             }))
@@ -669,6 +670,9 @@ export default class HowardSheet extends ActorSheet {
     // Presentation: GM Notes — open read-only dialog with page GM data
     html.find('.howard-pres-notes-btn').click(() => this._openPresGmNotes());
 
+    // Presentation: Roll Call — ad-hoc skill check dialog
+    html.find('.howard-pres-rollcall-btn').click(() => this._onRollCall());
+
     // Presentation: Per-element eye icon — toggle visibility + broadcast
     html.find('.howard-pres-eye').click((ev) => {
       ev.stopPropagation();
@@ -699,8 +703,8 @@ export default class HowardSheet extends ActorSheet {
       this.render(false);
     });
 
-    // Page strip: right-click to toggle page hidden (Presentation mode, GM only)
-    if (game.user.isGM && this._editorMode === 'play') {
+    // Page strip: right-click to toggle page hidden (GM only, all editor modes)
+    if (game.user.isGM && (this._editorMode === 'gm' || this._editorMode === 'forge' || this._editorMode === 'play')) {
       html.find('.howard-page-strip-item').on('contextmenu', (ev) => {
         ev.preventDefault();
         const pageId = ev.currentTarget.dataset.pageId;
@@ -1037,6 +1041,18 @@ export default class HowardSheet extends ActorSheet {
         this._onDeleteTextBlock(tbId);
       });
 
+      // Text card: toggle transparent (no border/background)
+      html.find('.howard-text-transparent-toggle').click((ev) => {
+        ev.stopPropagation();
+        if (this._textToolLocked) return;
+        const tbId = ev.currentTarget.closest('.howard-forge-text-card').dataset.tbId;
+        const basePath = this._getPageBasePath();
+        const currentPage = this._getCurrentPage();
+        const tb = currentPage?.textBlocks?.[tbId];
+        if (!tb) return;
+        this.actor.update({ [`${basePath}.textBlocks.${tbId}.transparent`]: !tb.transparent });
+      });
+
       // Text card: edit → switch to inline editor
       html.find('.howard-text-edit').click((ev) => {
         ev.stopPropagation();
@@ -1277,8 +1293,8 @@ export default class HowardSheet extends ActorSheet {
                 <input type="number" name="dc" value="10" min="1" max="30" style="width:60px;" />
               </div>
               <div style="display:flex;gap:6px;align-items:flex-start;">
-                <label style="width:60px;font-size:12px;padding-top:4px;">Prompt</label>
-                <textarea name="prompt" rows="3" placeholder="What happens..." style="flex:1;resize:vertical;"></textarea>
+                <label style="width:60px;font-size:12px;padding-top:4px;">Success</label>
+                <textarea name="prompt" rows="3" placeholder="Revealed on success..." style="flex:1;resize:vertical;"></textarea>
               </div>
             </form>`,
           buttons: {
@@ -1645,11 +1661,18 @@ export default class HowardSheet extends ActorSheet {
 
     const check = currentPage.checks[checkId];
 
-    // Howard chat message (same style as skill markers)
+    // Map skill name to attribute key
+    const skillToAttr = { might: 'might', edge: 'edge', grit: 'grit', wits: 'wits' };
+    const attrKey = skillToAttr[(check.skillName || '').toLowerCase()] || 'might';
+
+    // Unique instance ID for linking rolls back to this check
+    const checkInstanceId = `howard-check-${Date.now()}`;
+
+    // Howard chat message with Roll button
     const howardImg = 'systems/conan/images/howard.png';
     const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const content = `
-      <div class="conan-roll spell-chat-card howard-check-card">
+      <div class="conan-roll spell-chat-card howard-check-card" data-check-instance="${checkInstanceId}">
         <div class="spell-chat-header">
           <div class="spell-chat-portrait-wrap">
             <img src="${howardImg}" class="spell-chat-portrait"/>
@@ -1660,10 +1683,12 @@ export default class HowardSheet extends ActorSheet {
           </div>
         </div>
         <div class="spell-chat-body">
-          <div class="spell-chat-effect">${esc(check.prompt)}</div>
           <div class="spell-chat-meta">
             <strong>${esc(check.skillName)}</strong> &nbsp;|&nbsp; <span style="color: #FFD700;">Difficulty ${check.dc}</span>
           </div>
+          <button type="button" class="howard-check-roll-btn" data-attribute="${attrKey}" data-check-instance="${checkInstanceId}" data-dc="${check.dc}">
+            <i class="fas fa-dice-d20"></i> Roll ${esc(check.skillName)} Check
+          </button>
         </div>
       </div>
     `;
@@ -1672,6 +1697,185 @@ export default class HowardSheet extends ActorSheet {
       content,
       speaker: { alias: "Howard the Chronicler" }
     });
+
+    // Open GM check control dialog (top-right quadrant)
+    if (game.user.isGM) {
+      this._openCheckDialog(check, checkInstanceId);
+    }
+  }
+
+  /** Open the GM-only check control dialog */
+  _openCheckDialog(check, checkInstanceId) {
+    const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+    // Store active check state for roll detection hook
+    this._activeCheck = { checkInstanceId, check, dc: check.dc };
+
+    const dialogContent = `
+      <div class="gm-check-dialog-body">
+        <div class="gm-check-summary">
+          <i class="fas fa-dice-d20 gm-check-icon"></i>
+          <div class="gm-check-info">
+            <div class="gm-check-stat">${esc(check.skillName)}</div>
+            <div class="gm-check-dc">Difficulty ${check.dc}</div>
+          </div>
+        </div>
+        ${check.prompt ? `<div class="gm-check-section-label">Hidden Success Text</div><div class="gm-check-success-preview">${esc(check.prompt)}</div>` : ''}
+        <div class="gm-check-section-label">Players</div>
+        <div class="gm-check-player-list"><div class="gm-check-empty">Waiting for rolls...</div></div>
+        <button type="button" class="gm-check-reveal-btn"><i class="fas fa-eye"></i> Reveal</button>
+      </div>`;
+
+    const dlg = new Dialog({
+      title: `${check.skillName} Check — Difficulty ${check.dc}`,
+      content: dialogContent,
+      buttons: {},
+      render: (html) => {
+        // Toggle pass/fail on click
+        html.find('.gm-check-toggle').click((ev) => {
+          $(ev.currentTarget).toggleClass('checked');
+        });
+        // Reveal button
+        html.find('.gm-check-reveal-btn').click(() => {
+          this._revealCheckResult(check, dlg);
+        });
+      },
+      close: () => { this._activeCheck = null; this._activeCheckDialog = null; }
+    }, {
+      width: 300,
+      classes: ['bpm-dialog-window', 'gm-check-dialog'],
+      top: 80,
+      left: window.innerWidth - 340
+    });
+    this._activeCheckDialog = dlg;
+    dlg.render(true);
+  }
+
+  /** Post the outcome chat message and close the dialog */
+  async _revealCheckResult(check, dlg) {
+    const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const howardImg = 'systems/conan/images/howard.png';
+
+    // Read who passed/failed from dialog DOM
+    const passed = [];
+    const failed = [];
+    dlg.element.find('.gm-check-player-row').each((i, el) => {
+      const name = $(el).find('.gm-check-player-name').text();
+      const isChecked = $(el).find('.gm-check-toggle').hasClass('checked');
+      if (isChecked) passed.push(name);
+      else failed.push(name);
+    });
+
+    const anyPassed = passed.length > 0;
+
+    // Default fail messages by stat
+    const defaultFail = {
+      might: [
+        "Brute strength alone is not enough. The obstacle holds firm.",
+        "Muscles strain and sinew screams — but nothing yields.",
+        "Despite your best effort, raw power fails you this time.",
+        "The task demands more than even a strong arm can deliver."
+      ],
+      edge: [
+        "Quick hands and sharp eyes are not enough — the moment slips away.",
+        "Nimble as you are, this challenge proves too slippery.",
+        "Speed and cunning fail where patience might have served.",
+        "Your reflexes betray you at the worst possible moment."
+      ],
+      grit: [
+        "Endurance has its limits, and you have found yours.",
+        "You grit your teeth and push on — but your body refuses.",
+        "Willpower alone cannot carry you through this trial.",
+        "The pain is too great. Even iron resolve has a breaking point."
+      ],
+      wits: [
+        "The answer dances at the edge of your mind — but escapes you.",
+        "Keen senses are not enough. The truth remains hidden.",
+        "You study the problem but the pieces refuse to fit.",
+        "Cleverness fails where deeper insight was needed."
+      ]
+    };
+
+    // Build name tags
+    let nameTags = '';
+    for (const n of passed) {
+      nameTags += `<span class="howard-outcome-tag pass"><i class="fas fa-check"></i> ${esc(n)}</span>`;
+    }
+    for (const n of failed) {
+      nameTags += `<span class="howard-outcome-tag fail"><i class="fas fa-times"></i> ${esc(n)}</span>`;
+    }
+
+    // Success or fail text
+    let outcomeHtml = '';
+    if (anyPassed) {
+      const successText = check.prompt || 'The challenge is overcome.';
+      outcomeHtml = `
+        <div class="howard-outcome-label success">Success</div>
+        <div class="howard-outcome-text success">${esc(successText)}</div>`;
+    } else {
+      const attrKey = (check.skillName || 'might').toLowerCase();
+      const failPool = defaultFail[attrKey] || defaultFail.might;
+      const failText = check.failText || failPool[Math.floor(Math.random() * failPool.length)];
+      outcomeHtml = `
+        <div class="howard-outcome-label fail">Failed</div>
+        <div class="howard-outcome-text fail">${esc(failText)}</div>`;
+    }
+
+    const content = `
+      <div class="conan-roll spell-chat-card howard-check-card howard-outcome-card">
+        <div class="howard-outcome-header">
+          <img src="${howardImg}" class="howard-outcome-portrait" />
+          <div class="howard-outcome-title"><strong>${esc(check.skillName)}</strong> Check — ${anyPassed ? 'Resolved' : 'Failed'}</div>
+        </div>
+        <div class="howard-outcome-body">
+          <div class="howard-outcome-names">${nameTags}</div>
+          ${outcomeHtml}
+        </div>
+      </div>`;
+
+    await ChatMessage.create({
+      content,
+      speaker: { alias: "Howard the Chronicler" }
+    });
+
+    dlg.close();
+  }
+
+  /** Add a player roll result to the active check dialog */
+  _addCheckResult(actorId, name, tokenImg, rollTotal, passed) {
+    const dlg = this._activeCheckDialog;
+    if (!dlg?.element?.length) return;
+
+    const list = dlg.element.find('.gm-check-player-list');
+    // Remove "Waiting for rolls..." placeholder
+    list.find('.gm-check-empty').remove();
+
+    // Update existing row or add new one
+    let row = list.find(`.gm-check-player-row[data-actor-id="${actorId}"]`);
+    if (row.length) {
+      // Update existing — always use latest roll
+      row.find('.gm-check-player-result')
+        .text(rollTotal)
+        .removeClass('pass fail')
+        .addClass(passed ? 'pass' : 'fail');
+      if (passed) row.find('.gm-check-toggle').addClass('checked');
+      else row.find('.gm-check-toggle').removeClass('checked');
+    } else {
+      const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const rowHtml = `
+        <div class="gm-check-player-row" data-actor-id="${actorId}">
+          <img src="${tokenImg}" class="gm-check-player-token" />
+          <span class="gm-check-player-name">${esc(name)}</span>
+          <span class="gm-check-player-result ${passed ? 'pass' : 'fail'}">${rollTotal}</span>
+          <div class="gm-check-toggle${passed ? ' checked' : ''}" title="Click to toggle pass/fail"><i class="fas fa-check"></i></div>
+        </div>`;
+      row = $(rowHtml);
+      list.append(row);
+      // Wire toggle click
+      row.find('.gm-check-toggle').click((ev) => {
+        $(ev.currentTarget).toggleClass('checked');
+      });
+    }
   }
 
   /* ------------------------------------------ */
@@ -3132,18 +3336,35 @@ export default class HowardSheet extends ActorSheet {
   _buildCoverCard(tale, position) {
     const defaultImg = 'systems/conan/images/howard.png';
     const coverSrc = tale.coverImage || defaultImg;
+    const archivedClass = tale.archived ? ' howard-cover-archived' : '';
 
-    return $(`
-      <div class="howard-cover-slot ${position}" data-tale-id="${tale.id}">
+    const card = $(`
+      <div class="howard-cover-slot ${position}${archivedClass}" data-tale-id="${tale.id}">
         <div class="howard-cover">
           <img src="${coverSrc}" alt="${tale.title}">
           <div class="howard-cover-overlay">
             <div class="issue-number">Issue #${tale.issueNumber}</div>
             <div class="issue-title">${tale.title}</div>
           </div>
+          ${tale.archived ? '<div class="howard-cover-archive-badge"><i class="fas fa-archive"></i> Archived</div>' : ''}
         </div>
       </div>
     `);
+
+    // GM right-click: archive/unarchive context menu
+    if (game.user.isGM) {
+      card.on('contextmenu', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (tale.archived) {
+          this._onUnarchiveTale(tale.id);
+        } else {
+          this._onArchiveTale(tale.id);
+        }
+      });
+    }
+
+    return card;
   }
 
   /* ------------------------------------------ */
@@ -3221,6 +3442,15 @@ export default class HowardSheet extends ActorSheet {
   _onOpenIssue(taleId) {
     const tale = this.actor.system.tales[taleId];
     if (!tale) return;
+
+    if (tale.archived) {
+      if (game.user.isGM) {
+        ui.notifications.info('This tale is archived. Right-click to unarchive it.');
+      } else {
+        ui.notifications.warn('This tale is currently archived.');
+      }
+      return;
+    }
 
     this._viewMode = 'reader';
     this._activeTaleId = taleId;
@@ -4441,6 +4671,89 @@ export default class HowardSheet extends ActorSheet {
   }
 
   /* ------------------------------------------ */
+  /*  Tale Archive / Unarchive                   */
+  /* ------------------------------------------ */
+
+  /** Archive a tale — save full data to JSON file, replace with stub in actor */
+  async _onArchiveTale(taleId) {
+    const tale = this.actor.system.tales[taleId];
+    if (!tale || tale.archived) return;
+
+    const confirmed = await Dialog.confirm({
+      title: `Archive "${tale.title}"`,
+      content: `<p>Archive <strong>${tale.title}</strong> (Issue #${tale.issueNumber})?</p>
+        <p style="color:#aaa;font-size:12px;">The full tale data will be saved to a file. Only the cover will remain in the rack. Right-click to unarchive later.</p>`,
+      yes: () => true,
+      no: () => false,
+      defaultYes: false
+    });
+    if (!confirmed) return;
+
+    // Create archive folder for this tale
+    const safeName = tale.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folderPath = `howard-archives/${safeName}_${taleId}`;
+
+    // Ensure parent folder exists
+    try {
+      await FilePicker.browse('data', 'howard-archives');
+    } catch {
+      await FilePicker.createDirectory('data', 'howard-archives');
+    }
+    try {
+      await FilePicker.browse('data', folderPath);
+    } catch {
+      await FilePicker.createDirectory('data', folderPath);
+    }
+
+    // Save full tale data as JSON
+    const json = JSON.stringify(tale, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const file = new File([blob], 'tale.json', { type: 'application/json' });
+    await FilePicker.upload('data', folderPath, file);
+
+    // Replace tale with archived stub (keep cover for rack display)
+    const stub = {
+      id: tale.id,
+      title: tale.title,
+      issueNumber: tale.issueNumber,
+      coverImage: tale.coverImage || '',
+      archived: true,
+      archivePath: `${folderPath}/tale.json`
+    };
+
+    await this.actor.update({ [`system.tales.${taleId}`]: stub });
+    ui.notifications.info(`"${tale.title}" archived successfully.`);
+  }
+
+  /** Unarchive a tale — read JSON from archive, restore full data */
+  async _onUnarchiveTale(taleId) {
+    const stub = this.actor.system.tales[taleId];
+    if (!stub?.archived || !stub.archivePath) return;
+
+    const confirmed = await Dialog.confirm({
+      title: `Unarchive "${stub.title}"`,
+      content: `<p>Restore <strong>${stub.title}</strong> (Issue #${stub.issueNumber}) from archive?</p>`,
+      yes: () => true,
+      no: () => false,
+      defaultYes: true
+    });
+    if (!confirmed) return;
+
+    try {
+      const resp = await fetch(stub.archivePath);
+      if (!resp.ok) throw new Error(`File not found: ${stub.archivePath}`);
+      const taleData = await resp.json();
+
+      // Restore full tale data
+      await this.actor.update({ [`system.tales.${taleId}`]: taleData });
+      ui.notifications.info(`"${stub.title}" restored from archive.`);
+    } catch (err) {
+      console.error('Howard | Failed to unarchive tale:', err);
+      ui.notifications.error(`Failed to unarchive: ${err.message}`);
+    }
+  }
+
+  /* ------------------------------------------ */
   /*  PDF Export                                 */
   /* ------------------------------------------ */
 
@@ -4896,6 +5209,102 @@ ${pagesHtml}
     HowardSheet._showZoomOverlay(this, elId);
   }
 
+  /** Roll Call — ad-hoc skill check from Presentation mode */
+  _onRollCall() {
+    const content = `
+      <div class="rollcall-dialog-body">
+        <div class="rollcall-section-label">Check Type</div>
+        <div class="rollcall-radio-group">
+          <label class="rollcall-radio"><input type="radio" name="skillName" value="Might" checked /> Might</label>
+          <label class="rollcall-radio"><input type="radio" name="skillName" value="Edge" /> Edge</label>
+          <label class="rollcall-radio"><input type="radio" name="skillName" value="Grit" /> Grit</label>
+          <label class="rollcall-radio"><input type="radio" name="skillName" value="Wits" /> Wits</label>
+          <label class="rollcall-radio"><input type="radio" name="skillName" value="Custom" /> <input type="text" class="rollcall-custom-name" placeholder="Custom..." style="width:100px;" /></label>
+        </div>
+        <div class="rollcall-row">
+          <label class="rollcall-label">TN#</label>
+          <input type="number" class="rollcall-tn" value="5" min="1" max="99" />
+        </div>
+        <div class="rollcall-row" style="flex-direction:column; align-items:stretch;">
+          <label class="rollcall-label">Success Text <span style="color:#666;font-weight:400;">(hidden until reveal)</span></label>
+          <textarea class="rollcall-success-text" rows="3" placeholder="Revealed on success..."></textarea>
+        </div>
+      </div>`;
+
+    new Dialog({
+      title: 'Roll Call',
+      content,
+      buttons: {
+        send: {
+          icon: '<i class="fas fa-dice-d20"></i>',
+          label: 'Send',
+          callback: (html) => {
+            let skillName = html.find('input[name="skillName"]:checked').val();
+            if (skillName === 'Custom') {
+              skillName = html.find('.rollcall-custom-name').val().trim() || 'Skill';
+            }
+            const dc = parseInt(html.find('.rollcall-tn').val()) || 5;
+            const prompt = html.find('.rollcall-success-text').val().trim();
+
+            const check = { skillName, dc, prompt };
+            this._fireRollCall(check);
+          }
+        },
+        cancel: { label: 'Cancel' }
+      },
+      default: 'send',
+      render: (html) => {
+        html.find('.rollcall-custom-name').on('focus', () => {
+          html.find('input[name="skillName"][value="Custom"]').prop('checked', true);
+        });
+      }
+    }, {
+      width: 320,
+      classes: ['bpm-dialog-window', 'rollcall-dialog']
+    }).render(true);
+  }
+
+  /** Fire an ad-hoc roll call check — chat card with Roll button + GM dialog */
+  async _fireRollCall(check) {
+    const skillToAttr = { might: 'might', edge: 'edge', grit: 'grit', wits: 'wits' };
+    const attrKey = skillToAttr[(check.skillName || '').toLowerCase()] || 'might';
+    const checkInstanceId = `howard-check-${Date.now()}`;
+
+    const howardImg = 'systems/conan/images/howard.png';
+    const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const content = `
+      <div class="conan-roll spell-chat-card howard-check-card" data-check-instance="${checkInstanceId}">
+        <div class="spell-chat-header">
+          <div class="spell-chat-portrait-wrap">
+            <img src="${howardImg}" class="spell-chat-portrait"/>
+            <div class="howard-check-badge"><i class="fas fa-dice-d20"></i></div>
+          </div>
+          <div class="spell-chat-title">
+            <strong>Howard the Chronicler</strong> calls for a <strong>${esc(check.skillName)}</strong> check
+          </div>
+        </div>
+        <div class="spell-chat-body">
+          <div class="spell-chat-meta">
+            <strong>${esc(check.skillName)}</strong> &nbsp;|&nbsp; <span style="color: #FFD700;">Difficulty ${check.dc}</span>
+          </div>
+          <button type="button" class="howard-check-roll-btn" data-attribute="${attrKey}" data-check-instance="${checkInstanceId}" data-dc="${check.dc}">
+            <i class="fas fa-dice-d20"></i> Roll ${esc(check.skillName)} Check
+          </button>
+        </div>
+      </div>
+    `;
+
+    await ChatMessage.create({
+      content,
+      speaker: { alias: "Howard the Chronicler" }
+    });
+
+    if (game.user.isGM) {
+      this._openCheckDialog(check, checkInstanceId);
+    }
+  }
+
   /** Open a read-only GM Notes dialog for the current page in Presentation mode */
   async _openPresGmNotes() {
     const tale = this.actor.system.tales[this._activeTaleId];
@@ -4997,7 +5406,7 @@ ${pagesHtml}
           if (checkId) this._fireCheck(checkId);
         });
       }
-    }, { width: 340, classes: ['bpm-dialog-window', 'pres-gm-notes-dialog'] });
+    }, { width: 340, height: 400, resizable: true, classes: ['bpm-dialog-window', 'pres-gm-notes-dialog'] });
     dlg.render(true);
   }
 

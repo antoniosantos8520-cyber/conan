@@ -348,7 +348,7 @@
 .tools-section-body {
   overflow: hidden;
   transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
-  max-height: 2000px;
+  max-height: 5000px;
   opacity: 1;
 }
 
@@ -6520,6 +6520,11 @@
   border: 1px solid rgba(225,6,0,0.3);
   color: #ff4444;
 }
+.enemy-msg .mech-tag.heal {
+  background: rgba(50,205,50,0.15);
+  border: 1px solid rgba(50,205,50,0.3);
+  color: #32CD32;
+}
 .enemy-msg .mech-tag.target {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
@@ -6624,6 +6629,11 @@
   background: linear-gradient(180deg, #5c1a1a 0%, #3a0a0a 100%);
   border-color: #882222;
   color: #ff6666;
+}
+.enemy-msg .die.heal {
+  background: linear-gradient(180deg, #1a4a1a 0%, #0a2a0a 100%);
+  border-color: #228822;
+  color: #44ff44;
 }
 .enemy-msg .dmg-total {
   margin-left: auto;
@@ -8739,6 +8749,13 @@
   text-decoration: line-through;
 }
 
+.area-matrix-header.los-open,
+.area-matrix-label.los-open {
+  color: #4caf50;
+  text-decoration: underline;
+  text-decoration-style: double;
+}
+
 .area-matrix-cell.self {
   color: var(--tools-muted);
   opacity: 0.3;
@@ -8786,6 +8803,31 @@
   bottom: -2px;
   right: -2px;
   color: #f44336;
+  background: #1a1a2e;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Open LOS state on palette letters */
+.area-letter.los-open {
+  border-color: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+  position: relative;
+}
+
+.area-letter.los-open::after {
+  content: '\f06e';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  font-size: 9px;
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  color: #4caf50;
   background: #1a1a2e;
   border-radius: 50%;
   width: 14px;
@@ -9270,6 +9312,63 @@
 @keyframes dreadSkullPulse {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
+}
+
+/* Threshold text inside clock */
+.dread-threshold-text {
+  font-size: 10px;
+  fill: #8b7340;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-family: Georgia, serif;
+}
+
+/* Clock ring — relative wrapper for corner buttons */
+.dread-clock-ring {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+
+/* Corner buttons around the clock face */
+.dread-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2a1f12;
+  border: 1px solid #5a4a2e;
+  color: #8b7340;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 1;
+}
+.dread-corner:hover {
+  background: #3a2f1e;
+  border-color: #c4a55a;
+  color: #f0d878;
+}
+.dread-corner-tl { top: 2px; left: 2px; }
+.dread-corner-tr { top: 2px; right: 2px; }
+.dread-corner-bl { bottom: 2px; left: 2px; }
+.dread-corner-br { bottom: 2px; right: 2px; }
+
+/* Roll result styling in chat */
+.dread-roll-value {
+  font-size: 20px;
+  font-weight: bold;
+  font-family: Georgia, serif;
+}
+.dread-chat-triggered .dread-roll-value {
+  color: #e04030;
+  text-shadow: 0 0 8px rgba(224, 64, 48, 0.5);
+}
+.dread-chat-safe .dread-roll-value {
+  color: #8b7340;
 }
 
 /* Dusk/dawn labels */

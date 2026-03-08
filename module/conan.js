@@ -122,6 +122,15 @@ Hooks.once('init', async function() {
     default: 0
   });
 
+  // Register Dread Clock threat threshold (1-8, lower = easier to trigger)
+  game.settings.register('conan', 'dreadClockThreshold', {
+    name: 'Dread Clock Threshold',
+    scope: 'world',
+    config: false,
+    type: Number,
+    default: 8
+  });
+
   // Register settings for saved travel journeys
   game.settings.register('conan', 'savedJourneys', {
     name: 'Saved Journeys',
@@ -151,8 +160,8 @@ Hooks.once('init', async function() {
         if (!vis.visibleAreas) return base; // No areas set up — default behavior
         const areaData = canvas.scene?.getFlag('conan', 'areaData');
         if (!areaData?.areas) return base;
-        const losBlockers = areaData.losBlockers || [];
-        const blockerSet = new Set(losBlockers);
+        const blockerSet = new Set(areaData.losBlockers || []);
+        const openSet = new Set(areaData.losOpen || []);
         // Find which area this enemy is in
         const enemyArea = _getAreaAtPoint(
           this.document.x + ((this.document.width || 1) * canvas.grid.size / 2),
@@ -166,6 +175,7 @@ Hooks.once('init', async function() {
         } else {
           // Lights on: enemy visible unless in LOS-blocked area without player present
           if (!enemyArea) return true;
+          if (openSet.has(enemyArea)) return true; // Open areas always visible
           if (blockerSet.has(enemyArea)) return vis.playerAreas.has(enemyArea);
           return true;
         }
@@ -920,6 +930,63 @@ Hooks.once('ready', async function() {
   game.conan._hasAreaLOS = _hasAreaLOS;
   game.conan._invalidatePlayerVisCache = _invalidatePlayerVisCache;
   game.conan.dreadClock = dreadClock;
+
+  // Bound (Garrote) — chat button handlers (delegated)
+  document.addEventListener('click', async (ev) => {
+    const escapeBtn = ev.target.closest('.bound-escape-btn');
+    const spBtn = ev.target.closest('.bound-sp-btn');
+    if (!escapeBtn && !spBtn) return;
+
+    const btn = escapeBtn || spBtn;
+    const actorId = btn.dataset.actorId;
+    const actor = game.actors.get(actorId);
+    if (!actor) return;
+
+    // Disable both buttons in this card
+    const card = btn.closest('.enemy-msg-body');
+    if (card) card.querySelectorAll('.bound-escape-btn, .bound-sp-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; b.style.cursor = 'default'; });
+
+    const boundFlag = actor.getFlag('conan', 'boundDebuff');
+    if (!boundFlag?.active) return;
+
+    if (escapeBtn) {
+      // Might roll vs TN
+      const tn = parseInt(escapeBtn.dataset.tn) || 7;
+      const mightDie = actor.system?.attributes?.might?.die || 'd8';
+      const mightVal = actor.system?.attributes?.might?.value || 0;
+      const roll = await new Roll(`1${mightDie}`).evaluate();
+      const total = roll.total + mightVal;
+      const escaped = total >= tn;
+
+      if (escaped) {
+        await actor.unsetFlag('conan', 'boundDebuff');
+        await actor.update({ 'system.conditions.bound': false });
+        if (boundFlag.tokenId) {
+          const tokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
+          if (tokenDoc) await tokenDoc.update({ locked: false });
+        }
+        ChatMessage.create({ speaker: { alias: 'GM' }, content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-link" style="color: #32CD32;"></i></div><div class="msg-titles"><div class="msg-name">${actor.name} — Breaks Free!</div></div></div><div class="enemy-msg-body"><div style="color: #32CD32; text-align: center; font-weight: bold;">Might ${roll.total} + ${mightVal} = ${total} vs TN ${tn} — ESCAPED!</div></div></div>` });
+      } else {
+        ChatMessage.create({ speaker: { alias: 'GM' }, content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-link" style="color: #FF6B4A;"></i></div><div class="msg-titles"><div class="msg-name">${actor.name} — Escape Failed!</div></div></div><div class="enemy-msg-body"><div style="color: #FF6B4A; text-align: center;">Might ${roll.total} + ${mightVal} = ${total} vs TN ${tn} — still bound!</div></div></div>` });
+      }
+    } else if (spBtn) {
+      // Spend 1 SP to auto-escape
+      const currentSP = actor.system.stamina || 0;
+      if (currentSP < 1) {
+        ui.notifications.warn('Not enough Stamina Points! (1 SP required)');
+        if (card) card.querySelectorAll('.bound-escape-btn, .bound-sp-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; });
+        return;
+      }
+      await actor.update({ 'system.stamina': currentSP - 1 });
+      await actor.unsetFlag('conan', 'boundDebuff');
+      await actor.update({ 'system.conditions.bound': false });
+      if (boundFlag.tokenId) {
+        const tokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
+        if (tokenDoc) await tokenDoc.update({ locked: false });
+      }
+      ChatMessage.create({ speaker: { alias: 'GM' }, content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-link" style="color: #4A90D9;"></i></div><div class="msg-titles"><div class="msg-name">${actor.name} — Breaks Free!</div></div></div><div class="enemy-msg-body"><div style="color: #4A90D9; text-align: center;">${actor.name} spends 1 SP and tears free from the bonds!</div></div></div>` });
+    }
+  });
 
   // Auto-create Albert (GM Tools) on first world load if none exists
   if (game.user.isGM && !game.actors.find(a => a.type === 'tools')) {
@@ -2004,6 +2071,52 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     button.disabled = true;
     button.textContent = 'ROLLED';
   });
+
+  // ========== HOWARD CHECK: Roll button triggers _onRollAttribute ==========
+  html.find('.howard-check-roll-btn').off('click').on('click', (ev) => {
+    ev.preventDefault();
+    const btn = ev.currentTarget;
+    const attribute = btn.dataset.attribute;
+    if (!attribute) return;
+
+    // Find the clicking player's character — try assigned character first, then owned character2 actors
+    let actor = game.user.character;
+    if (!actor || actor.type !== 'character2') {
+      actor = game.actors.find(a => a.type === 'character2' && a.isOwner && !a.pack);
+    }
+    if (!actor) {
+      ui.notifications.warn("No character found. Make sure you own a character.");
+      return;
+    }
+
+    // Get their sheet and call _onRollAttribute
+    const sheet = actor.sheet;
+    if (sheet?._onRollAttribute) {
+      sheet._onRollAttribute(null, { forceAttribute: attribute, howardCheckInstance: btn.dataset.checkInstance });
+    }
+  });
+
+  // ========== HOWARD CHECK: Auto-detect rolls tagged with data-howard-check ==========
+  if (game.user.isGM) {
+    const rollEl = html.find('[data-howard-check]');
+    if (rollEl.length) {
+      const checkInstanceId = rollEl.attr('data-howard-check');
+      const resultBox = rollEl.find('.skill-result-box').first();
+      const rollTotal = resultBox.length ? parseInt(resultBox.text()) : NaN;
+      const actorId = message.speaker?.actor;
+      const actor = actorId ? game.actors.get(actorId) : null;
+
+      // Find the Howard sheet with this active check
+      const howard = game.actors.find(a => a.type === 'howard');
+      const howardSheet = howard?.sheet;
+      if (howardSheet?._activeCheck?.checkInstanceId === checkInstanceId && actor) {
+        const dc = howardSheet._activeCheck.dc;
+        const passed = !isNaN(rollTotal) && rollTotal >= dc;
+        const tokenImg = actor.prototypeToken?.texture?.src || actor.img || 'icons/svg/mystery-man.svg';
+        howardSheet._addCheckResult(actor.id, actor.name, tokenImg, rollTotal, passed);
+      }
+    }
+  }
 
   // ========== SP BOOST: +1/+2 stamina spend buttons on skill checks ==========
   html.find('.sp-boost-btn').each((i, btn) => {
@@ -3711,8 +3824,94 @@ async function applyDamageToToken(token) {
     }
   }
 
+  // ==========================================
+  // HARMLESS TRAIT (Threat Engine — Silk Vipers)
+  // ==========================================
+  // First killing blow auto-misses. Once per fight.
+  if (isDead && enemyData?.threatTraits?.includes('harmless') && !isHealing) {
+    const harmlessUsed = token.document.getFlag('conan', 'harmlessUsed');
+    if (!harmlessUsed) {
+      await token.document.setFlag('conan', 'harmlessUsed', true);
+      isDead = false;
+      await token.document.unsetFlag('conan', 'dead');
+      // Restore HP to pre-damage state
+      if (enemyData.type === 'Minion') {
+        isWounded = false;
+        await token.document.unsetFlag('conan', 'wounded');
+      } else if (newHP !== undefined && actor?.system?.lifePoints) {
+        await actor.update({ 'system.lifePoints.value': prevState.hp });
+      }
+
+      const harmlessName = enemyData.chatName || enemyData.name;
+      const HARMLESS_FLAVOR = [
+        `Your blade stops inches from ${harmlessName}'s throat — she looks so... defenseless.`,
+        `${harmlessName} cowers before you, trembling. You cannot bring yourself to strike.`,
+        `Something stays your hand — ${harmlessName} seems too fragile, too innocent to harm.`,
+        `${harmlessName}'s wide eyes meet yours and your killing blow falters.`,
+      ];
+
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `
+          <div class="enemy-msg theme-human">
+            <div class="enemy-msg-header">
+              <div class="msg-icon"><i class="fas fa-heart" style="color: #FF69B4;"></i></div>
+              <div class="msg-titles"><div class="msg-name">Harmless!</div></div>
+            </div>
+            <div class="enemy-msg-body">
+              <div class="enemy-msg-flavor">${HARMLESS_FLAVOR[Math.floor(Math.random() * HARMLESS_FLAVOR.length)]}</div>
+            </div>
+          </div>`
+      });
+      broadcastFloatingDamage(token.id, 0, false, false, false);
+      return;
+    }
+  }
+
   // Show floating damage/healing number (local + broadcast to all clients via ChatMessage)
   broadcastFloatingDamage(token.id, damage, isDead, isWounded, isHealing);
+
+  // ==========================================
+  // MADWOMAN TRAIT (Threat Engine — Silk Vipers)
+  // ==========================================
+  // Surviving a hit: +2 defense, +2 damage. Stacks up to 2.
+  if (!isDead && !isHealing && damage > 0 && enemyData?.threatTraits?.includes('madwoman')) {
+    const madFlag = token.actor?.getFlag('conan', 'madwomanBuff') || { stacks: 0 };
+    if (madFlag.stacks < 2) {
+      const newStacks = madFlag.stacks + 1;
+      await token.actor.setFlag('conan', 'madwomanBuff', { stacks: newStacks });
+      // Boost physical defense directly on enemyData
+      enemyData.physicalDefense = (enemyData.physicalDefense || 0) + 2;
+      await token.document.setFlag('conan', 'enemyData', { ...enemyData });
+
+      const madName = enemyData.chatName || enemyData.name;
+      const MAD_FLAVOR = [
+        `${madName}'s eyes go wild — the pain only makes her stronger!`,
+        `Blood runs down ${madName}'s face and she GRINS. This is what she lives for.`,
+        `${madName} shrieks with delight as the blade bites — she's getting faster!`,
+        `Something breaks behind ${madName}'s eyes. She's no longer afraid.`,
+      ];
+
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `
+          <div class="enemy-msg theme-human">
+            <div class="enemy-msg-header">
+              <div class="msg-icon"><i class="fas fa-face-angry" style="color: #FF4500;"></i></div>
+              <div class="msg-titles"><div class="msg-name">Madwoman!</div></div>
+            </div>
+            <div class="enemy-msg-body">
+              <div class="enemy-msg-flavor">${MAD_FLAVOR[Math.floor(Math.random() * MAD_FLAVOR.length)]}</div>
+              <div class="enemy-msg-mechanic" style="justify-content: center;">
+                <span class="mech-tag buff"><i class="fas fa-shield-halved"></i> +${newStacks * 2} Defense</span>
+                <span class="mech-tag buff"><i class="fas fa-sword"></i> +${newStacks * 2} Damage</span>
+              </div>
+              <div style="color: #888; text-align: center; margin-top: 2px; font-size: 11px;">${newStacks}/2 stacks</div>
+            </div>
+          </div>`
+      });
+    }
+  }
 
   // Bone Armor: reflect damage = number of living skeletons summoned by this necromancer
   if (!isHealing && enemyData?.threatTraits?.includes('bonearmor') && game.conan?.lastDamageActorId) {
@@ -4201,9 +4400,10 @@ async function applyDamageToToken(token) {
     : null;
 
   // Capture Stunned trait info before poison block clears lastEnemyAttack
+  const isThunderstrike = game.conan?.lastEnemyAttack?.threatTraits?.includes('thunderstrike') && game.conan?.lastEnemyAttack?.attackType === 'melee';
+  const isSilkWhipStun = game.conan?.lastEnemyAttack?.weaponName === 'Silk Whip';
   const hasStunnedTrait = !isHealing && damage > 0
-    && game.conan?.lastEnemyAttack?.threatTraits?.includes('thunderstrike')
-    && game.conan?.lastEnemyAttack?.attackType === 'melee' // melee only — no stun from arrows
+    && (isThunderstrike || isSilkWhipStun)
     && !enemyData // only triggers on player tokens (enemyData = null for PCs)
     && actor?.type === 'character2';
 
@@ -4218,6 +4418,19 @@ async function applyDamageToToken(token) {
     && game.conan?.lastEnemyAttack?.threatTraits?.includes('untamed')
     && !game.conan?.lastEnemyAttack?.companionFired
     ? { ...game.conan.lastEnemyAttack } : null;
+
+  // Capture Lotus Dust trait info before poison block clears lastEnemyAttack
+  const hasLotusDust = !isHealing && damage > 0
+    && game.conan?.lastEnemyAttack?.threatTraits?.includes('lotusdust')
+    && !enemyData // only triggers on player tokens
+    && actor?.type === 'character2';
+
+  // Capture Garrote trait info — Bride with garrote applies Bound status
+  const hasGarrote = !isHealing && damage > 0
+    && game.conan?.lastEnemyAttack?.threatTraits?.includes('garrote')
+    && game.conan?.lastEnemyAttack?.enemyId === 'bride'
+    && !enemyData
+    && actor?.type === 'character2';
 
   // Capture Riposte info — enemy survives player damage → counter-attacks
   // Fires on ENEMY tokens (enemyData != null), only if they survive (checked later after isDead is set)
@@ -4241,7 +4454,8 @@ async function applyDamageToToken(token) {
       'giant-scorpion-brood-mother': { ruleName: 'Potent Venom', weaponName: 'Barbed Stinger', damageThreshold: 2, gritDC: null, dcType: 'dynamic', outcome: 'poisoned', bonusDamage: '1d10', bonusDamageIgnoresAR: true },
       'scourge-of-set': { ruleName: 'Venomous Bite', weaponName: null, damageThreshold: 3, gritDC: 11, dcType: 'fixed', outcome: 'poisoned' },
       'giant-spider-queen': { ruleName: 'Paralyzing Venom', weaponName: null, damageThreshold: 3, gritDC: 10, dcType: 'fixed', outcome: 'immobilized' },
-      'giant-serpent': { ruleName: 'Venomous Bite', weaponName: null, damageThreshold: 5, gritDC: null, dcType: 'none', outcome: 'poisoned' }
+      'giant-serpent': { ruleName: 'Venomous Bite', weaponName: null, damageThreshold: 5, gritDC: null, dcType: 'none', outcome: 'poisoned' },
+      'handmaiden': { ruleName: 'Poisoned Blade', weaponName: 'Poisoned Knife', damageThreshold: 1, gritDC: null, dcType: 'none', outcome: 'poisoned' }
     };
 
     const poisonRule = POISON_RULES[enemyAttack.enemyId];
@@ -4719,6 +4933,84 @@ async function applyDamageToToken(token) {
   }
 
   // ==========================================
+  // LOTUS DUST TRAIT (Threat Engine — Silk Vipers)
+  // ==========================================
+  // On dealing damage to a player: -1 attack debuff, stacking up to 3
+  if (hasLotusDust && actor && token) {
+    const currentDust = actor.getFlag('conan', 'lotusDustDebuff');
+    const currentStacks = currentDust?.stacks || 0;
+    if (currentStacks < 3) {
+      const newStacks = currentStacks + 1;
+      await actor.setFlag('conan', 'lotusDustDebuff', { stacks: newStacks });
+
+      const dustFlavors = [
+        `A cloud of shimmering powder blinds ${actor.name}'s senses!`,
+        `Sweet-smelling dust fills ${actor.name}'s lungs — the world grows hazy!`,
+        `${actor.name}'s eyes water as lotus pollen clouds their vision!`,
+        `A perfumed mist clings to ${actor.name} — their aim falters!`,
+      ];
+
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `
+          <div class="enemy-msg theme-human">
+            <div class="enemy-msg-header">
+              <div class="msg-icon"><i class="fas fa-seedling" style="color: #DA70D6;"></i></div>
+              <div class="msg-titles">
+                <div class="msg-name">Lotus Dust!</div>
+              </div>
+            </div>
+            <div class="enemy-msg-body">
+              <div style="color: #ccc; text-align: center; font-style: italic;">${dustFlavors[Math.floor(Math.random() * dustFlavors.length)]}</div>
+              <div style="color: #DA70D6; text-align: center; margin-top: 4px;">-${newStacks} to all attack rolls! (${newStacks}/3 stacks)</div>
+            </div>
+          </div>`
+      });
+    }
+  }
+
+  // ==========================================
+  // GARROTE TRAIT (Threat Engine — Silk Vipers / Bride)
+  // ==========================================
+  // On dealing damage to a player: lock token + apply Bound status
+  if (hasGarrote && actor && token) {
+    await token.document.update({ locked: true });
+
+    const combatant = game.combat?.combatants?.find(c => c.tokenId === token.document?.id);
+    await actor.setFlag('conan', 'boundDebuff', {
+      active: true,
+      tokenId: token.document.id,
+      combatantId: combatant?.id || null,
+      source: 'garrote'
+    });
+    await actor.update({ 'system.conditions.bound': true });
+
+    const garroteFlavors = [
+      `The silk whip coils around ${actor.name}'s throat — pulling tight!`,
+      `${actor.name} is snared! The whip bites into flesh like a living serpent!`,
+      `Silken cord wraps ${actor.name}'s limbs — every struggle draws it tighter!`,
+      `The Bride's whip lashes around ${actor.name}, binding them in place!`,
+    ];
+
+    ChatMessage.create({
+      speaker: { alias: 'GM' },
+      content: `
+        <div class="enemy-msg theme-human">
+          <div class="enemy-msg-header">
+            <div class="msg-icon"><i class="fas fa-link" style="color: #FF69B4;"></i></div>
+            <div class="msg-titles">
+              <div class="msg-name">Bound!</div>
+            </div>
+          </div>
+          <div class="enemy-msg-body">
+            <div style="color: #ccc; text-align: center; font-style: italic;">${garroteFlavors[Math.floor(Math.random() * garroteFlavors.length)]}</div>
+            <div style="color: #FF69B4; text-align: center; margin-top: 4px;">Cannot move! 1d4 damage each turn. Might vs TN to escape — or fight through it.</div>
+          </div>
+        </div>`
+    });
+  }
+
+  // ==========================================
   // FROM THE GRAVE TRAIT (Threat Engine — Cultists)
   // ==========================================
   // On death: auto-deal 1d4 damage to the player who killed this enemy
@@ -4941,6 +5233,126 @@ async function applyDamageToToken(token) {
     };
 
     canvas.stage.on('pointerdown', dedClickHandler);
+  }
+
+  // ==========================================
+  // FIRST WIFE TRAIT (Threat Engine — Silk Vipers)
+  // ==========================================
+  // When an Enchantress dies: GM clicks a living Silk Viper minion with firstwife.
+  // That minion dies, a new Enchantress spawns at her position with her traits.
+  const SILKVIPER_IDS_FW = ['handmaiden', 'bride', 'enchantress'];
+  if (isDead && enemyData?.id === 'enchantress' && !isHealing) {
+    // Check if any living silk viper minion has firstwife
+    const hasFirstWife = canvas.scene.tokens.some(t => {
+      if (t.id === token.document.id) return false;
+      if (t.getFlag('conan', 'dead')) return false;
+      const ed = t.getFlag('conan', 'enemyData');
+      return ed && SILKVIPER_IDS_FW.includes(ed.id) && ed.type === 'Minion' && ed.threatTraits?.includes('firstwife');
+    });
+
+    if (hasFirstWife) {
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `
+          <div class="enemy-msg theme-human">
+            <div class="enemy-msg-header">
+              <div class="msg-icon"><i class="fas fa-crown" style="color: #FF69B4;"></i></div>
+              <div class="msg-titles"><div class="msg-name">First Wife!</div></div>
+            </div>
+            <div class="enemy-msg-body">
+              <div class="enemy-msg-flavor">The Enchantress falls — but her successor is already waiting. Click a Silk Viper minion to promote her.</div>
+            </div>
+          </div>`
+      });
+
+      ui.notifications.info('FIRST WIFE: Click a Silk Viper minion to sacrifice and promote.');
+      document.body.style.cursor = 'crosshair';
+
+      const fwTokenHandler = async (controlledToken, controlled) => {
+        if (!controlled) return;
+        const targetEd = controlledToken.document.getFlag('conan', 'enemyData');
+        if (!targetEd || !SILKVIPER_IDS_FW.includes(targetEd.id) || targetEd.type !== 'Minion') {
+          ui.notifications.warn('Must target a Silk Viper minion.');
+          return;
+        }
+        if (controlledToken.document.getFlag('conan', 'dead')) {
+          ui.notifications.warn('That minion is already dead.');
+          return;
+        }
+
+        Hooks.off('controlToken', fwTokenHandler);
+        document.removeEventListener('keydown', fwEscHandler);
+        document.body.style.cursor = '';
+
+        // Grab position and traits from the sacrifice
+        const sacrificeX = controlledToken.document.x;
+        const sacrificeY = controlledToken.document.y;
+        const sacrificeTraits = targetEd.threatTraits || [];
+        const sacrificeTier = targetEd.threatTier || 0;
+        const sacrificeName = targetEd.chatName || targetEd.name;
+
+        // Kill the minion
+        await controlledToken.document.setFlag('conan', 'dead', true);
+        await controlledToken.document.setFlag('conan', 'wounded', true);
+        await controlledToken.document.update({ 'texture.tint': '#ff0000', alpha: 0.5 });
+
+        // Spawn new Enchantress at sacrifice position with her traits
+        await window.spawnFirstWifeEnchantress(sacrificeX, sacrificeY, sacrificeTraits, sacrificeTier);
+
+        const FIRSTWIFE_REMARKS = [
+          "I always hated that bitch.",
+          "She was getting old anyway.",
+          "I've been practicing her walk for months.",
+          "Finally. I thought she'd never die.",
+          "Her perfume was cheap. Mine won't be.",
+          "The master will barely notice the difference.",
+          "I've been sharpening more than my smile.",
+          "One less between me and the throne.",
+          "She always underestimated me. Fatal mistake.",
+          "I've waited years for this moment.",
+          "Her screams were... satisfying.",
+          "The harem whispered I was next in line. They were right.",
+          "She thought loyalty would save her. How naive.",
+          "I already moved my things into her chambers.",
+          "Pity. I liked her jewels. They're mine now.",
+          "Every night I prayed to Set for this.",
+          "She tasted the same poison she loved to use.",
+          "I learned everything from her — including how to replace her.",
+        ];
+        const snide = FIRSTWIFE_REMARKS[Math.floor(Math.random() * FIRSTWIFE_REMARKS.length)];
+
+        ChatMessage.create({
+          speaker: { alias: 'GM' },
+          content: `
+            <div class="enemy-msg theme-human">
+              <div class="enemy-msg-header">
+                <div class="msg-icon"><i class="fas fa-crown" style="color: #FF69B4;"></i></div>
+                <div class="msg-titles"><div class="msg-name">${sacrificeName} — Ascends!</div></div>
+              </div>
+              <div class="enemy-msg-body">
+                <div class="enemy-msg-flavor">${sacrificeName} sheds her guise — she was never just a servant. A new Enchantress rises.</div>
+                <div class="enemy-msg-flavor" style="font-style: italic; color: #FF69B4; margin-top: 4px;">"${snide}"</div>
+              </div>
+            </div>`
+        });
+
+        canvas.tokens.releaseAll();
+        ui.notifications.info('First Wife — new Enchantress has risen!');
+      };
+
+      const fwEscHandler = (ev) => {
+        if (ev.key === 'Escape') {
+          Hooks.off('controlToken', fwTokenHandler);
+          document.removeEventListener('keydown', fwEscHandler);
+          document.body.style.cursor = '';
+          ui.notifications.info('First Wife cancelled.');
+        }
+      };
+
+      canvas.tokens.releaseAll();
+      Hooks.on('controlToken', fwTokenHandler);
+      document.addEventListener('keydown', fwEscHandler);
+    }
   }
 
   // ==========================================
@@ -5317,6 +5729,16 @@ Hooks.on('deleteCombat', async (combat, options, userId) => {
     }
   }
 
+  // Clear Bound debuffs (Garrote) from all tokens
+  for (const tokenDoc of game.scenes.active?.tokens || []) {
+    const boundData = tokenDoc.actor?.getFlag('conan', 'boundDebuff');
+    if (boundData) {
+      if (boundData.tokenId) await tokenDoc.update({ locked: false });
+      await tokenDoc.actor.update({ 'system.conditions.bound': false });
+      await tokenDoc.actor.unsetFlag('conan', 'boundDebuff');
+    }
+  }
+
   // Clear Prone debuffs (Bane Weapon) from all tokens
   for (const tokenDoc of game.scenes.active?.tokens || []) {
     if (tokenDoc.actor?.getFlag('conan', 'proneDebuff')) {
@@ -5347,6 +5769,20 @@ Hooks.on('deleteCombat', async (combat, options, userId) => {
   for (const tokenDoc of game.scenes.active?.tokens || []) {
     if (tokenDoc.actor?.getFlag('conan', 'dirtyFighterDebuff')) {
       await tokenDoc.actor.unsetFlag('conan', 'dirtyFighterDebuff');
+    }
+  }
+
+  // Clear Lotus Dust debuff from all player tokens (Threat Engine — Silk Vipers)
+  for (const tokenDoc of game.scenes.active?.tokens || []) {
+    if (tokenDoc.actor?.getFlag('conan', 'lotusDustDebuff')) {
+      await tokenDoc.actor.unsetFlag('conan', 'lotusDustDebuff');
+    }
+  }
+
+  // Clear Madwoman buff from all enemy tokens (Threat Engine — Silk Vipers)
+  for (const tokenDoc of game.scenes.active?.tokens || []) {
+    if (tokenDoc.actor?.getFlag('conan', 'madwomanBuff')) {
+      await tokenDoc.actor.unsetFlag('conan', 'madwomanBuff');
     }
   }
 
@@ -5723,6 +6159,46 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
           });
         }
       }
+    }
+  }
+
+  // === BOUND (Garrote): 1d4 damage at start of bound player's turn ===
+  if (burnCombatant?.actor) {
+    const boundFlag = burnCombatant.actor.getFlag('conan', 'boundDebuff');
+    if (boundFlag?.active) {
+      const boundRoll = await new Roll('1d4').evaluate();
+      const boundDmg = boundRoll.total;
+      const playerName = burnCombatant.actor.name;
+      const actorId = burnCombatant.actor.id;
+      const lpData = burnCombatant.actor.system?.lifePoints;
+      if (lpData) {
+        const curLP = lpData.value ?? lpData.max ?? 0;
+        const newLP = Math.max(0, curLP - boundDmg);
+        await burnCombatant.actor.update({ 'system.lifePoints.value': newLP });
+        const boundToken = burnCombatant.token ? canvas.tokens.get(burnCombatant.token.id) : null;
+        if (boundToken) broadcastFloatingDamage(boundToken.id, boundDmg, false, false, false);
+      }
+
+      // Randomize TN for this turn's escape attempt
+      const escapeTN = 6 + Math.floor(Math.random() * 3); // 6, 7, or 8
+
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `
+          <div class="enemy-msg theme-human">
+            <div class="enemy-msg-header">
+              <div class="msg-icon"><i class="fas fa-link" style="color: #FF69B4;"></i></div>
+              <div class="msg-titles"><div class="msg-name">Bound — Garrote!</div></div>
+            </div>
+            <div class="enemy-msg-body">
+              <div class="enemy-msg-flavor">The silk cord bites deeper — <em>${playerName}</em> takes <em>${boundDmg}</em> damage!</div>
+              <div class="enemy-msg-mechanic" style="justify-content: center;">
+                <button type="button" class="bound-escape-btn mech-tag" data-actor-id="${actorId}" data-tn="${escapeTN}" style="background: rgba(255,105,180,0.2); border: 1px solid rgba(255,105,180,0.4); color: #FF69B4; cursor: pointer;"><i class="fas fa-fist-raised"></i> Escape</button>
+                <button type="button" class="bound-sp-btn mech-tag" data-actor-id="${actorId}" style="background: rgba(100,149,237,0.2); border: 1px solid rgba(100,149,237,0.4); color: #6495ED; cursor: pointer;"><i class="fas fa-bolt"></i> -1 SP</button>
+              </div>
+            </div>
+          </div>`
+      });
     }
   }
 
@@ -6271,17 +6747,26 @@ function _getAreaDistance(connections, from, to) {
  * @param {string} from - Start area label
  * @param {string} to - Target area label
  * @param {Array} losBlockers - Array of area labels that block LOS
+ * @param {Array} losOpen - Array of area labels with open LOS (always visible)
  * @returns {boolean} true if LOS exists
  */
-function _hasAreaLOS(connections, from, to, losBlockers) {
+function _hasAreaLOS(connections, from, to, losBlockers, losOpen) {
   if (from === to) return true;
-  if (!losBlockers || losBlockers.length === 0) return true;
+  const hasBlockers = losBlockers && losBlockers.length > 0;
+  const hasOpen = losOpen && losOpen.length > 0;
+  if (!hasBlockers && !hasOpen) return true;
 
-  const blockerSet = new Set(losBlockers);
+  const blockerSet = new Set(losBlockers || []);
+  const openSet = new Set(losOpen || []);
+
+  // Open LOS shortcut: open areas are always visible from anywhere,
+  // and from an open area you can see any non-blocked area
+  if (openSet.has(to)) return true;
+  if (openSet.has(from) && !blockerSet.has(to)) return true;
+
   // You can see OUT of a blocker, but not INTO or THROUGH one
   blockerSet.delete(from);
   if (blockerSet.size === 0) return true;
-  // Can't see into a blocker area
   if (blockerSet.has(to)) return false;
 
   // BFS on connection graph, skipping blocker nodes
@@ -6354,7 +6839,7 @@ function _getLocalPlayerVisibility() {
       const torch = torchData.torches?.[doc.id];
       if (torch?.active) {
         for (const neighbor of (adj[area] || [])) {
-          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers)) {
+          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers, areaData.losOpen || [])) {
             visibleAreas.add(neighbor);
           }
         }
@@ -6427,7 +6912,7 @@ async function _recalcTorchVisibilityInner() {
       if (torch?.active) {
         torchAreas.add(area);
         for (const neighbor of (adj[area] || [])) {
-          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers)) {
+          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers, areaData.losOpen || [])) {
             visibleAreas.add(neighbor);
           }
         }
@@ -6748,7 +7233,7 @@ function _onAreaPointerMove(event) {
   }
 
   const distance = _getAreaDistance(areaData.connections, playerArea, hoveredArea);
-  const hasLOS = _hasAreaLOS(areaData.connections, playerArea, hoveredArea, areaData.losBlockers || []);
+  const hasLOS = _hasAreaLOS(areaData.connections, playerArea, hoveredArea, areaData.losBlockers || [], areaData.losOpen || []);
 
   _showAreaTooltip(screenX, screenY, hoveredArea, distance, distance, !hasLOS);
 }

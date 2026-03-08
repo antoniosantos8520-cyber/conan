@@ -279,8 +279,10 @@ const THREAT_TRAITS_SUMMONER = [
   { id: 'damnation',  name: 'Damnation',  description: 'Hellfire deals 15 damage instead of 10.' },
   { id: 'volatile',   name: 'Volatile',   description: 'On death: explodes for 1d8 fire damage to the killer.' },
   { id: 'backdraft',  name: 'Backdraft',  description: 'Melee attackers take 1d4 fire damage when they strike.' },
-  { id: 'eruption',   name: 'Eruption',   description: 'Ticking time bomb. Each round: chance to erupt scaling with wounds (5% full → 50% half → 90% critical). Eruption deals 2d10 fire damage to everyone in the area and kills the Volcanist.' },
 ];
+
+// Eruption — NOT in the random pool, only enters via Volatile→Eruption swap on tier 3 Volcanist
+const THREAT_TRAIT_ERUPTION = { id: 'eruption', name: 'Eruption', description: 'Ticking time bomb. Each round: chance to erupt scaling with wounds (5% full → 50% half → 90% critical). Eruption deals 2d10 fire damage to everyone in the area and kills the Volcanist.' };
 
 // Summoner tier images — override portrait + token per skull tier
 const SUMMONER_TIER_IMAGES = {
@@ -288,6 +290,14 @@ const SUMMONER_TIER_IMAGES = {
   2: { portrait: 'systems/conan/images/enemies/summoner/burning_one_portrait.png',  token: 'systems/conan/images/enemies/summoner/burning_one_token.png' },
   3: { portrait: 'systems/conan/images/enemies/summoner/volcanist_portrait.png',    token: 'systems/conan/images/enemies/summoner/volcanist_token.png' },
 };
+
+const THREAT_TRAITS_SILKVIPERS = [
+  { id: 'lotusdust',  name: 'Lotus Dust',  description: 'On physical hit, target gets -1 to attack rolls. Stacks up to 3.' },
+  { id: 'garrote',    name: 'Garrote',      description: 'Whip attack applies Bound status. Target cannot move and takes 1d4 damage each turn. 1 SP to break free.' },
+  { id: 'firstwife',  name: 'First Wife',   description: 'When the Enchantress dies, summon a replacement at 40-60% HP.' },
+  { id: 'harmless',   name: 'Harmless',     description: 'First killing blow misses — "you cannot bring yourself to hurt this harmless woman." Once per fight.' },
+  { id: 'madwoman',   name: 'Madwoman',     description: 'Surviving a hit grants +2 defense and +2 damage. Stacks up to 2 times.' },
+];
 
 const THREAT_TRAITS_WITCH = [
   { id: 'glamour',    name: 'Glamour',     description: 'Sorcery (1 LP): Blinds a player until end of their turn. Attacks auto-miss unless Flex triggers. 1 SP to overcome.' },
@@ -322,10 +332,13 @@ const THREAT_POOLS = {
   'witch':              THREAT_TRAITS_WITCH,
   'necromancer':        THREAT_TRAITS_NECRO,
   'summoner':           THREAT_TRAITS_SUMMONER,
+  'handmaiden':         THREAT_TRAITS_SILKVIPERS,
+  'bride':              THREAT_TRAITS_SILKVIPERS,
+  'enchantress':        THREAT_TRAITS_SILKVIPERS,
 };
 
 // Flat union for trait badge lookups (resolves any trait ID regardless of pool)
-const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER];
+const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS];
 
 // Hyborian name pool — gendered for flavor text pronouns
 const HYBORIAN_NAMES_M = [
@@ -427,6 +440,17 @@ function pickSummonerName() {
   return { name: SUMMONER_NAMES[Math.floor(Math.random() * SUMMONER_NAMES.length)], gender: 'm' };
 }
 
+// Silk Viper names — harem-appropriate, female only, Persian/Arabic/Ottoman
+const SILKVIPER_NAMES = [
+  'Zahra','Yasmin','Nadira','Farah','Soraya','Layla','Amira','Safiya',
+  'Rashida','Zuleika','Nahla','Dalila','Jamila','Samira','Halima','Nasreen',
+  'Aziza','Kalila','Nadia','Sabira','Tahira','Rania','Inara','Kamilah',
+  'Leila','Miriam','Parisa','Shahla','Yara','Zarina',
+];
+function pickSilkViperName() {
+  return { name: SILKVIPER_NAMES[Math.floor(Math.random() * SILKVIPER_NAMES.length)], gender: 'f' };
+}
+
 const THREAT_TIERS = [
   { tier: 0, weight: 40, prefix: '' },         // Normal — 40%
   { tier: 1, weight: 30, prefix: 'Seasoned' }, // 30%
@@ -460,6 +484,9 @@ const THREAT_NAME_MAP = {
   'witch':              { 0: 'Witch',               1: 'Hedge Witch',      2: 'Crone',             3: 'Hag' },
   'necromancer':        { 0: 'Necromancer',         1: 'Bone Caller',      2: 'Death Speaker',    3: 'Lich' },
   'summoner':           { 0: 'Torch',               1: 'Pyre',             2: 'Burning One',      3: 'Volcanist' },
+  'handmaiden':         { 0: 'Handmaiden',          1: 'Cariye Handmaiden', 2: 'Ikbal Handmaiden', 3: 'Haseki Handmaiden' },
+  'bride':              { 0: 'Bride',               1: 'Cariye Bride',     2: 'Ikbal Bride',      3: 'Haseki Bride' },
+  'enchantress':        { 0: 'Enchantress',         1: 'Cariye Enchantress', 2: 'Ikbal Enchantress', 3: 'Haseki Enchantress' },
 };
 
 function rollThreatTier() {
@@ -5884,6 +5911,7 @@ export default class ConanToolsSheet extends ActorSheet {
     const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
     const placedLabels = new Set(Object.keys(areaData.areas));
     const losBlockers = new Set(areaData.losBlockers || []);
+    const losOpen = new Set(areaData.losOpen || []);
 
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     let paletteHTML = '';
@@ -5891,11 +5919,14 @@ export default class ConanToolsSheet extends ActorSheet {
     for (const letter of letters) {
       const isPlaced = placedLabels.has(letter);
       const isBlocker = losBlockers.has(letter);
+      const isOpen = losOpen.has(letter);
       let cls = '';
       if (isPlaced) cls += ' placed';
       if (isBlocker) cls += ' los-blocker';
+      if (isOpen) cls += ' los-open';
       let title = isPlaced ? letter + ' (on scene)' : 'Drag ' + letter + ' to scene';
       if (isBlocker) title += ' — blocks LOS';
+      if (isOpen) title += ' — open LOS';
       paletteHTML += `<div class="area-letter${cls}" data-label="${letter}" draggable="true" title="${title}">${letter}</div>`;
     }
 
@@ -5913,6 +5944,7 @@ export default class ConanToolsSheet extends ActorSheet {
     const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
     const labels = Object.keys(areaData.areas).sort();
     const losBlockers = new Set(areaData.losBlockers || []);
+    const losOpen = new Set(areaData.losOpen || []);
 
     if (labels.length < 2) {
       container.html('<p class="area-matrix-empty">Place at least 2 area markers to define connections.</p>');
@@ -5929,14 +5961,14 @@ export default class ConanToolsSheet extends ActorSheet {
     // Build table HTML — header labels are right-clickable for LOS toggle
     let tableHTML = '<table class="area-matrix"><thead><tr><th></th>';
     for (const col of labels) {
-      const blockerCls = losBlockers.has(col) ? ' los-blocker' : '';
-      tableHTML += `<th class="area-matrix-header${blockerCls}" data-label="${col}">${col}</th>`;
+      const losCls = losBlockers.has(col) ? ' los-blocker' : losOpen.has(col) ? ' los-open' : '';
+      tableHTML += `<th class="area-matrix-header${losCls}" data-label="${col}">${col}</th>`;
     }
     tableHTML += '</tr></thead><tbody>';
 
     for (const row of labels) {
-      const blockerCls = losBlockers.has(row) ? ' los-blocker' : '';
-      tableHTML += `<tr><td class="area-matrix-label${blockerCls}" data-label="${row}">${row}</td>`;
+      const losCls = losBlockers.has(row) ? ' los-blocker' : losOpen.has(row) ? ' los-open' : '';
+      tableHTML += `<tr><td class="area-matrix-label${losCls}" data-label="${row}">${row}</td>`;
       for (const col of labels) {
         if (row === col) {
           tableHTML += '<td class="area-matrix-cell self">\u2014</td>';
@@ -5949,7 +5981,7 @@ export default class ConanToolsSheet extends ActorSheet {
       tableHTML += '</tr>';
     }
     tableHTML += '</tbody></table>';
-    tableHTML += '<p class="area-matrix-hint">Left-click: path · Right-click letter: toggle LOS blocker</p>';
+    tableHTML += '<p class="area-matrix-hint">Left-click: path · Right-click letter: cycle LOS (blocked / open)</p>';
 
     container.html(tableHTML);
 
@@ -5997,7 +6029,8 @@ export default class ConanToolsSheet extends ActorSheet {
   }
 
   /**
-   * Toggle LOS blocker on an area (right-click matrix header/label)
+   * Toggle LOS state on an area (right-click matrix header/label)
+   * 3-state cycle: Normal → Blocked (no LOS) → Open (always LOS) → Normal
    */
   async _onToggleAreaLOS(event) {
     event.preventDefault();
@@ -6006,12 +6039,21 @@ export default class ConanToolsSheet extends ActorSheet {
 
     const areaData = canvas.scene.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
     if (!areaData.losBlockers) areaData.losBlockers = [];
+    if (!areaData.losOpen) areaData.losOpen = [];
 
-    const idx = areaData.losBlockers.indexOf(label);
-    if (idx >= 0) {
-      areaData.losBlockers.splice(idx, 1);
-    } else {
+    const isBlocked = areaData.losBlockers.includes(label);
+    const isOpen = areaData.losOpen.includes(label);
+
+    if (!isBlocked && !isOpen) {
+      // Normal → Blocked
       areaData.losBlockers.push(label);
+    } else if (isBlocked) {
+      // Blocked → Open
+      areaData.losBlockers.splice(areaData.losBlockers.indexOf(label), 1);
+      areaData.losOpen.push(label);
+    } else {
+      // Open → Normal
+      areaData.losOpen.splice(areaData.losOpen.indexOf(label), 1);
     }
 
     await canvas.scene.setFlag('conan', 'areaData', areaData);
@@ -7529,7 +7571,6 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     if (threatTraits.includes('hex')) {
       enemy.rules = [...(enemy.rules || []), { name: 'Hex', description: 'Sorcery (1 LP): Curses a player with -1 attack. Stacks up to 3. Removed when witch dies.' }];
     }
-
     if (threatTier > 0) {
       console.log(`Conan | Threat Engine: ${enemy.name} — Tier ${threatTier} (${'💀'.repeat(threatTier)}), Traits: [${threatTraits.join(', ')}]`);
     }
@@ -7558,10 +7599,12 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   const WITCH_ENEMY_IDS = ['witch'];
   const NECRO_ENEMY_IDS = ['necromancer'];
   const SUMMONER_ENEMY_IDS = ['summoner'];
+  const SILKVIPER_ENEMY_IDS = ['handmaiden', 'bride', 'enchantress'];
   const chatNameData = PICT_ENEMY_IDS.includes(enemy.id) ? pickPictName()
     : CULTIST_ENEMY_IDS.includes(enemy.id) ? pickCultistName()
     : BARBARIAN_ENEMY_IDS.includes(enemy.id) ? pickBarbarianName()
     : SUMMONER_ENEMY_IDS.includes(enemy.id) ? pickSummonerName()
+    : SILKVIPER_ENEMY_IDS.includes(enemy.id) ? pickSilkViperName()
     : [...NAMED_ENEMY_IDS, ...PIRATE_ENEMY_IDS, ...STEPPE_ENEMY_IDS, ...WITCH_ENEMY_IDS, ...NECRO_ENEMY_IDS].includes(enemy.id) ? pickHyborianName() : null;
   const chatName = chatNameData?.name || null;
   const chatGender = chatNameData?.gender || null;
@@ -8048,8 +8091,14 @@ function showEnemyRollDialog(enemyData, token = null) {
   if (enemyData.attacks?.ranged) {
     const rangedWeapons = Array.isArray(enemyData.attacks.ranged) ? enemyData.attacks.ranged : [enemyData.attacks.ranged];
     rangedWeapons.forEach(r => {
+      // garroteOnly weapons hidden unless enemy has garrote trait
+      if (r.garroteOnly && !enemyData.threatTraits?.includes('garrote')) return;
+      // Silk Whip uses Might, not Edge
+      const rStat = r.name === 'Silk Whip' ? 'might' : 'edge';
+      const rStatVal = r.name === 'Silk Whip' ? mightVal : edgeVal;
+      const rStatDie = r.name === 'Silk Whip' ? mightDie : edgeDie;
       weapons.push(`
-        <button type="button" class="weapon-btn" data-attack="ranged" data-damage="${r.damage}" data-name="${r.name}" data-stat="edge" data-stat-value="${edgeVal}" data-stat-die="${edgeDie}" title="${r.special || ''}">
+        <button type="button" class="weapon-btn" data-attack="ranged" data-damage="${r.damage}" data-name="${r.name}" data-stat="${rStat}" data-stat-value="${rStatVal}" data-stat-die="${rStatDie}" title="${r.special || ''}">
           <div class="weapon-icon"><i class="fas fa-crosshairs"></i></div>
           <div class="weapon-details">
             <span class="weapon-name">${r.name}</span>
@@ -8119,6 +8168,12 @@ function showEnemyRollDialog(enemyData, token = null) {
       } else if (r.name === 'Hex') {
         stateClass = 'hex-btn';
         tooltip = ' title="Sorcery (1 LP): -1 attack on a player. Stacks up to 3. Removed on witch death."';
+      } else if (r.name === 'Lust') {
+        stateClass = 'lust-btn';
+        tooltip = ' title="Sorcery (1 LP): Blind a player — they see nothing but the object of their desire"';
+      } else if (r.name === 'Tender Mercy') {
+        stateClass = 'tender-mercy-btn';
+        tooltip = ' title="Sorcery (1 LP): Heal an ally for 2D4+2 LP"';
       }
       return `<button type="button" class="ability-btn ${stateClass}" data-rule-index="${i}" data-rule-name="${r.name}"${tooltip}><i class="fas fa-bolt"></i> ${r.name}</button>`;
     }).join('');
@@ -8370,6 +8425,12 @@ function showEnemyRollDialog(enemyData, token = null) {
         } else if (r.name === 'Hex') {
           stateClass = 'hex-btn';
           extraAttrs = ' title="Sorcery (1 LP): -1 attack on a player. Stacks up to 3. Removed on witch death."';
+        } else if (r.name === 'Lust') {
+          stateClass = 'lust-btn';
+          extraAttrs = ' title="Sorcery (1 LP): Blind a player — they see nothing but the object of their desire"';
+        } else if (r.name === 'Tender Mercy') {
+          stateClass = 'tender-mercy-btn';
+          extraAttrs = ' title="Sorcery (1 LP): Heal an ally for 2D4+2 LP"';
         } else if (r.name === 'Master of the Dead') {
           stateClass = 'necro-btn';
           extraAttrs = ' title="Raise Dead or Death Scream — dark necromancy"';
@@ -8377,7 +8438,7 @@ function showEnemyRollDialog(enemyData, token = null) {
           stateClass = 'summoner-btn';
           extraAttrs = ' title="Demonic Ward, Hellfire, or Summon Fiend — dark sorcery"';
         }
-        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : r.name === 'Glamour' ? '👁' : r.name === 'Hex' ? '🔮' : r.name === 'White Magic' ? '🌿' : r.name === 'Master of the Dead' ? '💀' : r.name === 'Demonic Darkness' ? '🔥' : '⚔';
+        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : r.name === 'Glamour' ? '👁' : r.name === 'Hex' ? '🔮' : r.name === 'White Magic' ? '🌿' : r.name === 'Master of the Dead' ? '💀' : r.name === 'Demonic Darkness' ? '🔥' : r.name === 'Lust' ? '💋' : r.name === 'Tender Mercy' ? '💗' : '⚔';
         return `<button type="button" class="ability-btn ${stateClass}" data-rule-index="${i}" data-rule-name="${r.name}"${extraAttrs}>${icon} ${r.name}<div class="ability-tooltip"><strong>${r.name}:</strong> ${r.description}</div></button>`;
       }).join('');
     }
@@ -8393,7 +8454,11 @@ function showEnemyRollDialog(enemyData, token = null) {
     if (enemyData.attacks?.ranged) {
       const rangedArr = Array.isArray(enemyData.attacks.ranged) ? enemyData.attacks.ranged : [enemyData.attacks.ranged];
       rangedArr.forEach(r => {
-        newWeapons.push(`<button type="button" class="weapon-btn" data-attack="ranged" data-damage="${r.damage}" data-name="${r.name}" data-stat="edge" data-stat-value="${edgeVal}" data-stat-die="${edgeDie}"><span class="weapon-name">${r.name}</span><div class="weapon-tooltip"><span class="wp-dmg">${r.damage}</span> · <span class="wp-range">${r.range}</span></div></button>`);
+        if (r.garroteOnly && !enemyData.threatTraits?.includes('garrote')) return;
+        const rStat = r.name === 'Silk Whip' ? 'might' : 'edge';
+        const rStatVal = r.name === 'Silk Whip' ? mightVal : edgeVal;
+        const rStatDie = r.name === 'Silk Whip' ? mightDie : edgeDie;
+        newWeapons.push(`<button type="button" class="weapon-btn" data-attack="ranged" data-damage="${r.damage}" data-name="${r.name}" data-stat="${rStat}" data-stat-value="${rStatVal}" data-stat-die="${rStatDie}"><span class="weapon-name">${r.name}</span><div class="weapon-tooltip"><span class="wp-dmg">${r.damage}</span> · <span class="wp-range">${r.range}</span></div></button>`);
       });
     }
 
@@ -9704,7 +9769,11 @@ function showEnemyRollDialog(enemyData, token = null) {
         const bellowBuff = isPlaced && token?.actor?.getFlag('conan', 'bellowBuff');
         const bellowDamageBonus = bellowBuff?.active ? 1 : 0;
 
-        const totalDamage = damageRoll.total + baneDamage + aggressiveDamageBonus + bloodthirstyDamage + zealotDamage + cutthroatDamage + bloodyAxeDamage + warChantDamageBonus + martyrDamageBonus + berserkerDamageBonus + bellowDamageBonus + trampleDamage + eagleEyeDamage;
+        // Check for Madwoman buff (+2 damage per stack)
+        const madwomanBuff = isPlaced && token?.actor?.getFlag('conan', 'madwomanBuff');
+        const madwomanDamageBonus = (madwomanBuff?.stacks || 0) * 2;
+
+        const totalDamage = damageRoll.total + baneDamage + aggressiveDamageBonus + bloodthirstyDamage + zealotDamage + cutthroatDamage + bloodyAxeDamage + warChantDamageBonus + martyrDamageBonus + berserkerDamageBonus + bellowDamageBonus + madwomanDamageBonus + trampleDamage + eagleEyeDamage;
         const statLabel = stat.charAt(0).toUpperCase() + stat.slice(1);
 
         // Build modifier lines (white text on black — no inline colors)
@@ -9732,6 +9801,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         if (hasTrample) atkModifiers += `<div class="msg-modifier">${eShort}'s mount tramples the foe!</div>`;
         if (hasEagleEye) atkModifiers += `<div class="msg-modifier">${eShort}'s arrow flies true — pierces armor!</div>`;
         if (martyrDamageBonus) atkModifiers += `<div class="msg-modifier">Martyr's Fury: +${martyrDamageBonus} damage</div>`;
+        if (madwomanDamageBonus) atkModifiers += `<div class="msg-modifier">Madwoman: +${madwomanDamageBonus} damage</div>`;
         if (hasVenom) atkModifiers += `<div class="msg-modifier">Snake Venom: −2 to Attack</div>`;
         if (hellfirePenalty) atkModifiers += `<div class="msg-modifier">Hellfire: ${hellfirePenalty} to Attack</div>`;
 
@@ -9764,6 +9834,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         if (martyrDamageBonus) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${martyrDamageBonus}</span>`;
         if (berserkerDamageBonus) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${berserkerDamageBonus}</span>`;
         if (bellowDamageBonus) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${bellowDamageBonus}</span>`;
+        if (madwomanDamageBonus) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${madwomanDamageBonus}</span>`;
         if (trampleDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${trampleDamage}</span>`;
         if (eagleEyeDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${eagleEyeDamage}</span>`;
         let dmgExtras = '';
@@ -10481,6 +10552,257 @@ function showEnemyRollDialog(enemyData, token = null) {
             }
           };
           document.addEventListener('keydown', hexEscHandler);
+          return;
+        }
+
+        // === LUST (Enchantress — Blind a player, reskinned Glamour) ===
+        if (rule.name === 'Lust' && isPlaced && token) {
+          const lustName = enemyData.chatName || enemyData.name;
+
+          // LP cost check (1 LP sorcery)
+          const sceneTokenL = game.scenes.active?.tokens.get(token.id);
+          const lustMaxLP = enemyData.lifePoints || 0;
+          const lustCurrentLP = sceneTokenL?.actor?.system?.lifePoints?.value ?? (token.getFlag('conan', 'currentHP') ?? lustMaxLP);
+          if (lustCurrentLP <= 1) {
+            ui.notifications.warn(`${enemyData.name} does not have enough LP to cast Lust.`);
+            return;
+          }
+
+          ui.notifications.info('LUST: Click a player token to blind them.');
+          const lustBtn = ev.currentTarget;
+          lustBtn.classList.add('ability-targeting');
+          document.body.style.cursor = 'crosshair';
+
+          const lustClickHandler = async (controlledToken, controlled) => {
+            if (!controlled) return;
+            const lustTarget = controlledToken.actor;
+            if (!lustTarget || lustTarget.type !== 'character2') {
+              ui.notifications.warn('Lust can only target player characters.');
+              return;
+            }
+
+            Hooks.off('controlToken', lustClickHandler);
+            document.removeEventListener('keydown', lustEscHandler);
+            lustBtn.classList.remove('ability-targeting');
+            document.body.style.cursor = '';
+
+            // Pay 1 LP — DUAL LP WRITE
+            const lustNewLP = Math.max(0, lustCurrentLP - 1);
+            if (sceneTokenL) {
+              await sceneTokenL.setFlag('conan', 'currentHP', lustNewLP);
+              if (sceneTokenL.actor) await sceneTokenL.actor.update({ 'system.lifePoints.value': lustNewLP });
+            }
+
+            // Apply blinded condition
+            await lustTarget.update({ 'system.conditions.blinded': true });
+            await lustTarget.setFlag('conan', 'glamourDebuff', { active: true, source: token.id, witchName: lustName });
+
+            const lustTargetName = lustTarget.name;
+            const LUST_FLAVOR = [
+              `${lustName} locks eyes with ${lustTargetName} — the world melts away, leaving only her.`,
+              `${lustName} whispers something only ${lustTargetName} can hear. Everything else ceases to exist.`,
+              `${lustName}'s perfume thickens the air and ${lustTargetName}'s vision blurs with longing.`,
+              `${lustName} traces a finger along her collarbone — ${lustTargetName} forgets where they are.`,
+              `${lustName} smiles, and ${lustTargetName}'s sword arm goes slack. Nothing else matters now.`,
+              `A single glance from ${lustName} and ${lustTargetName} is lost in a dream of silk and warmth.`,
+            ];
+
+            await ChatMessage.create({
+              speaker: { alias: enemyData.name },
+              content: `
+                <div class="enemy-msg theme-human">
+                  <div class="enemy-msg-header">
+                    <div class="msg-icon"><i class="fas fa-heart" style="font-size: 24px; color: #FF69B4;"></i></div>
+                    <div class="msg-titles">
+                      <div class="msg-name">Lust — ${lustTargetName} Blinded!</div>
+                    </div>
+                  </div>
+                  <div class="enemy-msg-body">
+                    <div style="color: #ccc; text-align: center; font-style: italic;">${LUST_FLAVOR[Math.floor(Math.random() * LUST_FLAVOR.length)]}</div>
+                    <div class="roll-row" style="justify-content: center; margin-top: 6px;">
+                      <span class="mech-tag debuff"><i class="fas fa-heart"></i> Blinded</span>
+                      <span class="mech-tag"><i class="fas fa-droplet"></i> 1 LP</span>
+                    </div>
+                    <div style="color: #FF69B4; text-align: center; margin-top: 4px; font-size: 0.85em;">Attacks auto-miss unless Flex triggers. Spend 1 SP to overcome. Expires end of turn.</div>
+                  </div>
+                </div>`,
+              flags: { conan: { enemySpellCast: {
+                enemyName: enemyData.name,
+                abilityName: 'Lust',
+                tokenId: token?.id || null,
+                enemyWits: enemyData.stats?.wits?.value ?? 0,
+                enemyWitsDie: enemyData.stats?.wits?.die || 'D6'
+              }}}
+            });
+            console.log(`%c[LUST] ${lustName} blinds ${lustTargetName}`, 'color: #FF69B4; font-weight: bold;');
+          };
+
+          Hooks.on('controlToken', lustClickHandler);
+          const lustEscHandler = (e) => {
+            if (e.key === 'Escape') {
+              Hooks.off('controlToken', lustClickHandler);
+              document.removeEventListener('keydown', lustEscHandler);
+              lustBtn.classList.remove('ability-targeting');
+              document.body.style.cursor = '';
+              ui.notifications.info('Lust cancelled.');
+            }
+          };
+          document.addEventListener('keydown', lustEscHandler);
+          return;
+        }
+
+        // === TENDER MERCY (Enchantress — Heal an ally enemy for 2D4+2, repeatable) ===
+        if (rule.name === 'Tender Mercy' && isPlaced && token) {
+          const mercyName = enemyData.chatName || enemyData.name;
+          const mercyBtn = ev.currentTarget;
+
+          // Toggle off if already targeting
+          if (mercyBtn.classList.contains('ability-targeting')) {
+            mercyBtn.classList.remove('ability-targeting');
+            document.body.style.cursor = '';
+            ui.notifications.info('Tender Mercy ended.');
+            return;
+          }
+
+          ui.notifications.info('TENDER MERCY: Click enemy tokens to heal. ESC or re-click to stop.');
+          mercyBtn.classList.add('ability-targeting');
+          document.body.style.cursor = 'crosshair';
+
+          const MERCY_FLAVOR = [
+            `${mercyName} presses her lips to TARGET's wounds — the flesh knits together.`,
+            `${mercyName} whispers honeyed lies and TARGET's pain melts away.`,
+            `Soft hands and softer words — ${mercyName} mends what steel has torn.`,
+            `${mercyName} hums an ancient lullaby and TARGET's wounds close like sleeping eyes.`,
+            `"Hush now," ${mercyName} murmurs, and TARGET's blood retreats back beneath the skin.`,
+            `${mercyName} traces a sigil on TARGET's chest — warmth floods through them.`,
+          ];
+
+          const mercyClickHandler = async (controlledToken, controlled) => {
+            if (!controlled) return;
+            const tEd = controlledToken.document?.getFlag('conan', 'enemyData');
+            if (!tEd) {
+              ui.notifications.warn('Tender Mercy can only target enemies.');
+              return;
+            }
+            if (controlledToken.document.getFlag('conan', 'dead')) {
+              ui.notifications.warn('That enemy is already dead.');
+              return;
+            }
+
+            // Check LP each time (re-read live)
+            const sceneTokenM = game.scenes.active?.tokens.get(token.id);
+            const mercyCurrentLP = sceneTokenM?.actor?.system?.lifePoints?.value ?? (token.getFlag('conan', 'currentHP') ?? 0);
+            if (mercyCurrentLP <= 1) {
+              ui.notifications.warn(`${enemyData.name} does not have enough LP to cast Tender Mercy.`);
+              Hooks.off('controlToken', mercyClickHandler);
+              document.removeEventListener('keydown', mercyEscHandler);
+              mercyBtn.classList.remove('ability-targeting');
+              document.body.style.cursor = '';
+              return;
+            }
+
+            // Pay 1 LP — DUAL LP WRITE
+            const mercyNewLP = Math.max(0, mercyCurrentLP - 1);
+            if (sceneTokenM) {
+              await sceneTokenM.setFlag('conan', 'currentHP', mercyNewLP);
+              if (sceneTokenM.actor) await sceneTokenM.actor.update({ 'system.lifePoints.value': mercyNewLP });
+            }
+
+            const targetName = tEd.chatName || tEd.name;
+            const flavor = MERCY_FLAVOR[Math.floor(Math.random() * MERCY_FLAVOR.length)].replace('TARGET', targetName);
+            const isMinion = tEd.type === 'Minion';
+
+            if (isMinion) {
+              // Minion: clear wounded flag (remove a hit)
+              const isWounded = controlledToken.document.getFlag('conan', 'wounded');
+              if (!isWounded) {
+                ui.notifications.warn(`${targetName} is not wounded.`);
+                canvas.tokens.releaseAll();
+                return;
+              }
+              await controlledToken.document.setFlag('conan', 'wounded', false);
+              // Reset orange wounded tint back to normal
+              await controlledToken.document.update({ 'texture.tint': null });
+
+              // Floating green heal
+              if (typeof window.broadcastFloatingDamage === 'function') window.broadcastFloatingDamage(controlledToken.id, 0, false, false, true);
+
+              await ChatMessage.create({
+                speaker: { alias: enemyData.name },
+                content: `
+                  <div class="enemy-msg theme-human">
+                    <div class="enemy-msg-header">
+                      <div class="msg-icon"><i class="fas fa-hand-holding-heart" style="font-size: 24px; color: #FF69B4;"></i></div>
+                      <div class="msg-titles">
+                        <div class="msg-name">Tender Mercy — ${targetName} Restored!</div>
+                      </div>
+                    </div>
+                    <div class="enemy-msg-body">
+                      <div style="color: #ccc; text-align: center; font-style: italic;">${flavor}</div>
+                      <div class="roll-row" style="justify-content: center; margin-top: 6px;">
+                        <span class="mech-tag heal"><i class="fas fa-heart"></i> Wound Removed</span>
+                        <span class="mech-tag"><i class="fas fa-droplet"></i> 1 LP</span>
+                      </div>
+                    </div>
+                  </div>`
+              });
+              console.log(`%c[TENDER MERCY] ${mercyName} removes wound from ${targetName}`, 'color: #FF69B4; font-weight: bold;');
+            } else {
+              // Antagonist: roll 2D4+2 LP heal
+              const mercyRoll = await new Roll('2d4+2').evaluate();
+              const healAmount = mercyRoll.total;
+
+              // Heal target — DUAL LP WRITE
+              const targetSceneToken = game.scenes.active?.tokens.get(controlledToken.document.id);
+              const tMaxLP = tEd.lifePoints || 0;
+              const tCurrentLP = targetSceneToken?.actor?.system?.lifePoints?.value ?? (controlledToken.document.getFlag('conan', 'currentHP') ?? tMaxLP);
+              const tNewLP = Math.min(tMaxLP, tCurrentLP + healAmount);
+              if (targetSceneToken?.actor) {
+                await targetSceneToken.actor.update({ 'system.lifePoints.value': tNewLP });
+              }
+              await controlledToken.document.setFlag('conan', 'currentHP', tNewLP);
+
+              // Floating green heal
+              if (typeof window.broadcastFloatingDamage === 'function') window.broadcastFloatingDamage(controlledToken.id, healAmount, false, false, true);
+
+              await ChatMessage.create({
+                speaker: { alias: enemyData.name },
+                content: `
+                  <div class="enemy-msg theme-human">
+                    <div class="enemy-msg-header">
+                      <div class="msg-icon"><i class="fas fa-hand-holding-heart" style="font-size: 24px; color: #FF69B4;"></i></div>
+                      <div class="msg-titles">
+                        <div class="msg-name">Tender Mercy — ${targetName} Healed!</div>
+                      </div>
+                    </div>
+                    <div class="enemy-msg-body">
+                      <div style="color: #ccc; text-align: center; font-style: italic;">${flavor}</div>
+                      <div class="roll-row" style="justify-content: center; margin-top: 6px;">
+                        <div class="roll-dice"><div class="die heal">${mercyRoll.total}</div></div>
+                        <span class="mech-tag heal"><i class="fas fa-heart"></i> +${healAmount} LP</span>
+                        <span class="mech-tag"><i class="fas fa-droplet"></i> 1 LP</span>
+                      </div>
+                    </div>
+                  </div>`
+              });
+              console.log(`%c[TENDER MERCY] ${mercyName} heals ${targetName} for ${healAmount} LP`, 'color: #FF69B4; font-weight: bold;');
+            }
+
+            // Release token so next click fires controlToken again
+            canvas.tokens.releaseAll();
+          };
+
+          Hooks.on('controlToken', mercyClickHandler);
+          const mercyEscHandler = (e) => {
+            if (e.key === 'Escape') {
+              Hooks.off('controlToken', mercyClickHandler);
+              document.removeEventListener('keydown', mercyEscHandler);
+              mercyBtn.classList.remove('ability-targeting');
+              document.body.style.cursor = '';
+              ui.notifications.info('Tender Mercy ended.');
+            }
+          };
+          document.addEventListener('keydown', mercyEscHandler);
           return;
         }
 
@@ -11807,6 +12129,140 @@ async function spawnDemonAtPosition(x, y, demonType) {
   return createdToken;
 }
 window.spawnDemonAtPosition = spawnDemonAtPosition;
+
+// ==========================================
+// FIRST WIFE — Spawn replacement Enchantress at 40-60% HP
+// ==========================================
+async function spawnFirstWifeEnchantress(x, y, traits, tier) {
+  const inheritedTraits = traits || [];
+  const inheritedTier = tier || 0;
+
+  const response = await fetch('systems/conan/data/enemies.json');
+  if (!response.ok) return;
+  const data = await response.json();
+  const group = data.categories?.human?.groups?.['silk-vipers'];
+  const enchantress = group?.enemies?.find(e => e.id === 'enchantress');
+  if (!enchantress) {
+    console.error('[FIRST WIFE] Could not find enchantress in enemies.json!');
+    return;
+  }
+
+  let enemy = JSON.parse(JSON.stringify(enchantress));
+  enemy.category = 'human';
+  enemy.group = 'silk-vipers';
+  enemy.groupBackground = group.backgroundImg || null;
+
+  // Custom images
+  const customImages = game.settings.get('conan', 'enemyCustomImages') || {};
+  const imgKey = `human.silk-vipers.${enemy.id}`;
+  if (customImages[imgKey]) {
+    if (customImages[imgKey].portraitImg) enemy.portraitImg = customImages[imgKey].portraitImg;
+    if (customImages[imgKey].tokenImg) enemy.tokenImg = customImages[imgKey].tokenImg;
+  }
+
+  // Flatten defenses
+  const pDef = enemy.defenses.physical;
+  enemy.physicalDefense = pDef.min + Math.floor(Math.random() * (pDef.max - pDef.min + 1));
+  const sDef = enemy.defenses.sorcery;
+  enemy.sorceryDefense = sDef.min + Math.floor(Math.random() * (sDef.max - sDef.min + 1));
+
+  // AR randomize
+  const arMin = enemy.ar?.min || 0;
+  const arMax = enemy.ar?.max || 0;
+  enemy.armorRating = arMin + Math.floor(Math.random() * (arMax - arMin + 1));
+
+  // Apply inherited spawn-time trait effects
+  if (inheritedTraits.includes('faithful')) {
+    enemy.sorceryDefense = (enemy.sorceryDefense || 0) + 2;
+  }
+
+  // Apply tier name from THREAT_NAME_MAP
+  const nameMap = THREAT_NAME_MAP[enemy.id];
+  if (nameMap && nameMap[inheritedTier]) {
+    enemy = { ...enemy, name: nameMap[inheritedTier] };
+  }
+
+  // LP at 40-60% of base
+  const baseLP = enemy.lifePoints || 40;
+  const lpPercent = 0.4 + (Math.random() * 0.2); // 0.4 to 0.6
+  const reducedLP = Math.max(1, Math.round(baseLP * lpPercent));
+
+  const portraitImg = enemy.portraitImg || enemy.tokenImg || 'icons/svg/mystery-man.svg';
+  const tokenImg = enemy.tokenImg || 'icons/svg/mystery-man.svg';
+
+  // Pick a name
+  const nameData = pickSilkViperName();
+
+  // Build nameplate with skulls
+  const skullPrefix = inheritedTier > 0 ? '💀'.repeat(inheritedTier) + ' ' : '';
+  const displayName = skullPrefix + enemy.name;
+
+  const actorData = {
+    name: displayName,
+    type: 'npc2',
+    img: portraitImg,
+    system: {
+      enemyType: enemy.type,
+      stats: {
+        might: { value: enemy.stats.might.value, die: enemy.stats.might.die },
+        edge: { value: enemy.stats.edge.value, die: enemy.stats.edge.die },
+        grit: { value: enemy.stats.grit.value, die: enemy.stats.grit.die },
+        wits: { value: enemy.stats.wits.value, die: enemy.stats.wits.die }
+      },
+      defenses: { physical: enemy.physicalDefense, sorcery: enemy.sorceryDefense },
+      threshold: null,
+      lifePoints: { value: reducedLP, max: reducedLP },
+      ar: enemy.armorRating,
+      attacks: enemy.attacks || {},
+      actions: enemy.actions || { perTurn: 2, attackLimit: null },
+      rules: enemy.rules || [],
+      isDefaultEnemy: true,
+      sourceEnemyId: enemy.id
+    }
+  };
+
+  const scene = canvas.scene;
+  if (!scene) return;
+
+  const actor = await Actor.create(actorData, { conanEnemySpawn: true });
+  const dropPosition = canvas.grid.getSnappedPosition(x, y);
+
+  await actor.update({
+    'prototypeToken.actorLink': false,
+    'prototypeToken.texture.src': tokenImg,
+    'prototypeToken.disposition': CONST.TOKEN_DISPOSITIONS.HOSTILE,
+    'prototypeToken.displayName': CONST.TOKEN_DISPLAY_MODES.ALWAYS,
+    'prototypeToken.displayBars': CONST.TOKEN_DISPLAY_MODES.NONE,
+    'prototypeToken.lockRotation': true
+  });
+
+  const tokenData = await actor.getTokenDocument({ x: dropPosition.x, y: dropPosition.y, actorLink: false });
+  const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
+
+  await createdToken.setFlag('conan', 'enemyData', {
+    id: enemy.id, name: enemy.name, type: enemy.type,
+    category: enemy.category, group: enemy.group, groupBackground: enemy.groupBackground,
+    stats: enemy.stats, defenses: enemy.defenses,
+    physicalDefense: enemy.physicalDefense, sorceryDefense: enemy.sorceryDefense,
+    threshold: null, lifePoints: reducedLP,
+    ar: enemy.ar, armorRating: enemy.armorRating,
+    attacks: enemy.attacks, actions: enemy.actions, rules: enemy.rules,
+    portraitImg: portraitImg, tokenImg: tokenImg, actorId: actor.id,
+    chatName: nameData.name, chatGender: nameData.gender,
+    threatTier: inheritedTier, threatTraits: inheritedTraits
+  });
+
+  // DUAL LP WRITE — set currentHP flag
+  await createdToken.setFlag('conan', 'currentHP', reducedLP);
+
+  let folder = game.folders.find(f => f.name === 'Encounter Enemies' && f.type === 'Actor');
+  if (!folder) folder = await Folder.create({ name: 'Encounter Enemies', type: 'Actor' });
+  await actor.update({ folder: folder.id });
+
+  console.log(`%c[FIRST WIFE] Spawned ${displayName} at ${reducedLP}/${baseLP} LP (${Math.round(lpPercent * 100)}%), Tier ${inheritedTier}, Traits: [${inheritedTraits.join(', ')}]`, 'color: #FF69B4; font-weight: bold;');
+  return createdToken;
+}
+window.spawnFirstWifeEnchantress = spawnFirstWifeEnchantress;
 
 // ========== TOKEN DOUBLE-CLICK - Intercept before sheet opens ==========
 // Override Token._onClickLeft2 to intercept double-clicks on enemy tokens BEFORE the sheet opens
