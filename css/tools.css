@@ -6064,9 +6064,9 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.03em;
-  background: rgba(224,192,112,0.15);
-  color: #e0c070;
-  border: 1px solid rgba(224,192,112,0.3);
+  background: #e0c070;
+  color: #1a1a1a;
+  border: 1px solid #c8a850;
   cursor: default;
 }
 .enemy-ccg-card .trait-tooltip {

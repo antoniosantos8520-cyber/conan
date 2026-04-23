@@ -1351,10 +1351,14 @@ export default class ConanActorSheet2 extends ActorSheet {
       // Protect bonus from Guard ability (stored in flags, max +3)
       const protectData = this.actor.getFlag('conan', 'protectBonus');
       const protectBonus = Math.min(protectData?.total || 0, 3);
-      context.system.defense.physical = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus;
+      // Defensive Fighting: +2 when active
+      const defensiveFightingActive = this.actor.getFlag('conan', 'defensiveFighting') || false;
+      const defensiveFightingBonus = defensiveFightingActive ? 2 : 0;
+      context.system.defense.physical = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus + defensiveFightingBonus;
       context.protectBonus = protectBonus;
       context.physicalToughSouledBonus = toughSouledBonus;
       context.physicalBlockerBonus = blockerBonus;
+      context.defensiveFighting = defensiveFightingActive;
     }
 
     // Auto-calculate Sorcery Defense (Wits + 2, min 5) unless unlocked and overridden
@@ -3009,7 +3013,7 @@ export default class ConanActorSheet2 extends ActorSheet {
         sorcery: "None",
         bonuses: "+1 to all Melee Damage.",
         startingSkills: "Iron Hide OR Charge",
-        backgroundImage: "bg_steppes.jpg", // TODO: replace with bg_north.jpg when available
+        backgroundImage: "bg_north.jpg",
         flavorQuote: "Man of the raven locks, tell me your name, so that my brothers in Vanaheim may know who was the last of Wulfhere's band to fall before the sword of Heimdul.",
         quoteSource: "Robert E. Howard, \"Gods of the North\"",
         description: "Where the icebergs, calved from the great glaciers of the north, drift. Where the skalds intone strange songs of the frost giant, Ymir, and his beautiful daughter. Where the mead is drunk, and the old gods toast as though they sit at one's right hand... that is where you first drew breath, breath which fogged in the air and hung above your small, frail form like a mighty doom waiting to be embraced.\n\nSuch is the way of things in the remote regions of the north. Here the ice crystals form in your beard in seconds, and falling into the water is a death sentence—provided the fall is hard enough to breach the thick ice crusting over it. Fortunately, you were strong enough to survive, to grow to adulthood in the brutal cultures of your homeland. Your people are ship builders, sailors, reavers. You pillaged the shores of those nations to the south, dragging back gold and captives and tales of your own heroism, to become the great sagas you dreamed of having sung in your name.\n\nYou'd done this since you were a child. You knew the whims of the sea almost as well as you did the tempers of your crewmates, the cold anger of your monarch. You knew how to make a ship skip over and through the waves, you knew how to catch the wind, how to break the storm. And you knew how to find those secret coves, the hidden rivers, leading you into the fatted, verdant lands of the south. There, those unexpecting fools also discovered you knew the way of the sword and the spear; that you knew how to feed the ravens, as well as to follow them to the richest outposts.\n\nBut too often your ship turned for home before you were done exploring. Too often the mead hall summoned you back before you'd gathered enough loot, or performed enough heroic feats, to earn your place in the skald's songs. Not this time, however. This time, you decided to stay. To strike out into the lands of the south, to claim your destiny, and to find the mightiest doom ever heard of in the whole of the freezing north."
@@ -3452,6 +3456,38 @@ export default class ConanActorSheet2 extends ActorSheet {
           skill.id === "sorcerous-vigor") {
         return true;
       }
+    }
+    return false;
+  }
+
+  /**
+   * Check if the character has Fierce Strokes skill
+   * @returns {boolean}
+   */
+  _hasFierceStrokes() {
+    const originBonuses = this._getActiveOriginBonuses();
+    if (originBonuses.grantedSkills.includes("fierce-strokes")) return true;
+    const skills = this.actor.system.skills || {};
+    for (const skill of Object.values(skills)) {
+      const skillName = skill.name?.toLowerCase() || '';
+      if (skillName === "fierce strokes" || skillName === "fierce-strokes" ||
+          skill.defId === "fierce-strokes" || skill.id === "fierce-strokes") return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if the character has Fierce Shots skill
+   * @returns {boolean}
+   */
+  _hasFierceShots() {
+    const originBonuses = this._getActiveOriginBonuses();
+    if (originBonuses.grantedSkills.includes("fierce-shots")) return true;
+    const skills = this.actor.system.skills || {};
+    for (const skill of Object.values(skills)) {
+      const skillName = skill.name?.toLowerCase() || '';
+      if (skillName === "fierce shots" || skillName === "fierce-shots" ||
+          skill.defId === "fierce-shots" || skill.id === "fierce-shots") return true;
     }
     return false;
   }
@@ -4062,6 +4098,9 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     // ===== TRIO INFO TOGGLE =====
     html.find('.toggle-trio-info').click(this._onToggleTrioInfo.bind(this));
+
+    // ===== DEFENSIVE FIGHTING TOGGLE =====
+    html.find('.defensive-fighting-toggle').click(this._onToggleDefensiveFighting.bind(this));
 
     // ===== DEFENSE LOCK TOGGLE =====
     html.find('.toggle-defense-lock').change(this._onToggleDefenseLock.bind(this));
@@ -4926,6 +4965,114 @@ export default class ConanActorSheet2 extends ActorSheet {
     btsView.toggleClass('active');
   }
 
+  async _onToggleDefensiveFighting(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const current = this.actor.getFlag('conan', 'defensiveFighting') || false;
+    const newState = !current;
+    await this.actor.setFlag('conan', 'defensiveFighting', newState);
+
+    // Chat message
+    const name = this.actor.name;
+    if (!newState) {
+      ChatMessage.create({
+        content: `<div class="conan-roll"><div class="roll-header">${name}</div><div class="roll-section ability-desc">${name} is no longer fighting defensively.</div></div>`,
+        speaker: ChatMessage.getSpeaker({ actor: this.actor })
+      });
+    } else {
+      const msg = this._getDefensiveFightingMessage();
+      ChatMessage.create({
+        content: `<div class="conan-roll"><div class="roll-header" style="color: #4A90D9;">Defensive Fighting</div><div class="roll-section ability-desc">${msg}</div></div>`,
+        speaker: ChatMessage.getSpeaker({ actor: this.actor })
+      });
+    }
+  }
+
+  _getDefensiveFightingMessage() {
+    const name = this.actor.name;
+    const originId = this.actor.system.origin?.id || '';
+    const sub = this._pronoun('subject');
+    const pos = this._pronoun('possessive');
+    const obj = this._pronoun('object');
+    const Sub = sub.charAt(0).toUpperCase() + sub.slice(1);
+
+    const messages = {
+      'from-the-hills': [
+        `${name} shifts ${pos} weight low, blade held close — a hill-fighter's guard, born from ambush country.`,
+        `${name} drops into a crouch, eyes scanning. ${Sub} fights like the hills taught ${obj}: survive first, strike second.`,
+        `${name} tightens ${pos} stance, letting instinct take over. In the hills, the cautious ones live longest.`,
+        `${name} falls back to the mountain guard — compact, controlled. The hills breed patience.`,
+        `${name} braces ${pos} footing and narrows ${pos} profile. A Cimmerian knows when to endure.`
+      ],
+      'from-the-streets': [
+        `${name} sidesteps and keeps ${pos} guard up. The streets taught ${obj} that an opening given is a throat slit.`,
+        `${name} backs off, watching for the feint. Street rats don't survive by fighting fair — they survive by not getting hit.`,
+        `${name} goes defensive, weaving like a back-alley knife fighter. ${Sub} knows how to take a beating and give one back.`,
+        `${name} pulls ${pos} elbows in and lowers ${pos} center. In the gutter, the first one to overextend dies.`,
+        `${name} stops pressing and starts reading. The streets taught ${obj} patience the hard way.`
+      ],
+      'from-the-steppes': [
+        `${name} wheels ${pos} guard wide, circling like a rider on the open plain. ${Sub} yields ground to buy time.`,
+        `${name} sways back in the saddle-fighter's retreat — give ground, read the enemy, then strike.`,
+        `${name} shifts into a nomad's guard, weight on ${pos} back foot. The steppes reward those who outlast.`,
+        `${name} pulls back, balanced and ready. A steppe warrior knows the value of distance.`,
+        `${name} circles defensively, ${pos} blade tracking every movement. The open plain teaches you to watch.`
+      ],
+      'from-the-north': [
+        `${name} sets ${pos} jaw and raises ${pos} guard. ${Sub} fights like a northerner — take the blow, stay standing, then answer it.`,
+        `${name} plants ${pos} feet and braces. In the north, you learn to weather the storm before you become one.`,
+        `${name} tucks behind ${pos} weapon, absorbing what comes. The cold breeds stubbornness.`,
+        `${name} growls and holds ${pos} ground. A child of the north does not flinch.`,
+        `${name} drops into a shieldwall stance, even without a wall behind ${obj}. Old habits.`
+      ],
+      'from-the-wilds': [
+        `${name} goes still, coiled and watchful. A predator knows when to wait for the opening.`,
+        `${name} drops low, moving like a hunting cat. The wilds teach patience before the kill.`,
+        `${name} shifts ${pos} weight back, eyes locked on ${pos} opponent. In the wild, the reactive beast survives.`,
+        `${name} slows ${pos} breathing and reads the fight. Nature rewards those who conserve their strength.`,
+        `${name} sinks into a primal guard, instinct guiding ${pos} movements. The wilds honed this.`
+      ],
+      'from-a-civilized-land': [
+        `${name} assumes a trained defensive posture, ${pos} footwork precise. Civilization has its swordmasters.`,
+        `${name} raises ${pos} guard in the formal style — balanced, measured, disciplined.`,
+        `${name} falls back on ${pos} training, every movement deliberate. Fencing masters would approve.`,
+        `${name} shifts to the fourth guard, blade angled to deflect. Academy drilling dies hard.`,
+        `${name} settles into a scholar's guard. ${Sub} fights with ${pos} head, not just ${pos} arms.`
+      ],
+      'from-parts-unknown': [
+        `${name} shifts into a stance no one recognizes — alien, unsettling, but undeniably effective.`,
+        `${name} moves differently now, ${pos} guard strange and unreadable. Whatever taught ${obj} this, it wasn't human.`,
+        `${name} coils inward, ${pos} movements becoming something other. The defense of a thing from beyond.`,
+        `${name} assumes a posture that makes onlookers uneasy. It shouldn't work, but it does.`,
+        `${name} withdraws behind a guard that belongs to no school any warrior would name.`
+      ],
+      'from-the-blood-of-jhebbal-sag': [
+        `${name} bares ${pos} teeth and hunkers low. The blood of Jhebbal Sag knows when to stalk and when to pounce.`,
+        `${name} circles like a great cat, muscles taut, waiting. The old blood makes ${obj} patient.`,
+        `${name} drops into something between a fighting stance and a predator's crouch. Primal and effective.`,
+        `${name} goes still as a jungle cat in tall grass. The divine blood thrums with restrained violence.`,
+        `${name} lets the beast-blood guide ${obj} — coiled, watchful, ready to explode when the moment comes.`
+      ],
+      'from-the-blood-of-acheron': [
+        `${name} draws ${pos} guard tight, arcane awareness sharpening ${pos} reflexes. Dead Acheron whispers its secrets.`,
+        `${name} murmurs something under ${pos} breath and ${pos} movements become unnaturally precise.`,
+        `${name} falls back behind a ward of will and steel. The blood of Acheron remembers how empires defended themselves.`,
+        `${name} shifts ${pos} stance and the air around ${obj} seems to thicken. Acheronian instinct.`,
+        `${name} lets the old blood guide ${pos} defense. Acheron fell, but its warriors knew how to endure.`
+      ],
+      'from-the-blood-of-a-demon': [
+        `${name}'s eyes flicker with something inhuman as ${sub} draws inward. The demon blood rises to protect its vessel.`,
+        `${name} snarls and pulls ${pos} guard tight. The tainted blood burns cold, sharpening ${pos} reflexes.`,
+        `${name} falls behind a defense that seems to anticipate blows before they come. The fiend-blood knows.`,
+        `${name}'s movements become fluid and wrong, ${pos} guard shifting faster than mortal reflexes should allow.`,
+        `${name} goes defensive, and for a moment ${pos} shadow moves independently. The blood protects its own.`
+      ]
+    };
+
+    const pool = messages[originId] || messages['from-the-hills'];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   async _onToggleDefenseLock(event) {
     const checkbox = event.currentTarget;
     const defenseType = checkbox.dataset.defense; // 'physical' or 'sorcery'
@@ -4994,7 +5141,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       'button', 'input', 'select', 'textarea', 'a',
       '.roll-attribute', '.roll-weapon-attack', '.roll-spell', '.roll-skill',
       '.damage-roll-btn', '.recovery-icon', '.sheet2-tabBtn',
-      '.stat-toggle', '.toggle-char-info', '.toggle-trio-info',
+      '.stat-toggle', '.toggle-char-info', '.toggle-trio-info', '.defensive-fighting-toggle',
       '.clickable', '.dropdown-toggle', '.skill-icon-clickable',
       '.weapon-icon', '.spell-icon', '.delete-btn', '.add-btn',
       '.invoke-btn', '.condition-icon', '.xp-checkbox',
@@ -7936,7 +8083,11 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Build base attack formula (without mounted modifier)
     // Use effective die AND value that accounts for skill upgrades (Mighty/Sharpness, Legendary, etc.)
     const { die: effectiveAttackDie, value: effectiveAttackValue } = this._getEffectiveStatValues(attackStat);
-    let baseAttackFormula = `1${effectiveAttackDie} + ${effectiveAttackValue}`;
+    // Fierce Strokes (melee) / Fierce Shots (ranged/thrown): roll 2, take best
+    const hasFierceAttack = weapon.type === 'melee' ? this._hasFierceStrokes() : this._hasFierceShots();
+    const fierceLabel = weapon.type === 'melee' ? 'Fierce Strokes' : 'Fierce Shots';
+    const dieSizeNum = effectiveAttackDie.replace('d', '');
+    let baseAttackFormula = hasFierceAttack ? `2d${dieSizeNum}kh1 + ${effectiveAttackValue}` : `1${effectiveAttackDie} + ${effectiveAttackValue}`;
     if (attackBonus > 0) baseAttackFormula += ` + ${attackBonus}`;
 
     // Add Unseen Strike attack bonus (+2)
@@ -8012,6 +8163,10 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     // Build attack skill icons array
     const attackSkillIcons = [];
+    if (hasFierceAttack) {
+      const fierceIcon = weapon.type === 'melee' ? 'systems/conan/images/icons/fierce_strokes_i_icon.png' : 'systems/conan/images/icons/fierce_shots_i_icon.png';
+      attackSkillIcons.push({ icon: fierceIcon, title: `${fierceLabel} (Roll 2, Take Best)` });
+    }
     if (assassinApplies) {
       attackSkillIcons.push({ icon: 'systems/conan/images/icons/assassin_i_icon.png', title: 'Assassin (Edge Attack)' });
     }
@@ -8033,9 +8188,19 @@ export default class ConanActorSheet2 extends ActorSheet {
     }
 
     // Build attack breakdown data
-    const attackDieRoll = attackRoll.terms[0]?.total || 0;
     const attackBreakdownLines = [];
-    attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    if (hasFierceAttack) {
+      const diceResults = attackRoll.terms[0]?.results || [];
+      const allRolls = diceResults.map(r => r.result);
+      const keptRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      const rollDisplay = allRolls.length === 2
+        ? `[${allRolls[0]}, ${allRolls[1]}] → ${keptRoll}`
+        : `→ ${keptRoll}`;
+      attackBreakdownLines.push({ label: fierceLabel, value: `2${effectiveAttackDie}kh`, roll: rollDisplay, isSkill: true, isRaw: true });
+    } else {
+      const attackDieRoll = attackRoll.terms[0]?.total || 0;
+      attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    }
     attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Value`, value: `+${attackAttr.value}` });
     if (assassinApplies) attackBreakdownLines.push({ label: 'Assassin', value: 'Edge Attack', isSkill: true });
     if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
@@ -8052,7 +8217,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     attackBreakdownHtml += `<div class="breakdown-header">Attack Breakdown</div>`;
     for (const line of attackBreakdownLines) {
       const lineClass = line.isSkill ? 'breakdown-skill' : (line.isPoison ? 'breakdown-poison' : '');
-      if (line.roll !== undefined) {
+      if (line.isRaw && line.roll !== undefined) {
+        attackBreakdownHtml += `<div class="breakdown-line ${lineClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} ${line.roll}</span></div>`;
+      } else if (line.roll !== undefined) {
         attackBreakdownHtml += `<div class="breakdown-line ${lineClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} → ${line.roll}</span></div>`;
       } else {
         attackBreakdownHtml += `<div class="breakdown-line ${lineClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value}</span></div>`;
@@ -8331,7 +8498,10 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Build attack formula with origin bonus and mounted modifier
     // Use effective die AND value that accounts for skill upgrades (Mighty/Sharpness, Legendary, etc.)
     const { die: effectiveAttackDie, value: effectiveAttackValue } = this._getEffectiveStatValues(attackAttrName);
-    let attackFormula = `1${effectiveAttackDie} + ${effectiveAttackValue}`;
+    const hasFierceStrokes = this._hasFierceStrokes();
+    const dieSize = effectiveAttackDie.replace('d', '');
+    // Fierce Strokes: roll 2 dice, keep highest
+    let attackFormula = hasFierceStrokes ? `2d${dieSize}kh1 + ${effectiveAttackValue}` : `1${effectiveAttackDie} + ${effectiveAttackValue}`;
     if (attackBonus > 0) {
       attackFormula += ` + ${attackBonus}`;
     }
@@ -8357,9 +8527,19 @@ export default class ConanActorSheet2 extends ActorSheet {
     const ownerColor = this._getOwnerColor();
 
     // Build attack breakdown
-    const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
     const attackBreakdownLines = [];
-    attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    if (hasFierceStrokes) {
+      const diceResults = attackRoll.terms[0]?.results || [];
+      const allRolls = diceResults.map(r => r.result);
+      const keptRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      const rollDisplay = allRolls.length === 2
+        ? `[${allRolls[0]}, ${allRolls[1]}] → ${keptRoll}`
+        : `→ ${keptRoll}`;
+      attackBreakdownLines.push({ label: 'Fierce Strokes', value: `2${effectiveAttackDie}kh`, roll: rollDisplay, isSkill: true, isRaw: true });
+    } else {
+      const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    }
     attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Value`, value: `+${attackAttr.value}` });
     if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
     if (mountedModifier > 0) attackBreakdownLines.push({ label: 'Mounted Bonus', value: `+${mountedModifier}` });
@@ -8369,7 +8549,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     attackBreakdownHtml += `<div class="breakdown-header">Attack Breakdown</div>`;
     for (const line of attackBreakdownLines) {
       const skillClass = line.isSkill ? 'breakdown-skill' : '';
-      if (line.roll !== undefined) {
+      if (line.isRaw && line.roll !== undefined) {
+        attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} ${line.roll}</span></div>`;
+      } else if (line.roll !== undefined) {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} → ${line.roll}</span></div>`;
       } else {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value}</span></div>`;
@@ -8494,7 +8676,10 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Build attack formula with origin bonus and mounted penalty
     // Use effective die AND value that accounts for skill upgrades (Sharpness, Legendary, etc.)
     const { die: effectiveAttackDie, value: effectiveAttackValue } = this._getEffectiveStatValues(attackAttrName);
-    let attackFormula = `1${effectiveAttackDie} + ${effectiveAttackValue}`;
+    const hasFierceShots = this._hasFierceShots();
+    const dieSize = effectiveAttackDie.replace('d', '');
+    // Fierce Shots: roll 2 dice, keep highest (applies to thrown too)
+    let attackFormula = hasFierceShots ? `2d${dieSize}kh1 + ${effectiveAttackValue}` : `1${effectiveAttackDie} + ${effectiveAttackValue}`;
     if (attackBonus > 0) {
       attackFormula += ` + ${attackBonus}`;
     }
@@ -8519,9 +8704,19 @@ export default class ConanActorSheet2 extends ActorSheet {
     const ownerColor = this._getOwnerColor();
 
     // Build attack breakdown
-    const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
     const attackBreakdownLines = [];
-    attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    if (hasFierceShots) {
+      const diceResults = attackRoll.terms[0]?.results || [];
+      const allRolls = diceResults.map(r => r.result);
+      const keptRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      const rollDisplay = allRolls.length === 2
+        ? `[${allRolls[0]}, ${allRolls[1]}] → ${keptRoll}`
+        : `→ ${keptRoll}`;
+      attackBreakdownLines.push({ label: 'Fierce Shots', value: `2${effectiveAttackDie}kh`, roll: rollDisplay, isSkill: true, isRaw: true });
+    } else {
+      const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    }
     attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Value`, value: `+${attackAttr.value}` });
     if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
     if (mountedPenalty < 0) attackBreakdownLines.push({ label: 'Mounted Penalty', value: `${mountedPenalty}` });
@@ -8531,7 +8726,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     attackBreakdownHtml += `<div class="breakdown-header">Attack Breakdown</div>`;
     for (const line of attackBreakdownLines) {
       const skillClass = line.isSkill ? 'breakdown-skill' : '';
-      if (line.roll !== undefined) {
+      if (line.isRaw && line.roll !== undefined) {
+        attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} ${line.roll}</span></div>`;
+      } else if (line.roll !== undefined) {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} → ${line.roll}</span></div>`;
       } else {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value}</span></div>`;
@@ -8668,7 +8865,10 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Build attack formula with origin bonus and mounted penalty
     // Use effective die AND value that accounts for skill upgrades (Sharpness, Legendary, etc.)
     const { die: effectiveAttackDie, value: effectiveAttackValue } = this._getEffectiveStatValues(attackAttrName);
-    let attackFormula = `1${effectiveAttackDie} + ${effectiveAttackValue}`;
+    const hasFierceShots = this._hasFierceShots();
+    const dieSize = effectiveAttackDie.replace('d', '');
+    // Fierce Shots: roll 2 dice, keep highest
+    let attackFormula = hasFierceShots ? `2d${dieSize}kh1 + ${effectiveAttackValue}` : `1${effectiveAttackDie} + ${effectiveAttackValue}`;
     if (attackBonus > 0) {
       attackFormula += ` + ${attackBonus}`;
     }
@@ -8694,9 +8894,19 @@ export default class ConanActorSheet2 extends ActorSheet {
     const ownerColor = this._getOwnerColor();
 
     // Build attack breakdown
-    const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
     const attackBreakdownLines = [];
-    attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    if (hasFierceShots) {
+      const diceResults = attackRoll.terms[0]?.results || [];
+      const allRolls = diceResults.map(r => r.result);
+      const keptRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      const rollDisplay = allRolls.length === 2
+        ? `[${allRolls[0]}, ${allRolls[1]}] → ${keptRoll}`
+        : `→ ${keptRoll}`;
+      attackBreakdownLines.push({ label: 'Fierce Shots', value: `2${effectiveAttackDie}kh`, roll: rollDisplay, isSkill: true, isRaw: true });
+    } else {
+      const attackDieRoll = attackRoll.terms[0]?.total || attackRoll.total;
+      attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
+    }
     attackBreakdownLines.push({ label: `${attackAttrName.charAt(0).toUpperCase() + attackAttrName.slice(1)} Value`, value: `+${attackAttr.value}` });
     if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
     if (mountedPenalty < 0) attackBreakdownLines.push({ label: 'Mounted Penalty', value: `${mountedPenalty}` });
@@ -8706,7 +8916,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     attackBreakdownHtml += `<div class="breakdown-header">Attack Breakdown</div>`;
     for (const line of attackBreakdownLines) {
       const skillClass = line.isSkill ? 'breakdown-skill' : '';
-      if (line.roll !== undefined) {
+      if (line.isRaw && line.roll !== undefined) {
+        attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} ${line.roll}</span></div>`;
+      } else if (line.roll !== undefined) {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} → ${line.roll}</span></div>`;
       } else {
         attackBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value}</span></div>`;

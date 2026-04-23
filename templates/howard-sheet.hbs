@@ -58,6 +58,11 @@
           <button type="button" class="howard-topbar-btn howard-pres-rollcall-btn" title="Roll Call — ad-hoc skill check">
             <i class="fas fa-dice-d20"></i>
           </button>
+          {{!-- Theater button — commented out pending tile projection implementation
+          <button type="button" class="howard-topbar-btn howard-pres-theater-btn" title="Pull players to Theater scene">
+            <i class="fas fa-theater-masks"></i>
+          </button>
+          --}}
           {{else}}
           <button type="button" class="howard-topbar-btn howard-play-btn" title="Switch to Presentation mode">
             <i class="fas fa-tv"></i> Present
@@ -235,6 +240,17 @@
           {{!-- GM Mode Panel --}}
           {{#if isGmMode}}
           <div class="howard-gm-panel">
+
+            {{!-- Fight Scene Picker --}}
+            <div class="howard-gm-fight-scene">
+              <span class="howard-gm-fight-label">FIGHT:</span>
+              <select class="howard-fight-scene-select">
+                <option value="">— none —</option>
+                {{#each sceneList}}
+                <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                {{/each}}
+              </select>
+            </div>
 
             {{!-- Enemies Section --}}
             <div class="howard-gm-section howard-gm-enemies">

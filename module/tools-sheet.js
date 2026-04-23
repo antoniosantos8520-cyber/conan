@@ -81,6 +81,15 @@ const CATEGORY_THEMES = {
     border: '#7B5EAE',       // Purple border
     glow: 'rgba(123, 94, 174, 0.5)',
     isSuper: true
+  },
+  blackSouls: {
+    name: 'Black Souls',
+    primary: '#2D4A2D',      // Dark serpent green
+    secondary: '#1A2E1A',    // Near-black green
+    accent: '#7FBF4F',       // Venomous bright green
+    border: '#3A5C3A',       // Dark green border
+    glow: 'rgba(80, 160, 50, 0.5)',
+    isSuper: true
   }
 };
 
@@ -299,6 +308,14 @@ const THREAT_TRAITS_SILKVIPERS = [
   { id: 'madwoman',   name: 'Madwoman',     description: 'Surviving a hit grants +2 defense and +2 damage. Stacks up to 2 times.' },
 ];
 
+const THREAT_TRAITS_BLACKSOULS = [
+  { id: 'devoted',      name: 'Devoted',      description: '+2 attack rolls, +2 damage.' },
+  { id: 'warded',       name: 'Warded',       description: '50% spell bounce — any spell cast at them has a coin-flip chance of being blocked outright.' },
+  { id: 'blackblood',   name: 'Black Blood',  description: 'On damage dealt: infects target with Black Blood (stacks). At 3 stacks: auto-triggers 1d10+10 massive damage. If the player dies, they become a hostile reptilian replica. Clears end of combat.' },
+  { id: 'overwhelmed',  name: 'Overwhelmed',  description: '+1 Physical Defense per Overwhelmed enemy in the same area. Max +3.' },
+  { id: 'chosen',       name: 'Chosen',       description: 'On death: explodes in a black blood cloud, dealing 1d6+3 damage to their killer.' },
+];
+
 const THREAT_TRAITS_WITCH = [
   { id: 'glamour',    name: 'Glamour',     description: 'Sorcery (1 LP): Blinds a player until end of their turn. Attacks auto-miss unless Flex triggers. 1 SP to overcome.' },
   { id: 'beastmaster', name: 'Beastmaster', description: 'Call Beast summons 2 beasts instead of 1.' },
@@ -335,10 +352,13 @@ const THREAT_POOLS = {
   'handmaiden':         THREAT_TRAITS_SILKVIPERS,
   'bride':              THREAT_TRAITS_SILKVIPERS,
   'enchantress':        THREAT_TRAITS_SILKVIPERS,
+  'bs-watcher':         THREAT_TRAITS_BLACKSOULS,
+  'bs-strong-arm':      THREAT_TRAITS_BLACKSOULS,
+  'bs-speaker':         THREAT_TRAITS_BLACKSOULS,
 };
 
 // Flat union for trait badge lookups (resolves any trait ID regardless of pool)
-const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS];
+const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS, ...THREAT_TRAITS_BLACKSOULS];
 
 // Hyborian name pool — gendered for flavor text pronouns
 const HYBORIAN_NAMES_M = [
@@ -451,6 +471,26 @@ function pickSilkViperName() {
   return { name: SILKVIPER_NAMES[Math.floor(Math.random() * SILKVIPER_NAMES.length)], gender: 'f' };
 }
 
+// Black Souls names — corrupted, slithering, wrong-sounding. Names that used to be human.
+const BLACKSOUL_NAMES_M = [
+  'Sethrak','Vhoris','Kael-Ur','Draven','Mordechai','Ashael','Nephren','Sarkoth',
+  'Thalgor','Izzak','Vorath','Ghul-Shen','Havarr','Jarrek','Korrash','Lazrek',
+  'Malachar','Nythok','Orreth','Phalgor','Ravek','Szeth','Thassir','Vargul',
+  'Xanthrak','Zarek-Ul','Bashaal','Corvane','Drazul','Ezrakh',
+];
+const BLACKSOUL_NAMES_F = [
+  'Vashti','Ssyra','Naameth','Lilura','Thessa','Morwenna','Serket','Zar-Ith',
+  'Ashara','Belethis','Dahl-Ya','Feneth','Ghezara','Hecubra','Izoleth','Jezara',
+  'Kalindris','Lamira','Morvitha','Nyssara','Ophirath','Perditha','Ravennae',
+  'Seluneth','Tamsith','Ursaleth','Vespira','Wrentha','Xylara','Zuleith',
+];
+
+function pickBlackSoulName() {
+  const isFemale = Math.random() < 0.4;
+  const pool = isFemale ? BLACKSOUL_NAMES_F : BLACKSOUL_NAMES_M;
+  return { name: pool[Math.floor(Math.random() * pool.length)], gender: isFemale ? 'f' : 'm' };
+}
+
 const THREAT_TIERS = [
   { tier: 0, weight: 40, prefix: '' },         // Normal — 40%
   { tier: 1, weight: 30, prefix: 'Seasoned' }, // 30%
@@ -487,6 +527,9 @@ const THREAT_NAME_MAP = {
   'handmaiden':         { 0: 'Handmaiden',          1: 'Cariye Handmaiden', 2: 'Ikbal Handmaiden', 3: 'Haseki Handmaiden' },
   'bride':              { 0: 'Bride',               1: 'Cariye Bride',     2: 'Ikbal Bride',      3: 'Haseki Bride' },
   'enchantress':        { 0: 'Enchantress',         1: 'Cariye Enchantress', 2: 'Ikbal Enchantress', 3: 'Haseki Enchantress' },
+  'bs-watcher':         { 0: 'The Watcher',         1: 'Tainted Watcher',    2: 'Corrupt Watcher',    3: 'Vile Watcher' },
+  'bs-strong-arm':      { 0: 'The Strong Arm',      1: 'Tainted Arm',        2: 'Corrupt Arm',        3: 'Vile Arm' },
+  'bs-speaker':         { 0: 'The Speaker',         1: 'Tainted Speaker',    2: 'Corrupt Speaker',    3: 'Vile Speaker' },
 };
 
 function rollThreatTier() {
@@ -1234,7 +1277,8 @@ export default class ConanToolsSheet extends ActorSheet {
       monstrosity: { name: "Monstrosity", icon: "fa-dragon", description: "Monstrous enemies" },
       inanimate: { name: "Inanimate", icon: "fa-cube", description: "Inanimate threats" },
       originBeast: { name: "Origin Beasts", icon: "fa-paw", description: "Origin beast forms" },
-      unknown: { name: "Unknown", icon: "fa-question", description: "Unknown entities" }
+      unknown: { name: "Unknown", icon: "fa-question", description: "Unknown entities" },
+      blackSouls: { name: "Black Souls", icon: "fa-snake", description: "The cult of the Black Souls" }
     };
 
     // Add each custom enemy to its category
@@ -7571,6 +7615,28 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     if (threatTraits.includes('hex')) {
       enemy.rules = [...(enemy.rules || []), { name: 'Hex', description: 'Sorcery (1 LP): Curses a player with -1 attack. Stacks up to 3. Removed when witch dies.' }];
     }
+    // Black Souls traits: spawn-time modifications
+    if (threatTraits.includes('devoted')) {
+      // +2 attack (stat values) and +2 damage (weapon formulas)
+      enemy.stats = { ...enemy.stats };
+      enemy.stats.might = { ...enemy.stats.might, value: enemy.stats.might.value + 2 };
+      enemy.stats.edge = { ...enemy.stats.edge, value: enemy.stats.edge.value + 2 };
+      const boostDmgDevoted = (atk) => {
+        if (!atk) return atk;
+        const arr = Array.isArray(atk) ? atk : [atk];
+        arr.forEach(w => {
+          if (/\+(\d+)/.test(w.damage)) {
+            w.damage = w.damage.replace(/\+(\d+)/, (_, n) => `+${parseInt(n) + 2}`);
+          } else {
+            w.damage = w.damage + '+2';
+          }
+        });
+        return arr.length === 1 ? arr[0] : arr;
+      };
+      enemy.attacks = { ...enemy.attacks };
+      enemy.attacks.melee = boostDmgDevoted(enemy.attacks.melee);
+      enemy.attacks.ranged = boostDmgDevoted(enemy.attacks.ranged);
+    }
     if (threatTier > 0) {
       console.log(`Conan | Threat Engine: ${enemy.name} — Tier ${threatTier} (${'💀'.repeat(threatTier)}), Traits: [${threatTraits.join(', ')}]`);
     }
@@ -7600,11 +7666,13 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   const NECRO_ENEMY_IDS = ['necromancer'];
   const SUMMONER_ENEMY_IDS = ['summoner'];
   const SILKVIPER_ENEMY_IDS = ['handmaiden', 'bride', 'enchantress'];
+  const BLACKSOUL_ENEMY_IDS = ['bs-watcher', 'bs-strong-arm', 'bs-speaker'];
   const chatNameData = PICT_ENEMY_IDS.includes(enemy.id) ? pickPictName()
     : CULTIST_ENEMY_IDS.includes(enemy.id) ? pickCultistName()
     : BARBARIAN_ENEMY_IDS.includes(enemy.id) ? pickBarbarianName()
     : SUMMONER_ENEMY_IDS.includes(enemy.id) ? pickSummonerName()
     : SILKVIPER_ENEMY_IDS.includes(enemy.id) ? pickSilkViperName()
+    : BLACKSOUL_ENEMY_IDS.includes(enemy.id) ? pickBlackSoulName()
     : [...NAMED_ENEMY_IDS, ...PIRATE_ENEMY_IDS, ...STEPPE_ENEMY_IDS, ...WITCH_ENEMY_IDS, ...NECRO_ENEMY_IDS].includes(enemy.id) ? pickHyborianName() : null;
   const chatName = chatNameData?.name || null;
   const chatGender = chatNameData?.gender || null;

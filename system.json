@@ -32,6 +32,15 @@
     "distance": 5,
     "units": "ft"
   },
+  "documentTypes": {
+    "Actor": {
+      "character2": {},
+      "npc2": {},
+      "tools": {},
+      "howard": {}
+    },
+    "Item": {}
+  },
   "primaryTokenAttribute": "lifePoints",
   "license": "LICENSE",
   "url": "https://github.com/antoniosantos8520-cyber/conan",

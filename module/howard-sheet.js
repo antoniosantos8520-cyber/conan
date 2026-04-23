@@ -476,6 +476,12 @@ export default class HowardSheet extends ActorSheet {
           // GM Notes for this page
           context.currentGmNotes = context.currentPage.gmNotes || { title: '', notes: '' };
 
+          // Fight scene picker — list all non-Howard scenes
+          const currentCombatScene = context.currentPage.gmNotes?.combatScene || '';
+          context.sceneList = game.scenes.contents
+            .filter(s => !s.getFlag('conan', 'howardPresentation'))
+            .map(s => ({ id: s.id, name: s.name, selected: s.id === currentCombatScene }));
+
           // Speech edit content for inline editor
           const sbObjGm = context.currentPage.speechBubbles || {};
           if (this._speechEditId && sbObjGm[this._speechEditId]) {
@@ -672,6 +678,9 @@ export default class HowardSheet extends ActorSheet {
 
     // Presentation: Roll Call — ad-hoc skill check dialog
     html.find('.howard-pres-rollcall-btn').click(() => this._onRollCall());
+
+    // Presentation: Theater — pull players to Theater scene
+    html.find('.howard-pres-theater-btn').click(() => this._activateTheater());
 
     // Presentation: Per-element eye icon — toggle visibility + broadcast
     html.find('.howard-pres-eye').click((ev) => {
@@ -1402,6 +1411,11 @@ export default class HowardSheet extends ActorSheet {
       // GM Notes: auto-save text on blur
       html.find('.howard-notes-text').on('change', (ev) => {
         this._saveGmNotesField('notes', ev.currentTarget.value);
+      });
+
+      // Fight scene picker
+      html.find('.howard-fight-scene-select').on('change', (ev) => {
+        this._saveGmNotesField('combatScene', ev.currentTarget.value);
       });
     }
   }
@@ -5360,9 +5374,19 @@ ${pagesHtml}
       checksHtml += '</div></div>';
     }
 
+    // Fight scene button
+    const combatSceneId = gmNotes.combatScene || '';
+    const combatScene = combatSceneId ? game.scenes.get(combatSceneId) : null;
+    const fightBtnHtml = combatScene
+      ? `<button type="button" class="pres-gm-fight-btn" data-scene-id="${combatSceneId}"><i class="fas fa-swords"></i></button>`
+      : '';
+
     const content = `
       <div class="pres-gm-dialog">
-        <div class="pres-gm-title">${esc(pageTitle)}</div>
+        <div class="pres-gm-title-row">
+          <div class="pres-gm-title">${esc(pageTitle)}</div>
+          ${fightBtnHtml}
+        </div>
         ${enemyHtml}
         ${checksHtml}
         ${notesHtml}
@@ -5411,10 +5435,30 @@ ${pagesHtml}
           const checkId = ev.currentTarget.dataset.checkId;
           if (checkId) this._fireCheck(checkId);
         });
+
+        // Wire FIGHT button — pull everyone to the combat scene
+        html.find('.pres-gm-fight-btn').click(async (ev) => {
+          const sceneId = ev.currentTarget.dataset.sceneId;
+          const scene = game.scenes.get(sceneId);
+          if (!scene) return ui.notifications.warn('Fight scene not found.');
+          await scene.activate();
+        });
       }
     }, { width: 340, height: 400, resizable: true, classes: ['bpm-dialog-window', 'pres-gm-notes-dialog'] });
     dlg.render(true);
   }
+
+  /* Theater — commented out pending tile projection implementation
+  async _activateTheater() {
+    const theaterScene = game.scenes.find(s => s.getFlag('conan', 'howardPresentation'));
+    if (!theaterScene) {
+      ui.notifications.warn('Theater scene not found. Delete and reload to auto-create it.');
+      return;
+    }
+    await theaterScene.activate();
+    ui.notifications.info('Theater scene activated — players pulled in.');
+  }
+  */
 
   /** Toggle element visibility in Presentation mode — hide↔show + broadcast to players */
   async _presToggleElement(elId) {

@@ -283,6 +283,7 @@ Hooks.once('init', async function() {
         }
       }
     }
+
   });
 
   /**
@@ -427,6 +428,7 @@ Hooks.on('renderDialog', (dialog, html, data) => {
 const DEMONIC_VESSEL_GROUPS = new Set([
   'vampires', 'ghouls', 'deep-dwellers', 'black-ones'
 ]);
+
 function _isUnnaturalToken(tokenDoc) {
   const ed = tokenDoc.getFlag('conan', 'enemyData');
   if (ed?.category === 'demons') return true;
@@ -994,6 +996,24 @@ Hooks.once('ready', async function() {
     console.log('Conan | Created Albert (GM Tools) automatically');
     ui.notifications.info('Albert (GM Tools) has been created in your Actors tab.');
   }
+
+  /* Theater scene — commented out pending tile projection implementation
+  if (game.user.isGM && !game.scenes.find(s => s.getFlag('conan', 'howardPresentation'))) {
+    const scene = await Scene.create({
+      name: 'Theater',
+      width: 520, height: 780, padding: 0,
+      backgroundColor: '#1a1a1a',
+      grid: { type: 0, size: 50 },
+      tokenVision: false, fogExploration: false, globalLight: true,
+      flags: { conan: { howardPresentation: true } }
+    });
+    await scene.createEmbeddedDocuments('Tile', [{
+      texture: { src: 'systems/conan/images/howard-page-bg.svg' },
+      x: 0, y: 0, width: 520, height: 780, overhead: false,
+      flags: { conan: { theaterTile: true } }
+    }]);
+  }
+  */
 
   // Counter Ward — Wits contest triggered by clicking glowing icon
   game.conan.triggerCounterWard = async function() {
@@ -2050,6 +2070,8 @@ Hooks.on('renderChatMessage', (message, html, data) => {
           await actor.update({
             [`system.inventory.${ichorId}.quantity`]: ichorQuantity - 1
           });
+          // Set poison effect so shift+click applies snakeVenom to target
+          game.conan.lastDamageEffect = { type: 'poisoner-venom' };
           // Add poison indicator - need to insert before closing div
           content = content.slice(0, -6); // Remove </div>
           content += `<div class="skill-indicator poisoner-indicator" style="background: linear-gradient(180deg, #2d5a2d 0%, #1a3d1a 100%); border-color: #4CAF50; color: #90EE90; font-size: 18px; padding: 8px; margin-top: 5px;">🐍 TARGET POISONED!</div>`;
@@ -4122,6 +4144,18 @@ async function applyDamageToToken(token) {
     }
   }
 
+  // Poisoner Skill: Apply poison to enemy (1-3 dmg/round, -1 or -2 defense/round)
+  if (spellEffect?.type === 'poisoner-venom' && !isHealing && damage > 0) {
+    if (token.actor) {
+      await token.actor.setFlag('conan', 'poisonerVenom', { active: true });
+      game.conan.lastDamageEffect = null;
+      ChatMessage.create({
+        speaker: { alias: 'GM' },
+        content: `<div class="conan-enemy-roll ability-use"><div class="roll-header" style="color: #90EE90;">🐍 Poisoner</div><div class="roll-section ability-desc"><strong>${token.name}</strong> is <strong style="color: #90EE90;">Poisoned!</strong> (1-3 damage per round, defense deteriorates)</div></div>`
+      });
+    }
+  }
+
   // Wave of Darkness: Apply stun debuff (cannot move, dismissed after target's next turn)
   if (spellEffect?.type === 'wave-of-darkness' && !isHealing && damage > 0) {
     if (token.actor) {
@@ -6091,6 +6125,19 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     }
   }
 
+  // === DEFENSIVE FIGHTING: Auto-expire at start of defender's next turn ===
+  const defCombatant = combat.combatant;
+  if (defCombatant?.actor) {
+    const defFlag = defCombatant.actor.getFlag('conan', 'defensiveFighting');
+    if (defFlag) {
+      await defCombatant.actor.unsetFlag('conan', 'defensiveFighting');
+      ChatMessage.create({
+        content: `<div class="conan-roll"><div class="roll-header">${defCombatant.actor.name}</div><div class="roll-section ability-desc">${defCombatant.actor.name} is no longer fighting defensively.</div></div>`,
+        speaker: ChatMessage.getSpeaker({ actor: defCombatant.actor })
+      });
+    }
+  }
+
   // === GLAMOUR BLIND: Expires at end of blinded player's turn ===
   const prevCombatant = combat.combats?.length ? null : null; // fallback
   const prevTurn = combat.previous?.turn;
@@ -6384,6 +6431,64 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     }
   }
 
+  // === POISONER VENOM: 1-3 damage + defense decay at start of poisoned enemy's turn ===
+  const pvCombatant = combat.combatant;
+  if (pvCombatant?.actor) {
+    const pvFlag = pvCombatant.actor.getFlag('conan', 'poisonerVenom');
+    if (pvFlag?.active) {
+      const pvToken = pvCombatant.token;
+      const pvEnemy = pvToken?.getFlag('conan', 'enemyData');
+
+      if (pvEnemy) {
+        const pvDamage = Math.floor(Math.random() * 3) + 1; // 1-3
+        const pvDefLoss = Math.floor(Math.random() * 2) + 1; // 1-2
+        let pvKilled = false;
+
+        if (pvEnemy.type === 'Minion') {
+          const pvWounded = pvToken.getFlag('conan', 'wounded') || false;
+          if (pvWounded) {
+            pvKilled = true;
+            await pvToken.setFlag('conan', 'dead', true);
+            await pvToken.update({ 'texture.tint': '#660000', 'alpha': 0.5 });
+          } else {
+            await pvToken.setFlag('conan', 'wounded', true);
+            await pvToken.update({ 'texture.tint': '#cc6600' });
+          }
+        } else {
+          // Antagonist: deal 1-3 damage via dual LP system
+          const pvCurrentHP = pvCombatant.actor.system.lifePoints?.value ?? 0;
+          const pvNewHP = Math.max(0, pvCurrentHP - pvDamage);
+          await pvCombatant.actor.update({ 'system.lifePoints.value': pvNewHP });
+          if (pvNewHP <= 0) {
+            pvKilled = true;
+            await pvToken.setFlag('conan', 'dead', true);
+            await pvToken.update({ 'texture.tint': '#660000', 'alpha': 0.5 });
+          }
+        }
+
+        // Reduce physical defense
+        const pvCurDef = parseInt(pvEnemy.physicalDefense) || 0;
+        const pvNewDef = Math.max(0, pvCurDef - pvDefLoss);
+        if (pvCurDef > 0) {
+          await pvToken.setFlag('conan', 'enemyData', {
+            ...pvEnemy,
+            physicalDefense: pvNewDef
+          });
+        }
+
+        const defMsg = pvCurDef > 0 ? `, <strong style="color: #5599ff;">-${pvDefLoss} Defense</strong> (now ${pvNewDef})` : '';
+        const deathMsg = pvKilled ? ` <strong style="color: #ff4444;">— SLAIN BY POISON!</strong>` : '';
+        ChatMessage.create({
+          content: `<div class="conan-enemy-roll ability-use"><div class="roll-header" style="color: #90EE90;">🐍 Poisoner's Venom</div><div class="roll-section ability-desc"><strong>${pvEnemy.name}</strong> takes <strong style="color: #90EE90;">${pvDamage} poison damage</strong>${defMsg} at the start of their turn.${deathMsg}</div></div>`,
+          speaker: { alias: 'GM' }
+        });
+
+        if (pvKilled) {
+          await pvCombatant.actor.unsetFlag('conan', 'poisonerVenom');
+        }
+      }
+    }
+  }
 
   // === MESMERISM: Increment round counter on mesmerised enemy's turn start ===
   const mesmerCombatant = combat.combatant;

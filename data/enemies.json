@@ -2192,6 +2192,95 @@
           ]
         }
       }
+    },
+    "blackSouls": {
+      "name": "Black Souls",
+      "icon": "fa-snake",
+      "description": "The cult of the Black Souls. Men and women given over to the pool and what waits beyond it. They walk in three stages — the convinced, the marked, and the replaced.",
+      "groups": {
+        "blackHearts": {
+          "name": "Black Hearts",
+          "description": "True believers. Human in body. Monstrous in purpose. The living face of the Black Souls — men and women who have given themselves to the cult completely but carry no visible mark of it yet.",
+          "enemies": [
+            {
+              "id": "bs-watcher",
+              "name": "The Watcher",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 2, "die": "D6" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 2, "die": "D6" },
+                "wits": { "value": 3, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 7, "max": 9 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 4,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Short Blade", "range": "Touch", "damage": "1D6+2" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Shadow", "description": "The Watcher applies a +2 Modifier to any Edge Checks related to stealth, hiding, and remaining unnoticed. The danger is not what they can do — it is what they know and who they tell." }
+              ]
+            },
+            {
+              "id": "bs-strong-arm",
+              "name": "The Strong Arm",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 6, "max": 8 }
+              },
+              "threshold": 8,
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Mace", "range": "Close", "damage": "1D10+4" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "True Believer", "description": "The first time The Strong Arm would be reduced below half Threshold in a single hit, ignore it — he fights through. The most human thing in the Black Souls and therefore the most likely to break under real pressure." }
+              ]
+            },
+            {
+              "id": "bs-speaker",
+              "name": "The Speaker",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 4, "die": "D10" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 5, "die": "D10" }
+              },
+              "defenses": {
+                "physical": { "min": 9, "max": 11 },
+                "sorcery": { "min": 8, "max": 10 }
+              },
+              "threshold": null,
+              "lifePoints": 40,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Dagger", "range": "Touch", "damage": "1D8+3" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Serpent's Tongue", "description": "The Speaker applies a +2 Modifier to any Wits Checks for deception, persuasion, and manipulation. Patient, intelligent, and possessed of the particular charisma of someone who genuinely believes they are offering salvation." },
+                { "name": "Bronze Ring", "description": "Carries the bronze serpent ring. Knows names, locations, and operational details the players want badly enough to need them alive. When forced into violence is cold and competent." }
+              ]
+            }
+          ]
+        }
+      }
     }
   }
 }
