@@ -6,7 +6,7 @@ export default class CharacterCreatorGuide extends Application {
 
   /** @override */
   static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
+    return foundry.utils.mergeObject(super.defaultOptions, {
       id: "conan-character-creator-guide",
       classes: ["conan", "conan-guide-window"],
       template: "systems/conan/sheet2/character-creator-guide.hbs",

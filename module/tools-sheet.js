@@ -705,7 +705,7 @@ export default class ConanToolsSheet extends ActorSheet {
 
   // ========== SHEET CONFIG ==========
   static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
+    return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["conan", "sheet", "actor", "tools"],
       template: "systems/conan/templates/tools-sheet.html",
       width: 700,
