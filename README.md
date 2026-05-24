@@ -419,6 +419,61 @@ How-to videos, tips and tricks, and feature walkthroughs — **coming soon**.
 
 ---
 
+## Release History
+
+### v0.9.4 — 2026-05-24
+
+**Foundry v13 compatibility update + new content.**
+
+- Bumped Foundry compatibility: minimum **v12**, verified **v14**
+- Fixed v13 deprecations: `mergeObject` → `foundry.utils.mergeObject` in `tools-sheet.js` and `character-creator-guide.js`
+- Added SQUANDER tables for two new origins: **From the North** and **From the Wilds**
+- New images: `greg.png` / `greg2.png` mount portraits, `bg_civilized.jpg`, `bg_wilds.jpg`; replaced `bg_streets.jpg` with higher-res version
+
+### v0.9.3 — 2026-04-23
+
+**Black Souls Faction**
+- New enemy category with themed card styling (dark serpent green)
+- **Black Hearts** group: The Watcher, The Strong Arm, and more
+- 5 threat traits: Devoted, Warded, Black Blood, Overwhelmed, Chosen
+
+**Mechanics**
+- **Poisoner skill**: Shift+click on damage applies snake-venom poison (1–3 dmg/round, defense decay)
+- **Fierce Shots & Fierce Strokes**: Now actually roll 2 dice and take the best (previously display-only)
+- **Defensive Fighting**: Auto-expires at the start of the defender's next turn
+
+**Howard the Chronicler**
+- New **Theater** scene + Presentation button
+- Per-page fight scene picker in GM Notes — link a battle map to a page
+- New tales now start on a blank page (not the splash template)
+
+**Fixes**
+- `system.json` now declares `documentTypes` — silences the V16 `template.json` deprecation warning
+
+### v0.9.2 — 2026-03-08
+
+- **Silk Vipers** — Harem assassin enemy group: Handmaiden (poisoned blade), Bride (stunning lash, garrote), and Enchantress (Lust blind, Tender Mercy healing). Traits: Lotus Dust, Garrote, First Wife succession, Harmless, Madwoman.
+- **Howard Roll Call** — Ad-hoc skill checks from Presentation mode with hidden success text and GM reveal.
+- **Dread Clock Threat System** — Adjustable threat threshold with corner buttons (+/−/roll/reset) and d8 threat checks.
+- **Comprehensive README** — Full feature documentation covering character creation, all enemy categories, Threat Engine traits, sorcery, combat mechanics, Dread Clock, Howard the Chronicler, and the Area Distance Tool.
+
+### v0.9.1 — 2026-03-07
+
+**Three new enemy sorcerer categories in the Threat Engine**
+
+- **Witch** — Glamour (blind target), Hex (stacking attack curse −1/−2/−3, removed on death), Beastmaster (double summons), Feral Bond (+2 attack/damage on summoned beasts)
+- **Necromancer** — Eternal Servant (resurrects all dead skeletons each round), Deathless (killing blow kills a living skeleton instead), Soul Harvest (heal 1d6 LP per skeleton death), Bone Armor (reflect damage equal to living skeleton count)
+- **Summoner (Stygian Fire Cult)** — Four-tier portraits: Torch → Pyre → Burning One → Volcanist. Inferno (burning DoT), Damnation (15 dmg hellfire), Volatile (1d8 death explosion), Backdraft (1d4 melee reflect), Eruption (escalating self-destruct up to 2d10 AoE)
+
+**New player condition: Burning**
+- Toggle on the character sheet with icon
+- Burning ticks 1d4 fire damage per round with a 50/50 chance to extinguish each tick
+- Integrates with the Summoner's Inferno ability automatically
+
+**All human enemies complete** — Every human enemy category has been run through the Threat Engine and is ready for drag-and-drop play.
+
+---
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
