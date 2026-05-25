@@ -160,8 +160,6 @@ Hooks.once('init', async function() {
         if (!vis.visibleAreas) return base; // No areas set up — default behavior
         const areaData = canvas.scene?.getFlag('conan', 'areaData');
         if (!areaData?.areas) return base;
-        const blockerSet = new Set(areaData.losBlockers || []);
-        const openSet = new Set(areaData.losOpen || []);
         // Find which area this enemy is in
         const enemyArea = _getAreaAtPoint(
           this.document.x + ((this.document.width || 1) * canvas.grid.size / 2),
@@ -173,10 +171,9 @@ Hooks.once('init', async function() {
           if (!enemyArea) return false; // not in any area during lights out = hidden
           return vis.visibleAreas.has(enemyArea);
         } else {
-          // Lights on: enemy visible unless in LOS-blocked area without player present
+          // Lights on: enemy visible unless in a losIn=false area without a player present there
           if (!enemyArea) return true;
-          if (openSet.has(enemyArea)) return true; // Open areas always visible
-          if (blockerSet.has(enemyArea)) return vis.playerAreas.has(enemyArea);
+          if (areaData.areas[enemyArea]?.losIn === false) return vis.playerAreas.has(enemyArea);
           return true;
         }
       },
@@ -6846,50 +6843,44 @@ function _getAreaDistance(connections, from, to) {
 }
 
 /**
- * Check LOS between two areas — BFS that avoids blocker areas
- * Blockers are areas that block sight through them (not from/to them)
+ * Check LOS between two areas — per-area In/Out/Through model.
+ * LOS exists from `from` to `to` if a connection path exists where:
+ *   - from.losOut !== false  (source can see/shoot out)
+ *   - to.losIn !== false     (target can be seen/hit)
+ *   - every intermediate node on the path has losThrough !== false
+ * All three flags default to true when missing from area data.
  * @param {Array} connections - Array of [labelA, labelB] pairs
  * @param {string} from - Start area label
  * @param {string} to - Target area label
- * @param {Array} losBlockers - Array of area labels that block LOS
- * @param {Array} losOpen - Array of area labels with open LOS (always visible)
+ * @param {Object} areas - The areas object from scene flags (per-area In/Out/Through)
  * @returns {boolean} true if LOS exists
  */
-function _hasAreaLOS(connections, from, to, losBlockers, losOpen) {
+function _hasAreaLOS(connections, from, to, areas) {
   if (from === to) return true;
-  const hasBlockers = losBlockers && losBlockers.length > 0;
-  const hasOpen = losOpen && losOpen.length > 0;
-  if (!hasBlockers && !hasOpen) return true;
+  // Source must allow seeing out
+  if (areas?.[from]?.losOut === false) return false;
+  // Target must allow being seen
+  if (areas?.[to]?.losIn === false) return false;
 
-  const blockerSet = new Set(losBlockers || []);
-  const openSet = new Set(losOpen || []);
-
-  // Open LOS shortcut: open areas are always visible from anywhere,
-  // and from an open area you can see any non-blocked area
-  if (openSet.has(to)) return true;
-  if (openSet.has(from) && !blockerSet.has(to)) return true;
-
-  // You can see OUT of a blocker, but not INTO or THROUGH one
-  blockerSet.delete(from);
-  if (blockerSet.size === 0) return true;
-  if (blockerSet.has(to)) return false;
-
-  // BFS on connection graph, skipping blocker nodes
+  // Build adjacency
   const adj = {};
   for (const [a, b] of connections) {
     (adj[a] ??= []).push(b);
     (adj[b] ??= []).push(a);
   }
+
+  // BFS: walk neighbors; intermediates require losThrough !== false to be transited.
+  // The target itself isn't an intermediate — its In was already checked.
   const visited = new Set([from]);
   const queue = [from];
   while (queue.length) {
     const current = queue.shift();
     for (const neighbor of adj[current] || []) {
       if (neighbor === to) return true;
-      if (!visited.has(neighbor) && !blockerSet.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push(neighbor);
-      }
+      if (visited.has(neighbor)) continue;
+      if (areas?.[neighbor]?.losThrough === false) continue; // wall — sight stops here
+      visited.add(neighbor);
+      queue.push(neighbor);
     }
   }
   return false;
@@ -6918,7 +6909,6 @@ function _getLocalPlayerVisibility() {
 
   const torchData = canvas.scene.getFlag('conan', 'torchTimer') || {};
   const lightsOut = !!torchData.lightsOut;
-  const losBlockers = areaData.losBlockers || [];
 
   // Build adjacency
   const adj = {};
@@ -6944,7 +6934,7 @@ function _getLocalPlayerVisibility() {
       const torch = torchData.torches?.[doc.id];
       if (torch?.active) {
         for (const neighbor of (adj[area] || [])) {
-          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers, areaData.losOpen || [])) {
+          if (_hasAreaLOS(areaData.connections, area, neighbor, areaData.areas)) {
             visibleAreas.add(neighbor);
           }
         }
@@ -6989,8 +6979,6 @@ async function _recalcTorchVisibilityInner() {
 
   const torchData = canvas.scene.getFlag('conan', 'torchTimer') || {};
   const lightsOut = !!torchData.lightsOut;
-  const losBlockers = areaData.losBlockers || [];
-  const blockerSet = new Set(losBlockers);
 
   // Build adjacency list from connections
   const adj = {};
@@ -7017,7 +7005,7 @@ async function _recalcTorchVisibilityInner() {
       if (torch?.active) {
         torchAreas.add(area);
         for (const neighbor of (adj[area] || [])) {
-          if (_hasAreaLOS(areaData.connections, area, neighbor, losBlockers, areaData.losOpen || [])) {
+          if (_hasAreaLOS(areaData.connections, area, neighbor, areaData.areas)) {
             visibleAreas.add(neighbor);
           }
         }
@@ -7040,11 +7028,11 @@ async function _recalcTorchVisibilityInner() {
     if (lightsOut) {
       shouldBeVisible = enemyArea && visibleAreas.has(enemyArea);
     } else {
-      // Lights on: everyone visible EXCEPT enemies in LOS-blocked areas (unless player is there)
+      // Lights on: everyone visible EXCEPT enemies in losIn=false areas (unless player is there)
       if (!enemyArea) {
         shouldBeVisible = true; // not in any area — visible
-      } else if (blockerSet.has(enemyArea)) {
-        shouldBeVisible = playerAreas.has(enemyArea); // blocked area — only if player present
+      } else if (areaData.areas[enemyArea]?.losIn === false) {
+        shouldBeVisible = playerAreas.has(enemyArea); // sealed area — only if player present
       } else {
         shouldBeVisible = true; // normal area — always visible with lights on
       }
@@ -7277,6 +7265,50 @@ Hooks.on('refreshToken', (token) => {
   }
 });
 
+// ========== PLAYER DIM TINT ==========
+// Tokens in areas with losIn=false appear dimmed (alpha 0.3) to other players
+// so allies can still locate them on the map without losing them entirely.
+// GM and the token's owner always see full alpha. Players in the same area
+// as the dimmed token also see them at full alpha.
+function _applyPlayerDimTint(token) {
+  const doc = token.document;
+  if (!doc?.actor || doc.actor.type !== 'character2' || !doc.actorLink) return;
+  if (!token.mesh) return;
+
+  // GM and owner always see normal
+  if (game.user.isGM || doc.actor.testUserPermission(game.user, 'OWNER')) {
+    token.mesh.alpha = 1;
+    return;
+  }
+
+  const areaData = canvas.scene?.getFlag('conan', 'areaData');
+  if (!areaData?.areas) {
+    token.mesh.alpha = 1;
+    return;
+  }
+
+  const tokenArea = _getTokenOverlapArea(token, areaData.areas) || _playerAreaCache.get(doc.id) || null;
+  if (!tokenArea || areaData.areas[tokenArea]?.losIn !== false) {
+    token.mesh.alpha = 1;
+    return;
+  }
+
+  // Token is in a losIn=false area — dim UNLESS viewer's own tokens share that area
+  const vis = _getLocalPlayerVisibility();
+  token.mesh.alpha = vis.playerAreas?.has(tokenArea) ? 1 : 0.3;
+}
+
+Hooks.on('refreshToken', _applyPlayerDimTint);
+
+// Re-apply tint to all player tokens when the LOS data changes on the scene
+Hooks.on('updateScene', (scene, changes) => {
+  if (!changes.flags?.conan?.areaData) return;
+  _invalidatePlayerVisCache();
+  for (const token of (canvas.tokens?.placeables || [])) {
+    _applyPlayerDimTint(token);
+  }
+});
+
 function _onAreaPointerMove(event) {
   // Throttle to every 80ms
   const now = Date.now();
@@ -7338,7 +7370,7 @@ function _onAreaPointerMove(event) {
   }
 
   const distance = _getAreaDistance(areaData.connections, playerArea, hoveredArea);
-  const hasLOS = _hasAreaLOS(areaData.connections, playerArea, hoveredArea, areaData.losBlockers || [], areaData.losOpen || []);
+  const hasLOS = _hasAreaLOS(areaData.connections, playerArea, hoveredArea, areaData.areas);
 
   _showAreaTooltip(screenX, screenY, hoveredArea, distance, distance, !hasLOS);
 }

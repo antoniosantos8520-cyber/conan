@@ -8647,12 +8647,59 @@
    AREAS TAB - Area-Based Distance Tool
    ========================================================================== */
 
-/* Area Letter Palette */
+/* Area Letter Palette — single drag-icon in the consolidated control bar */
 .area-palette {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
-  gap: 6px;
-  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.area-palette-full {
+  color: var(--tools-muted);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 8px;
+}
+
+/* Consolidated Areas-tab control bar: drag-icon + button group */
+.area-controls-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.area-controls-buttons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.area-controls-buttons .tools-btn {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+}
+
+.area-subhead {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 14px 0 6px;
+  color: var(--tools-text);
+  opacity: 0.75;
+  border-bottom: 1px solid var(--tools-bevel);
+  padding-bottom: 3px;
+}
+
+.area-subhead:first-child {
+  margin-top: 4px;
 }
 
 .area-letter {
@@ -8694,6 +8741,70 @@
 .area-letter.placed:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Line of Sight Table — In / Out / Through per area */
+.area-los-table {
+  width: auto;
+  border-collapse: collapse;
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.area-los-table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tools-muted);
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--tools-bevel);
+  text-align: center;
+}
+
+.area-los-table tbody td {
+  padding: 4px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--tools-divider);
+}
+
+.area-los-label {
+  font-weight: 700;
+  color: var(--tools-text);
+  text-align: left !important;
+  min-width: 28px;
+}
+
+.area-los-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--tools-bevel);
+  background: var(--tools-bg0);
+  color: var(--tools-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+
+.area-los-cell:hover {
+  border-color: var(--tools-accent);
+}
+
+.area-los-cell.on {
+  background: rgba(76, 175, 80, 0.18);
+  border-color: #4caf50;
+  color: #6fe08c;
+}
+
+.area-los-cell.off {
+  background: var(--tools-bg0);
+  color: transparent;
 }
 
 /* Connection Matrix */
@@ -8743,19 +8854,6 @@
   color: #f44336;
 }
 
-.area-matrix-header.los-blocker,
-.area-matrix-label.los-blocker {
-  color: #f44336;
-  text-decoration: line-through;
-}
-
-.area-matrix-header.los-open,
-.area-matrix-label.los-open {
-  color: #4caf50;
-  text-decoration: underline;
-  text-decoration-style: double;
-}
-
 .area-matrix-cell.self {
   color: var(--tools-muted);
   opacity: 0.3;
@@ -8785,56 +8883,6 @@
   color: var(--tools-muted);
   margin-top: 6px;
   opacity: 0.7;
-}
-
-/* LOS blocker state on palette letters */
-.area-letter.los-blocker {
-  border-color: #f44336;
-  box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
-  position: relative;
-}
-
-.area-letter.los-blocker::after {
-  content: '\f070';
-  font-family: 'Font Awesome 5 Free';
-  font-weight: 900;
-  font-size: 9px;
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  color: #f44336;
-  background: #1a1a2e;
-  border-radius: 50%;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Open LOS state on palette letters */
-.area-letter.los-open {
-  border-color: #4caf50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
-  position: relative;
-}
-
-.area-letter.los-open::after {
-  content: '\f06e';
-  font-family: 'Font Awesome 5 Free';
-  font-weight: 900;
-  font-size: 9px;
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  color: #4caf50;
-  background: #1a1a2e;
-  border-radius: 50%;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* Area Settings */

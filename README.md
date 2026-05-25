@@ -337,31 +337,6 @@ Spells cast from the character sheet can affect enemy cards. **Tide of Stone** r
 
 ---
 
-## Dread Clock
-
-A narrative time tracker for night-based scenarios. The Dread Clock runs from **7 PM (Sundown)** to **6 AM (Dawn)** — 11 hours of darkness.
-
-### Clock Face
-
-An SVG bronze clock with filled/unfilled arcs showing elapsed time, hour notches, and a glowing marker at the current hour. Every hour advance posts atmospheric flavor text to chat.
-
-### Threat System (GM Only)
-
-The Dread Clock includes a **threat threshold** mechanic:
-
-- Configurable threshold (default 8, range 1–8)
-- **Roll button**: d8 vs. threshold — meet or beat triggers the Headsman event
-- **Corner buttons**: + (easier to trigger), - (harder), dice (roll now), reset (back to 8)
-- Threshold and controls hidden from players — they only see the clock face
-
-### Controls
-
-- **Advance/Retreat**: Move the clock forward or backward one hour
-- **Dawn Reset**: At dawn, reset to Sundown for the next night
-- **Live Sync**: All connected clients see clock updates in real time
-
----
-
 ## Howard the Chronicler
 
 A built-in **comic book creation and presentation tool** for storytelling. Create visual tales with panels, speech bubbles, narration, and skill checks — then present them to your players page by page with dramatic reveals.
@@ -420,6 +395,35 @@ How-to videos, tips and tricks, and feature walkthroughs — **coming soon**.
 ---
 
 ## Release History
+
+### v0.9.5 — 2026-05-25
+
+**Critical compatibility fix + Area tool overhaul.**
+
+**Critical fix**
+- Restored token drops on Foundry v13/v14. v0.9.4 silently broke area-marker drops, enemy drops from Albert, and trait-triggered spawns (Horde Pict, Dedicated Servant Nightmare, Summon Fiend, First Wife Enchantress) due to a removed grid API. All six call sites migrated to `canvas.grid.getSnappedPoint`.
+
+**Enemy cards**
+- The new CCG-style portrait card now applies to **all** enemies, not just bestiary entries with threat-engine traits. Custom enemies built via Albert's Summon button and procedurally-summoned creatures (Call Beast, Raise Dead, Summon Fiend, etc.) all use the new layout.
+
+**Albert — Areas tab overhaul**
+- Replaced the 26-letter palette with a single drag-icon that auto-assigns the next available letter (fill-gaps ordering — delete B and the next drop refills B)
+- Consolidated the three stacked sections into one tight control bar (drag-icon + Lock / Connect / Clear / Reset / Torch buttons)
+- **New In/Out/Through line-of-sight model** with editor table — three independent per-area flags fully describe LOS behavior
+  - **In**: can the area be seen INTO from outside
+  - **Out**: can tokens IN it see/shoot OUT
+  - **Through**: can sight/projectiles transit THROUGH it
+- LOS check: from X to Y, a path must exist where `X.Out`, `Y.In`, and every intermediate area's `Through` are all true (any valid path counts)
+- Enemies in `In:false` areas are hidden from players unless a player enters the area
+- Player tokens in `In:false` areas appear dimmed (30% alpha) to other players; GM and the owner always see full alpha
+- Reset now fully nukes the scene (deletes marker tokens, drawings, AND flags)
+- Lock button now controls new drops (no more "lock then unlock" dance)
+- Drop is orphan-aware (no false "Area X is already on this scene" errors when the old token is gone)
+- Connect button sweeps orphan area entries before drawing
+- Removed legacy 3-state LOS right-click cycle on matrix labels
+
+**Documentation**
+- Removed Dread Clock from README feature list — it's scenario-specific tooling for one module, not a core engine capability
 
 ### v0.9.4 — 2026-05-24
 

@@ -1542,6 +1542,7 @@ export default class ConanToolsSheet extends ActorSheet {
     // ========== AREAS TAB LISTENERS ==========
     this._renderAreaPalette(html);
     this._renderAreaMatrix(html);
+    this._renderAreaLOSTable(html);
     this._renderAreaSettings(html);
     // Bind dragstart manually — elements are created after Foundry's DragDrop init
     html.find('.area-letter').on('dragstart', this._onDragStart.bind(this));
@@ -5951,30 +5952,21 @@ export default class ConanToolsSheet extends ActorSheet {
     const container = html.find('.area-palette');
     if (!container.length) return;
 
-    // Get placed areas from scene flags
-    const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
+    // Compute next available letter — fill gaps from A
+    const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {} };
     const placedLabels = new Set(Object.keys(areaData.areas));
-    const losBlockers = new Set(areaData.losBlockers || []);
-    const losOpen = new Set(areaData.losOpen || []);
-
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    let paletteHTML = '';
+    const nextLetter = letters.find(l => !placedLabels.has(l));
+    const placedCount = placedLabels.size;
 
-    for (const letter of letters) {
-      const isPlaced = placedLabels.has(letter);
-      const isBlocker = losBlockers.has(letter);
-      const isOpen = losOpen.has(letter);
-      let cls = '';
-      if (isPlaced) cls += ' placed';
-      if (isBlocker) cls += ' los-blocker';
-      if (isOpen) cls += ' los-open';
-      let title = isPlaced ? letter + ' (on scene)' : 'Drag ' + letter + ' to scene';
-      if (isBlocker) title += ' — blocks LOS';
-      if (isOpen) title += ' — open LOS';
-      paletteHTML += `<div class="area-letter${cls}" data-label="${letter}" draggable="true" title="${title}">${letter}</div>`;
+    if (!nextLetter) {
+      container.html('<div class="area-palette-full">All 26 area markers placed (A–Z full).</div>');
+      return;
     }
 
-    container.html(paletteHTML);
+    container.html(
+      `<div class="area-letter" data-label="${nextLetter}" draggable="true" title="Drag to place area ${nextLetter} (${placedCount}/26 placed)">${nextLetter}</div>`
+    );
   }
 
   /**
@@ -5987,8 +5979,6 @@ export default class ConanToolsSheet extends ActorSheet {
 
     const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
     const labels = Object.keys(areaData.areas).sort();
-    const losBlockers = new Set(areaData.losBlockers || []);
-    const losOpen = new Set(areaData.losOpen || []);
 
     if (labels.length < 2) {
       container.html('<p class="area-matrix-empty">Place at least 2 area markers to define connections.</p>');
@@ -6002,17 +5992,15 @@ export default class ConanToolsSheet extends ActorSheet {
       connSet.add(`${b}-${a}`);
     }
 
-    // Build table HTML — header labels are right-clickable for LOS toggle
+    // Build table HTML
     let tableHTML = '<table class="area-matrix"><thead><tr><th></th>';
     for (const col of labels) {
-      const losCls = losBlockers.has(col) ? ' los-blocker' : losOpen.has(col) ? ' los-open' : '';
-      tableHTML += `<th class="area-matrix-header${losCls}" data-label="${col}">${col}</th>`;
+      tableHTML += `<th class="area-matrix-header" data-label="${col}">${col}</th>`;
     }
     tableHTML += '</tr></thead><tbody>';
 
     for (const row of labels) {
-      const losCls = losBlockers.has(row) ? ' los-blocker' : losOpen.has(row) ? ' los-open' : '';
-      tableHTML += `<tr><td class="area-matrix-label${losCls}" data-label="${row}">${row}</td>`;
+      tableHTML += `<tr><td class="area-matrix-label" data-label="${row}">${row}</td>`;
       for (const col of labels) {
         if (row === col) {
           tableHTML += '<td class="area-matrix-cell self">\u2014</td>';
@@ -6025,13 +6013,11 @@ export default class ConanToolsSheet extends ActorSheet {
       tableHTML += '</tr>';
     }
     tableHTML += '</tbody></table>';
-    tableHTML += '<p class="area-matrix-hint">Left-click: path · Right-click letter: cycle LOS (blocked / open)</p>';
+    tableHTML += '<p class="area-matrix-hint">Click cells to toggle connections.</p>';
 
     container.html(tableHTML);
 
-    // Bind click handlers — left-click cells for connections, right-click labels for LOS
     container.find('.area-matrix-cell.clickable').on('click', this._onToggleConnection.bind(this));
-    container.find('.area-matrix-header, .area-matrix-label').on('contextmenu', this._onToggleAreaLOS.bind(this));
   }
 
   /**
@@ -6073,36 +6059,74 @@ export default class ConanToolsSheet extends ActorSheet {
   }
 
   /**
-   * Toggle LOS state on an area (right-click matrix header/label)
-   * 3-state cycle: Normal → Blocked (no LOS) → Open (always LOS) → Normal
+   * Render the In/Out/Through LOS table into .area-los-container.
+   * Rows = placed areas. Columns = In | Out | Through. Cells are clickable
+   * spans (NOT form checkboxes) so Foundry's FormApplication can't fire
+   * synthetic change events on them and toggle the visual state.
    */
-  async _onToggleAreaLOS(event) {
-    event.preventDefault();
-    const label = event.currentTarget.dataset.label;
-    if (!label || !canvas?.scene) return;
+  _renderAreaLOSTable(html) {
+    const container = html.find('.area-los-container');
+    if (!container.length) return;
 
-    const areaData = canvas.scene.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
-    if (!areaData.losBlockers) areaData.losBlockers = [];
-    if (!areaData.losOpen) areaData.losOpen = [];
+    const areaData = canvas?.scene?.getFlag('conan', 'areaData') || { areas: {} };
+    const labels = Object.keys(areaData.areas).sort();
 
-    const isBlocked = areaData.losBlockers.includes(label);
-    const isOpen = areaData.losOpen.includes(label);
-
-    if (!isBlocked && !isOpen) {
-      // Normal → Blocked
-      areaData.losBlockers.push(label);
-    } else if (isBlocked) {
-      // Blocked → Open
-      areaData.losBlockers.splice(areaData.losBlockers.indexOf(label), 1);
-      areaData.losOpen.push(label);
-    } else {
-      // Open → Normal
-      areaData.losOpen.splice(areaData.losOpen.indexOf(label), 1);
+    if (labels.length === 0) {
+      container.html('<p class="area-matrix-empty">No area markers placed.</p>');
+      return;
     }
 
+    const cell = (label, field, isOn) => {
+      const cls = `area-los-cell ${isOn ? 'on' : 'off'}`;
+      const mark = isOn ? '✓' : '';
+      return `<td><span class="${cls}" data-label="${label}" data-field="${field}" role="button" tabindex="0">${mark}</span></td>`;
+    };
+
+    let html2 = '<table class="area-los-table"><thead><tr><th></th><th title="Can this area be seen INTO from anywhere with a valid path?">In</th><th title="Can tokens IN this area see/shoot OUT?">Out</th><th title="Can sight and projectiles transit THROUGH this area?">Through</th></tr></thead><tbody>';
+    for (const label of labels) {
+      const a = areaData.areas[label] || {};
+      html2 += `<tr data-label="${label}">`;
+      html2 += `<td class="area-los-label">${label}</td>`;
+      html2 += cell(label, 'losIn', a.losIn !== false);
+      html2 += cell(label, 'losOut', a.losOut !== false);
+      html2 += cell(label, 'losThrough', a.losThrough !== false);
+      html2 += '</tr>';
+    }
+    html2 += '</tbody></table>';
+    container.html(html2);
+
+    container.find('.area-los-cell').on('click', this._onAreaLOSCellClick.bind(this));
+  }
+
+  /**
+   * Toggle an In/Out/Through cell — persist to scene flags, update visual.
+   */
+  async _onAreaLOSCellClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const span = event.currentTarget;
+    const label = span.dataset.label;
+    const field = span.dataset.field;
+    if (!label || !field) return;
+
+    const areaData = canvas.scene.getFlag('conan', 'areaData');
+    if (!areaData?.areas?.[label]) return;
+
+    const savedIsOn = areaData.areas[label][field] !== false;
+    const nextIsOn = !savedIsOn;
+
+    // Store explicit true/false. Don't delete on toggle-on — Foundry's setFlag
+    // uses mergeObject under the hood and won't propagate key deletions, so the
+    // old false would stick in the database and revert on the next re-render.
+    areaData.areas[label][field] = nextIsOn;
     await canvas.scene.setFlag('conan', 'areaData', areaData);
-    this._renderAreaMatrix(this.element);
-    this._renderAreaPalette(this.element);
+
+    // Update this cell's visual immediately (no full re-render needed)
+    span.classList.toggle('on', nextIsOn);
+    span.classList.toggle('off', !nextIsOn);
+    span.textContent = nextIsOn ? '✓' : '';
+
+    console.log(`Conan | Area ${label}.${field} = ${nextIsOn}`);
   }
 
   /**
@@ -6169,6 +6193,24 @@ export default class ConanToolsSheet extends ActorSheet {
     if (!canvas?.scene) return;
 
     const areaData = canvas.scene.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
+
+    // Orphan sweep: drop any area whose marker token no longer exists on the scene,
+    // then strip dangling connections and LOS entries that referenced those labels.
+    const orphans = Object.entries(areaData.areas)
+      .filter(([, info]) => !canvas.scene.tokens.get(info.tokenId))
+      .map(([label]) => label);
+    if (orphans.length > 0) {
+      const orphanSet = new Set(orphans);
+      for (const label of orphans) delete areaData.areas[label];
+      areaData.connections = (areaData.connections || []).filter(([a, b]) => !orphanSet.has(a) && !orphanSet.has(b));
+      if (areaData.losBlockers) areaData.losBlockers = areaData.losBlockers.filter(l => !orphanSet.has(l));
+      if (areaData.losOpen) areaData.losOpen = areaData.losOpen.filter(l => !orphanSet.has(l));
+      await canvas.scene.setFlag('conan', 'areaData', areaData);
+      console.log(`Conan | Connect: swept ${orphans.length} orphan area entries: [${orphans.join(', ')}]`);
+      ui.notifications.info(`Cleaned up ${orphans.length} orphan area${orphans.length === 1 ? '' : 's'}: ${orphans.join(', ')}`);
+      this.render(false);
+    }
+
     const areas = areaData.areas;
     const connections = areaData.connections;
 
@@ -6307,12 +6349,27 @@ export default class ConanToolsSheet extends ActorSheet {
     ui.notifications.info('Area drawings cleared.');
   }
 
-  /** Reset all area data for the current scene */
+  /** Reset all area data for the current scene — nukes tokens, drawings, and flags */
   async _onAreaReset(event) {
     event.preventDefault();
     if (!canvas?.scene) return;
+
+    // 1. Collect and delete all area marker tokens
+    const markerTokenIds = canvas.scene.tokens
+      .filter(t => t.flags?.conan?.areaMarker)
+      .map(t => t.id);
+    if (markerTokenIds.length > 0) {
+      await canvas.scene.deleteEmbeddedDocuments('Token', markerTokenIds);
+    }
+
+    // 2. Delete any Connect-drawn boxes and connection lines
+    await this._clearAreaDrawings();
+
+    // 3. Clear scene flags
     await canvas.scene.unsetFlag('conan', 'areaData');
-    ui.notifications.info('Area data reset for this scene.');
+    await canvas.scene.unsetFlag('conan', 'areasLocked');
+
+    ui.notifications.info(`Areas reset: removed ${markerTokenIds.length} marker${markerTokenIds.length === 1 ? '' : 's'}.`);
     this.render(false);
   }
 
@@ -6481,9 +6538,8 @@ export default class ConanToolsSheet extends ActorSheet {
         const torch = data.torches?.[t.id];
         if (torch?.active) {
           torchAreas.add(area);
-          const losBlockers = areaData?.losBlockers || [];
           for (const neighbor of (adj[area] || [])) {
-            if (game.conan?._hasAreaLOS?.(areaData.connections, area, neighbor, losBlockers)) {
+            if (game.conan?._hasAreaLOS?.(areaData.connections, area, neighbor, areaData.areas)) {
               visibleAreas.add(neighbor);
             }
           }
@@ -6922,6 +6978,9 @@ Hooks.on('deleteToken', async (token, options, userId) => {
       }
       await scene.setFlag('conan', 'areaData', areaData);
       console.log('Conan | Area marker removed:', areaFlag.label);
+      // Re-render again post-cleanup so the palette's next-letter recomputes
+      // (the earlier refresh ran before the flag was updated)
+      if (scene?.active) refreshToolsSheets();
     }
   }
 });
@@ -7335,8 +7394,20 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   // Prevent duplicate — check if this letter is already on the scene
   const existingAreaData = canvas.scene.getFlag('conan', 'areaData') || { areas: {}, connections: [] };
   if (existingAreaData.areas[data.label]) {
-    ui.notifications.warn(`Area ${data.label} is already on this scene.`);
-    return false;
+    // Conflict — but is the existing entry a live token or an orphan?
+    const existingTokenId = existingAreaData.areas[data.label].tokenId;
+    const liveToken = canvas.scene.tokens.get(existingTokenId);
+    if (liveToken) {
+      ui.notifications.warn(`Area ${data.label} is already on this scene.`);
+      return false;
+    }
+    // Orphan — sweep it before proceeding so the new drop can take its slot
+    console.log(`Conan | Drop: clearing orphan area ${data.label} (tokenId ${existingTokenId} no longer on scene)`);
+    delete existingAreaData.areas[data.label];
+    existingAreaData.connections = (existingAreaData.connections || []).filter(([a, b]) => a !== data.label && b !== data.label);
+    if (existingAreaData.losBlockers) existingAreaData.losBlockers = existingAreaData.losBlockers.filter(l => l !== data.label);
+    if (existingAreaData.losOpen) existingAreaData.losOpen = existingAreaData.losOpen.filter(l => l !== data.label);
+    await canvas.scene.setFlag('conan', 'areaData', existingAreaData);
   }
 
   // Find or create shared "Area Markers" actor
@@ -7371,7 +7442,9 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   });
 
   // Create token on scene at drop position — pass all properties directly
-  const dropPos = canvas.grid.getSnappedPosition(data.x, data.y);
+  // Respect the current Areas-tab lock state so the lock button never lies about new drops.
+  const dropPos = canvas.grid.getSnappedPoint({x: data.x, y: data.y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
+  const isLocked = canvas.scene.getFlag('conan', 'areasLocked') || false;
   const tokenDocs = await canvas.scene.createEmbeddedDocuments('Token', [{
     actorId: markerActor.id,
     name: data.label,
@@ -7388,7 +7461,7 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     displayName: CONST.TOKEN_DISPLAY_MODES.NEVER,
     disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL,
     lockRotation: true,
-    locked: true,
+    locked: isLocked,
     sort: -9999
   }]);
 
@@ -7643,7 +7716,7 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
   }
 
   // Get drop position
-  const dropPosition = canvas.grid.getSnappedPosition(data.x, data.y);
+  const dropPosition = canvas.grid.getSnappedPoint({x: data.x, y: data.y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
 
   // Override images for tiered enemies (summoner gets unique art per skull tier)
   if (enemy.id === 'summoner' && threatTier > 0 && SUMMONER_TIER_IMAGES[threatTier]) {
@@ -8454,7 +8527,7 @@ function showEnemyRollDialog(enemyData, token = null) {
     : '';
 
   // ── New CCG card layout (guards) vs old horizontal layout ──
-  const isNewCardLayout = enemyData.id in THREAT_POOLS;
+  const isNewCardLayout = true;
 
   let content;
   if (isNewCardLayout) {
@@ -11951,7 +12024,7 @@ async function spawnHordePictAtPosition(x, y) {
   if (!scene) return;
 
   const actor = await Actor.create(actorData, { conanEnemySpawn: true });
-  const dropPosition = canvas.grid.getSnappedPosition(x, y);
+  const dropPosition = canvas.grid.getSnappedPoint({x, y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
 
   await actor.update({
     'prototypeToken.actorLink': false,
@@ -12052,7 +12125,7 @@ async function spawnDedicatedServantNightmare(x, y) {
   if (!scene) return;
 
   const actor = await Actor.create(actorData, { conanEnemySpawn: true });
-  const dropPosition = canvas.grid.getSnappedPosition(x, y);
+  const dropPosition = canvas.grid.getSnappedPoint({x, y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
 
   await actor.update({
     'prototypeToken.actorLink': false,
@@ -12157,7 +12230,7 @@ async function spawnDemonAtPosition(x, y, demonType) {
   if (!scene) return;
 
   const actor = await Actor.create(actorData, { conanEnemySpawn: true });
-  const dropPosition = canvas.grid.getSnappedPosition(x, y);
+  const dropPosition = canvas.grid.getSnappedPoint({x, y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
 
   await actor.update({
     'prototypeToken.actorLink': false,
@@ -12293,7 +12366,7 @@ async function spawnFirstWifeEnchantress(x, y, traits, tier) {
   if (!scene) return;
 
   const actor = await Actor.create(actorData, { conanEnemySpawn: true });
-  const dropPosition = canvas.grid.getSnappedPosition(x, y);
+  const dropPosition = canvas.grid.getSnappedPoint({x, y}, {mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX});
 
   await actor.update({
     'prototypeToken.actorLink': false,
