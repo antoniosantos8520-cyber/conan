@@ -17,6 +17,9 @@
     <button type="button" class="tools-tab {{#if (eq activeTab 'areas')}}active{{/if}}" data-tab="areas">
       <i class="fas fa-map-marked-alt"></i><span>Areas</span>
     </button>
+    <button type="button" class="tools-tab {{#if (eq activeTab 'workshop')}}active{{/if}}" data-tab="workshop">
+      <i class="fas fa-hammer"></i><span>Workshop</span>
+    </button>
     <button type="button" class="tools-tab {{#if (eq activeTab 'travel')}}active{{/if}}" data-tab="travel">
       <i class="fas fa-route"></i><span>Travel</span>
     </button>
@@ -28,9 +31,6 @@
     </button>
     <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'flex')}}active{{/if}}" data-tab="flex">
       <i class="fas fa-star"></i><span>Flex</span>
-    </button>
-    <button type="button" class="tools-tab tools-tab-disabled {{#if (eq activeTab 'chat')}}active{{/if}}" data-tab="chat">
-      <i class="fas fa-comment"></i><span>Chat</span>
     </button>
   </nav>
 
@@ -576,127 +576,103 @@
     </div>
 
     <!-- ============================================================
-         CHAT CAPTURE TAB
+         WORKSHOP TAB
          ============================================================ -->
-    <div class="tools-panel {{#if (eq activeTab 'chat')}}active{{/if}}" data-panel="chat">
-      <div class="tools-construction-overlay">
-        <i class="fas fa-hard-hat"></i>
-        <div class="tools-construction-banner">Under Construction</div>
+    <div class="tools-panel {{#if (eq activeTab 'workshop')}}active{{/if}}" data-panel="workshop">
+
+      <!-- Background image layer (bottom-most z-index, fills the workshop area, pinned to bottom) -->
+      <div class="workshop-bg-layer"></div>
+
+      <!-- Workshop sub-tabs: Weapons / Armor / Skills / Magic -->
+      <nav class="workshop-subnav">
+        <button type="button" class="workshop-subtab active" data-subtab="weapons">
+          <i class="fas fa-fist-raised"></i><span>Weapons</span>
+        </button>
+        <button type="button" class="workshop-subtab" data-subtab="armor">
+          <i class="fas fa-tshirt"></i><span>Armor</span>
+        </button>
+        <button type="button" class="workshop-subtab" data-subtab="shields">
+          <i class="fas fa-shield-halved"></i><span>Shields</span>
+        </button>
+        <button type="button" class="workshop-subtab workshop-subtab-disabled" data-subtab="skills" disabled>
+          <i class="fas fa-book-open"></i><span>Skills</span>
+        </button>
+        <button type="button" class="workshop-subtab workshop-subtab-disabled" data-subtab="magic" disabled>
+          <i class="fas fa-hat-wizard"></i><span>Magic</span>
+        </button>
+      </nav>
+
+      <!-- Weapons sub-panel (active) -->
+      <div class="workshop-subpanel active" data-subpanel="weapons">
+
+        <!-- Quick bar: + New opens the forge dialog -->
+        <div class="workshop-quickbar">
+          <button type="button" class="workshop-weapon-new-btn" title="Forge a new weapon">
+            <span>NEW</span>
+          </button>
+        </div>
+
+        <!-- Forged Weapons — list -->
+        <section class="tools-section">
+          <div class="tools-section-header">
+            <div class="tools-section-title">
+              <h3>Forged Weapons <span class="workshop-weapon-count">0</span></h3>
+            </div>
+          </div>
+          <div class="tools-section-body">
+            <div class="workshop-weapon-list"></div>
+          </div>
+        </section>
+
       </div>
 
-      <!-- Capture Controls -->
-      <section class="tools-section">
-        <div class="tools-section-header">
-          <div class="tools-section-title">
-            <h3>Roll Capture</h3>
-          </div>
-          <div class="tools-header-controls">
-            <button type="button" class="tools-btn small chat-capture-toggle {{#if chatCapture.listening}}active{{/if}}" title="{{#if chatCapture.listening}}Stop Listening{{else}}Start Listening{{/if}}">
-              <i class="fas {{#if chatCapture.listening}}fa-stop{{else}}fa-play{{/if}}"></i>
-              <span>{{#if chatCapture.listening}}Stop{{else}}Listen{{/if}}</span>
-            </button>
-            <button type="button" class="tools-btn small chat-capture-clear" title="Clear captured rolls">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>
-        <div class="tools-section-body">
-          <p class="tools-muted-text">
-            {{#if chatCapture.listening}}
-            <i class="fas fa-circle" style="color: #E10600; animation: pulse 1s infinite;"></i>
-            Listening for rolls... Make attacks, damage, or skill rolls to capture them.
-            {{else}}
-            Click <strong>Listen</strong> to start capturing rolls from chat.
-            {{/if}}
-          </p>
-        </div>
-      </section>
+      <!-- Armor sub-panel -->
+      <div class="workshop-subpanel" data-subpanel="armor">
 
-      <!-- Captured Rolls List -->
-      <section class="tools-section">
-        <div class="tools-section-header">
-          <div class="tools-section-title">
-            <h3>Captured Rolls</h3>
-            <span class="chat-capture-count">{{chatCapture.rolls.length}}</span>
-          </div>
+        <!-- Quick bar: + NEW opens the forge dialog -->
+        <div class="workshop-quickbar">
+          <button type="button" class="workshop-armor-new-btn" title="Forge a new armor">
+            <span>NEW</span>
+          </button>
         </div>
-        <div class="tools-section-body">
-          <div class="chat-capture-list">
-            {{#each chatCapture.rolls}}
-            <div class="chat-capture-item {{#if selected}}selected{{/if}}" data-capture-index="{{@index}}">
-              <div class="chat-capture-item-icon">
-                {{#if (eq rollType 'attack')}}<i class="fas fa-sword" style="color: #E10600;"></i>
-                {{else if (eq rollType 'damage')}}<i class="fas fa-burst" style="color: #FF6600;"></i>
-                {{else if (eq rollType 'skill')}}<i class="fas fa-dice-d20" style="color: #4CAF50;"></i>
-                {{else if (eq rollType 'flex')}}<i class="fas fa-star" style="color: #FFD700;"></i>
-                {{else if (eq rollType 'spell')}}<i class="fas fa-wand-sparkles" style="color: #9B59B6;"></i>
-                {{else}}<i class="fas fa-dice"></i>
-                {{/if}}
-              </div>
-              <div class="chat-capture-item-info">
-                <span class="chat-capture-item-title">{{title}}</span>
-                <span class="chat-capture-item-actor">{{actorName}}</span>
-              </div>
-              <div class="chat-capture-item-time">{{time}}</div>
-            </div>
-            {{else}}
-            <div class="tools-empty-state small">
-              <p>No rolls captured yet.</p>
-            </div>
-            {{/each}}
-          </div>
-        </div>
-      </section>
 
-      <!-- Export Section -->
-      <section class="tools-section">
-        <div class="tools-section-header">
-          <div class="tools-section-title">
-            <h3>Export</h3>
-          </div>
-        </div>
-        <div class="tools-section-body">
-          {{#if chatCapture.selectedRoll}}
-          <div class="chat-capture-preview">
-            <div class="chat-capture-preview-label">Selected: {{chatCapture.selectedRoll.title}}</div>
-            <div class="chat-capture-preview-box">
-              {{{chatCapture.selectedRoll.html}}}
+        <!-- Forged Armors — list -->
+        <section class="tools-section">
+          <div class="tools-section-header">
+            <div class="tools-section-title">
+              <h3>Forged Armors <span class="workshop-armor-count">0</span></h3>
             </div>
           </div>
-          <div class="chat-capture-export-actions">
-            <button type="button" class="tools-btn chat-capture-export" title="Copy to clipboard for Layout Designer">
-              <i class="fas fa-copy"></i> Export for Designer
-            </button>
+          <div class="tools-section-body">
+            <div class="workshop-armor-list"></div>
           </div>
-          {{else}}
-          <div class="tools-empty-state small">
-            <p>Select a captured roll above to export it.</p>
-          </div>
-          {{/if}}
-        </div>
-      </section>
+        </section>
 
-      <!-- Instructions -->
-      <section class="tools-section collapsed" data-collapsible data-section-id="chat-instructions">
-        <div class="tools-section-header">
-          <div class="tools-section-title">
-            <span class="tools-section-chevron">▼</span>
-            <h3>How to Use</h3>
+      </div>
+
+      <!-- Shields sub-panel -->
+      <div class="workshop-subpanel" data-subpanel="shields">
+
+        <!-- Quick bar: + NEW opens the forge dialog -->
+        <div class="workshop-quickbar">
+          <button type="button" class="workshop-shield-new-btn" title="Forge a new shield">
+            <span>NEW</span>
+          </button>
+        </div>
+
+        <!-- Forged Shields — list -->
+        <section class="tools-section">
+          <div class="tools-section-header">
+            <div class="tools-section-title">
+              <h3>Forged Shields <span class="workshop-shield-count">0</span></h3>
+            </div>
           </div>
-        </div>
-        <div class="tools-section-body">
-          <ol class="instruction-steps" style="color: #aaa; font-size: 12px; line-height: 1.6;">
-            <li>Click <strong>Listen</strong> to start capturing</li>
-            <li>Make rolls in the game (attacks, damage, skills, etc.)</li>
-            <li>Captured rolls appear in the list above</li>
-            <li>Click a roll to select it</li>
-            <li>Click <strong>Export for Designer</strong> to copy</li>
-            <li>Open <code>chat-design/chat-designer.html</code> in browser</li>
-            <li>Click <strong>Import</strong> and paste</li>
-            <li>Adjust styles, then <strong>Export</strong> for Claude</li>
-          </ol>
-        </div>
-      </section>
+          <div class="tools-section-body">
+            <div class="workshop-shield-list"></div>
+          </div>
+        </section>
+
+      </div>
 
     </div>
 

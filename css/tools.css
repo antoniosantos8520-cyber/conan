@@ -203,6 +203,2105 @@
   filter: grayscale(60%);
 }
 
+/* ============================================================================
+   WORKSHOP — sub-tab navigation (Weapons / Armor / Skills / Magic)
+   Inside Albert's Workshop panel. Same BPM industrial bevel pattern as the
+   main tab strip, but slightly smaller scale for sub-level navigation.
+   ============================================================================ */
+
+.workshop-subnav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background: var(--tools-bg1);
+  border-bottom: 2px solid var(--tools-accent);
+}
+
+.workshop-subtab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: linear-gradient(180deg, var(--tools-panel2) 0%, var(--tools-bg0) 100%);
+  border: 2px solid var(--tools-bevel);
+  border-radius: 8px;
+  outline: 1px solid rgba(255,255,255,0.04);
+  color: var(--tools-muted);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.4),
+    inset 1px 1px 3px rgba(255,255,255,0.05),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-subtab i {
+  font-size: 12px;
+  transition: color 0.15s ease;
+}
+
+.workshop-subtab:hover:not(:disabled) {
+  border-color: var(--tools-bevel-hover);
+  color: var(--tools-text);
+}
+
+.workshop-subtab.active {
+  border-color: var(--tools-accent);
+  color: var(--tools-text);
+  box-shadow:
+    0 0 12px var(--tools-accent-glow),
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 1px 1px 3px rgba(255,255,255,0.06),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-subtab.active i {
+  color: var(--tools-accent);
+}
+
+/* Per-sub-tab color themes (applied to active state only).
+   Uses approved semantic-palette colors so no new hues are introduced. */
+
+/* Weapons — Red (combat, blood) — uses the system accent.
+   The generic .active rule above already applies red, no override needed. */
+
+/* Armor — Steel blue (defense, plate) */
+.workshop-subtab[data-subtab="armor"].active {
+  border-color: #87CEEB;
+  box-shadow:
+    0 0 12px rgba(135,206,235,0.45),
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 1px 1px 3px rgba(255,255,255,0.06),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+.workshop-subtab[data-subtab="armor"].active i {
+  color: #87CEEB;
+}
+
+/* Skills — Light green (competence, knowledge) */
+.workshop-subtab[data-subtab="skills"].active {
+  border-color: #90EE90;
+  box-shadow:
+    0 0 12px rgba(144,238,144,0.45),
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 1px 1px 3px rgba(255,255,255,0.06),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+.workshop-subtab[data-subtab="skills"].active i {
+  color: #90EE90;
+}
+
+/* Magic — Gold (arcane, dangerous) */
+.workshop-subtab[data-subtab="magic"].active {
+  border-color: #FFD700;
+  box-shadow:
+    0 0 12px rgba(255,215,0,0.45),
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 1px 1px 3px rgba(255,255,255,0.06),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+.workshop-subtab[data-subtab="magic"].active i {
+  color: #FFD700;
+}
+
+/* Subnav underline shifts to active tab's color */
+.workshop-subnav {
+  position: relative;
+}
+.workshop-subnav:has(.workshop-subtab[data-subtab="armor"].active) {
+  border-bottom-color: #87CEEB;
+}
+.workshop-subnav:has(.workshop-subtab[data-subtab="skills"].active) {
+  border-bottom-color: #90EE90;
+}
+.workshop-subnav:has(.workshop-subtab[data-subtab="magic"].active) {
+  border-bottom-color: #FFD700;
+}
+
+.workshop-subtab:disabled,
+.workshop-subtab.workshop-subtab-disabled {
+  opacity: 0.3;
+  filter: grayscale(100%);
+  cursor: not-allowed;
+}
+
+.workshop-subtab:disabled:hover {
+  border-color: var(--tools-bevel);
+  color: var(--tools-muted);
+}
+
+.workshop-subpanel {
+  display: none;
+}
+
+.workshop-subpanel.active {
+  display: block;
+}
+
+/* ----- Workshop Weapon Forge: form ----- */
+.workshop-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.workshop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workshop-field-full {
+  grid-column: 1 / -1;
+}
+
+.workshop-field label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--tools-muted);
+}
+
+.workshop-input {
+  padding: 7px 10px;
+  background: var(--tools-bg0);
+  border: 2px solid var(--tools-bevel);
+  border-radius: 6px;
+  outline: 1px solid rgba(255,255,255,0.04);
+  color: var(--tools-text);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-input:focus {
+  outline: none;
+  border-color: var(--tools-accent);
+  box-shadow:
+    0 0 8px var(--tools-accent-glow),
+    inset 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-input::placeholder,
+.workshop-input::-webkit-input-placeholder,
+.workshop-input::-moz-placeholder {
+  color: rgba(255,255,255,0.45) !important;
+  font-style: normal !important;
+  opacity: 1 !important;
+}
+
+.workshop-textarea {
+  font-family: inherit;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.workshop-input-small {
+  width: 64px;
+  text-align: center;
+}
+
+.workshop-image-row,
+.workshop-ammo-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workshop-image-row .workshop-input {
+  flex: 1;
+  order: 1; /* path field first (long box on the left) */
+}
+
+/* Square image-pick button (just an icon, equal width/height).
+   Applies to every Workshop image picker — weapons, armor, future shields/etc. */
+.workshop-weapon-image-pick,
+.workshop-armor-image-pick,
+.workshop-image-row .tools-btn.small {
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  order: 2; /* picker button after path field */
+}
+
+.workshop-ammo-sep {
+  color: var(--tools-muted);
+  font-weight: 700;
+}
+
+.workshop-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ----- Workshop Weapon Forge: list of forged weapons ----- */
+.workshop-weapon-count {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 9px;
+  background: var(--tools-accent-dim);
+  border: 1px solid var(--tools-accent);
+  border-radius: 9px;
+  color: var(--tools-accent);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* Forged Weapons list — grid of 95x95 tiles matching character-sheet armed weapon pattern.
+   grid-auto-flow: dense so an open detail panel (full-row child) doesn't leave gaps in the previous row. */
+.workshop-weapon-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 95px);
+  grid-auto-flow: dense;
+  gap: 12px;
+  justify-content: start;
+  padding: 4px 0;
+}
+
+.workshop-weapon-tile {
+  position: relative;
+  width: 95px;
+  height: 95px;
+  padding: 0;
+  margin: 0;
+  background: url('../images/stat_container2.png') center / 100% 100% no-repeat,
+              linear-gradient(180deg, var(--tools-panel2) 0%, var(--tools-bg0) 100%);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 4px rgba(0,0,0,0.3);
+}
+
+.workshop-weapon-tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+.workshop-weapon-tile:active {
+  cursor: grabbing;
+}
+
+.workshop-weapon-tile-imgwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.workshop-weapon-tile-img {
+  width: 70px;
+  height: 70px;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 3px solid #2a2a2e;
+  outline: 1px solid rgba(255,255,255,0.05);
+  background: #1a1a1d;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 3px 8px rgba(0,0,0,0.6),
+    0 1px 3px rgba(0,0,0,0.4),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+  /* Native <img> drag would hijack the parent container's drag — disable it so the tile's drag fires from anywhere */
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: auto;
+}
+
+.workshop-weapon-tile:hover .workshop-weapon-tile-img {
+  transform: scale(1.05);
+  border-color: #C43C3C;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 14px rgba(196,60,60,0.5),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+}
+
+.workshop-weapon-tile-ammo {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #C43C3C;
+  z-index: 5;
+}
+
+.workshop-weapon-tile-label {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tools-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin: 0;
+  padding: 2px 4px;
+  line-height: 1;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+  transition: color 0.15s ease;
+}
+
+.workshop-weapon-tile-label:hover {
+  color: #f0a0a0;
+}
+
+/* Workshop subpanels: let the background image bleed through inner sections */
+.workshop-subpanel .tools-section {
+  background: rgba(11,11,13,0.30);
+  backdrop-filter: blur(1px);
+}
+
+/* ---------- Detail panel (inline grid child; label click toggles, mimics character sheet's .sheet2-weaponEdit) ---------- */
+.workshop-weapon-detail {
+  display: none;
+  grid-column: 1 / -1;          /* span full grid width when shown */
+  background: rgba(11,11,13,0.40);
+  backdrop-filter: blur(1px);
+  border: 1px solid var(--tools-bevel);
+  border-left: 3px solid #C43C3C;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 2px 6px rgba(0,0,0,0.4);
+}
+
+.workshop-weapon-detail.active {
+  display: block;
+}
+
+.workshop-weapon-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(196,60,60,0.35);
+}
+
+.workshop-weapon-detail-header h4 {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #FFE6CC;
+  border: none;
+}
+
+.workshop-weapon-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.workshop-weapon-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workshop-weapon-detail-item label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tools-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workshop-weapon-detail-item span {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tools-text);
+}
+
+.workshop-weapon-detail-item em {
+  color: #90EE90;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.workshop-weapon-detail-rules {
+  grid-column: span 3;
+}
+
+.workshop-weapon-detail-rules span {
+  font-size: 11px;
+  font-style: italic;
+  color: #f0a0a0;
+}
+
+.workshop-weapon-detail-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.workshop-weapon-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workshop-weapon-detail-btn:hover {
+  border-color: var(--tools-accent);
+  color: var(--tools-text);
+  box-shadow: 0 0 6px var(--tools-accent-glow);
+}
+
+.workshop-weapon-detail-btn i {
+  font-size: 10px;
+}
+
+.workshop-weapon-detail-delete:hover {
+  border-color: #ff5555;
+  color: #ff5555;
+  box-shadow: 0 0 6px rgba(255,85,85,0.4);
+}
+
+/* ----- Workshop Armor Forge: form fields (mirrors weapon form, plus bonus repeater) ----- */
+.workshop-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.workshop-field-checkbox label {
+  flex-direction: row;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--tools-text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.workshop-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tools-accent);
+  cursor: pointer;
+}
+
+/* Bonuses repeater */
+.workshop-bonuses > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workshop-bonus-add {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 10px;
+}
+
+.workshop-bonus-add:hover {
+  border-color: var(--tools-accent);
+  color: var(--tools-accent);
+}
+
+.workshop-bonus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workshop-bonus-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 28px;
+  gap: 6px;
+  align-items: center;
+}
+
+.workshop-bonus-target {
+  font-size: 11px !important;
+}
+
+.workshop-bonus-value {
+  text-align: center;
+}
+
+.workshop-bonus-remove {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.workshop-bonus-remove:hover {
+  border-color: #ff5555;
+  color: #ff5555;
+}
+
+/* ----- Workshop Armor: count badge + cards (re-uses weapon card structure) ----- */
+.workshop-armor-count {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 9px;
+  background: var(--tools-accent-dim);
+  border: 1px solid var(--tools-accent);
+  border-radius: 9px;
+  color: var(--tools-accent);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* Default armor list (used by shields too via .workshop-armor-card class) — column flex */
+.workshop-armor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Armor sub-panel switches the list to a tile grid — matching weapons */
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 95px);
+  grid-auto-flow: dense;
+  gap: 12px;
+  justify-content: start;
+  padding: 4px 0;
+}
+
+/* ========== ARMOR TILES (mirror weapon tiles, steel-blue accents) ========== */
+
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile {
+  position: relative;
+  width: 95px;
+  height: 95px;
+  padding: 0;
+  margin: 0;
+  background: url('../images/stat_container2.png') center / 100% 100% no-repeat,
+              linear-gradient(180deg, var(--tools-panel2) 0%, var(--tools-bg0) 100%);
+  border: none;
+  outline: none;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 4px rgba(0,0,0,0.3);
+}
+
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile:active {
+  cursor: grabbing;
+}
+
+.workshop-armor-tile-imgwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.workshop-armor-tile-img {
+  width: 70px;
+  height: 70px;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 3px solid #2a2a2e;
+  outline: 1px solid rgba(255,255,255,0.05);
+  background: #1a1a1d;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 3px 8px rgba(0,0,0,0.6),
+    0 1px 3px rgba(0,0,0,0.4),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile:hover .workshop-armor-tile-img {
+  transform: scale(1.05);
+  border-color: #87CEEB;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 14px rgba(135,206,235,0.5),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+}
+
+/* AR badge in the corner (steel-blue border, mirrors weapon ammo badge) */
+.workshop-armor-tile-ar {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #87CEEB;
+  z-index: 5;
+}
+
+.workshop-armor-tile-label {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tools-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin: 0;
+  padding: 2px 4px;
+  line-height: 1;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+/* Tile label gets a cool steel tone in armor context */
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile-label {
+  color: #CCE8F5;
+}
+
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile:hover .workshop-armor-tile-label {
+  color: #fff;
+}
+
+/* Direct label hover: bright steel-blue with subtle glow — matches weapons' red label-hover behavior, theme-tinted */
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-tile .workshop-armor-tile-label:hover {
+  color: #87CEEB;
+  text-shadow: 0 0 6px rgba(135,206,235,0.6);
+}
+
+/* ========== ARMOR DETAIL PANEL (inline grid child, label-click toggles) ========== */
+
+.workshop-armor-detail {
+  display: none;
+  grid-column: 1 / -1;
+  background: rgba(11,11,13,0.40);
+  backdrop-filter: blur(1px);
+  border: 1px solid var(--tools-bevel);
+  border-left: 3px solid #87CEEB;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 2px 6px rgba(0,0,0,0.4);
+}
+
+.workshop-armor-detail.active {
+  display: block;
+}
+
+.workshop-armor-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(135,206,235,0.35);
+}
+
+.workshop-armor-detail-header h4 {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #CCE8F5;
+  border: none;
+}
+
+.workshop-armor-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.workshop-armor-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workshop-armor-detail-item label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tools-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workshop-armor-detail-item span {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tools-text);
+}
+
+.workshop-armor-detail-bonuses,
+.workshop-armor-detail-text {
+  grid-column: span 3;
+}
+
+.workshop-armor-detail-bonuses span {
+  font-size: 11px;
+  color: #B0DBF0;
+}
+
+.workshop-armor-detail-text span {
+  font-size: 11px;
+  font-style: italic;
+  color: #c8d8e8;
+}
+
+.workshop-armor-detail-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.workshop-armor-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workshop-armor-detail-btn:hover {
+  border-color: #87CEEB;
+  color: #fff;
+  box-shadow: 0 0 6px rgba(135,206,235,0.4);
+}
+
+.workshop-armor-detail-btn i {
+  font-size: 10px;
+}
+
+.workshop-armor-detail-delete:hover {
+  border-color: #ff5555;
+  color: #ff5555;
+  box-shadow: 0 0 6px rgba(255,85,85,0.4);
+}
+
+.workshop-armor-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, var(--tools-panel2) 0%, var(--tools-bg0) 100%);
+  border: 2px solid var(--tools-bevel);
+  outline: 1px solid rgba(255,255,255,0.04);
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.15s ease;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.4),
+    inset 1px 1px 3px rgba(255,255,255,0.05),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-armor-card:hover {
+  border-color: var(--tools-accent);
+  box-shadow:
+    0 0 12px var(--tools-accent-glow),
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 1px 1px 3px rgba(255,255,255,0.06),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-armor-card:active {
+  cursor: grabbing;
+}
+
+.workshop-armor-card-img {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: var(--tools-bg0);
+  border: 2px solid var(--tools-bevel);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.workshop-armor-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.workshop-armor-card-name {
+  color: var(--tools-text);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workshop-armor-card-meta {
+  color: var(--tools-muted);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workshop-armor-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.workshop-armor-card-actions button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 11px;
+}
+
+.workshop-armor-card-actions button:hover {
+  border-color: var(--tools-accent);
+  color: var(--tools-text);
+}
+
+.workshop-armor-card-actions .workshop-armor-delete:hover {
+  border-color: #ff5555;
+  color: #ff5555;
+}
+
+/* ============================================================================
+   ARMOR SUB-PANEL — COLD STEEL / ANVIL THEME
+   Scoped to [data-subpanel="armor"] so it sits alongside the Weapons hot-iron
+   theme without bleeding. Steel-blue accents replace red wherever the weapons
+   theme used red. Same structure for visual symmetry.
+   ============================================================================ */
+
+/* Subpanel background — subtle cool steel gradient suggesting cold forge */
+.workshop-subpanel[data-subpanel="armor"] {
+  position: relative;
+  padding: 14px 16px 4px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(135,206,235,0.16) 0%, transparent 55%),
+    transparent;
+  border-radius: 6px;
+}
+
+/* Top-edge "polished steel" strip */
+.workshop-subpanel[data-subpanel="armor"]::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #87CEEB 20%, #CFE8F5 50%, #87CEEB 80%, transparent 100%);
+  box-shadow: 0 0 8px rgba(135,206,235,0.5);
+  opacity: 0.85;
+  border-radius: 2px;
+}
+
+/* Section headers get a steel-blue leading bar (anvil-mark) */
+.workshop-subpanel[data-subpanel="armor"] .tools-section-header h3 {
+  position: relative;
+  padding-left: 14px;
+  letter-spacing: 0.10em;
+}
+
+.workshop-subpanel[data-subpanel="armor"] .tools-section-header h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, #87CEEB 0%, #2C5F7F 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(135,206,235,0.5);
+}
+
+/* Form labels — cool steel tint */
+.workshop-subpanel[data-subpanel="armor"] .workshop-field label {
+  color: rgba(180,210,235,0.65);
+}
+
+/* Form inputs — subtle steel-blue border tint when unfocused, blue glow on focus */
+.workshop-subpanel[data-subpanel="armor"] .workshop-input {
+  border-color: #2a323a;
+}
+.workshop-subpanel[data-subpanel="armor"] .workshop-input:hover:not(:focus) {
+  border-color: #3a4a5a;
+}
+.workshop-subpanel[data-subpanel="armor"] .workshop-input:focus {
+  border-color: #87CEEB;
+  box-shadow:
+    0 0 8px rgba(135,206,235,0.5),
+    inset 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Checkbox accent — switch to steel blue */
+.workshop-subpanel[data-subpanel="armor"] .workshop-checkbox {
+  accent-color: #87CEEB;
+}
+
+/* Bonus add button — blue hover */
+.workshop-subpanel[data-subpanel="armor"] .workshop-bonus-add:hover {
+  border-color: #87CEEB;
+  color: #87CEEB;
+}
+
+/* Count badge — steel-blue theme */
+.workshop-subpanel[data-subpanel="armor"] .workshop-armor-count {
+  background: rgba(135,206,235,0.18);
+  border-color: #87CEEB;
+  color: #B0DBF0;
+  box-shadow: 0 0 6px rgba(135,206,235,0.25);
+}
+
+/* ============================================================================
+   SHIELDS SUB-PANEL — AGED BRONZE / SPARTAN THEME
+   ============================================================================ */
+
+.workshop-subpanel[data-subpanel="shields"] {
+  position: relative;
+  padding: 14px 16px 4px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(205,127,50,0.16) 0%, transparent 55%),
+    transparent;
+  border-radius: 6px;
+}
+
+.workshop-subpanel[data-subpanel="shields"]::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #cd7f32 20%, #e2a85f 50%, #cd7f32 80%, transparent 100%);
+  box-shadow: 0 0 8px rgba(205,127,50,0.5);
+  opacity: 0.85;
+  border-radius: 2px;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .tools-section-header h3 {
+  position: relative;
+  padding-left: 14px;
+  letter-spacing: 0.10em;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .tools-section-header h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, #e2a85f 0%, #8b5a2b 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(205,127,50,0.5);
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-field label {
+  color: rgba(226,168,95,0.7);
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-input {
+  border-color: #3a2f1f;
+}
+.workshop-subpanel[data-subpanel="shields"] .workshop-input:hover:not(:focus) {
+  border-color: #5a4a2f;
+}
+.workshop-subpanel[data-subpanel="shields"] .workshop-input:focus {
+  border-color: #cd7f32;
+  box-shadow:
+    0 0 8px rgba(205,127,50,0.5),
+    inset 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-bonus-add:hover {
+  border-color: #cd7f32;
+  color: #e2a85f;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-count {
+  background: rgba(205,127,50,0.18);
+  border-color: #cd7f32;
+  color: #e2a85f;
+  box-shadow: 0 0 6px rgba(205,127,50,0.25);
+}
+
+/* ========== SHIELDS — TILE GRID + DETAIL PANEL (mirror weapons, bronze accents) ========== */
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 95px);
+  grid-auto-flow: dense;
+  gap: 12px;
+  justify-content: start;
+  padding: 4px 0;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile {
+  position: relative;
+  width: 95px;
+  height: 95px;
+  padding: 0;
+  margin: 0;
+  background: url('../images/stat_container2.png') center / 100% 100% no-repeat,
+              linear-gradient(180deg, var(--tools-panel2) 0%, var(--tools-bg0) 100%);
+  border: none;
+  outline: none;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 4px rgba(0,0,0,0.3);
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile:active {
+  cursor: grabbing;
+}
+
+.workshop-shield-tile-imgwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.workshop-shield-tile-img {
+  width: 70px;
+  height: 70px;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 3px solid #2a2a2e;
+  outline: 1px solid rgba(255,255,255,0.05);
+  background: #1a1a1d;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 3px 8px rgba(0,0,0,0.6),
+    0 1px 3px rgba(0,0,0,0.4),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile:hover .workshop-shield-tile-img {
+  transform: scale(1.05);
+  border-color: #cd7f32;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 14px rgba(205,127,50,0.5),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+}
+
+/* Phys Def badge — bronze border instead of red (weapons) or steel-blue (armor) */
+.workshop-shield-tile-def {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #cd7f32;
+  z-index: 5;
+}
+
+.workshop-shield-tile-label {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin: 0;
+  padding: 2px 4px;
+  line-height: 1;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile-label {
+  color: #f0d29a;
+}
+
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile:hover .workshop-shield-tile-label {
+  color: #fff;
+}
+
+/* Direct label hover: bright bronze with glow */
+.workshop-subpanel[data-subpanel="shields"] .workshop-shield-tile .workshop-shield-tile-label:hover {
+  color: #e2a85f;
+  text-shadow: 0 0 6px rgba(205,127,50,0.6);
+}
+
+/* ========== SHIELDS — DETAIL PANEL (inline grid child) ========== */
+
+.workshop-shield-detail {
+  display: none;
+  grid-column: 1 / -1;
+  background: rgba(11,11,13,0.40);
+  backdrop-filter: blur(1px);
+  border: 1px solid var(--tools-bevel);
+  border-left: 3px solid #cd7f32;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 2px 6px rgba(0,0,0,0.4);
+}
+
+.workshop-shield-detail.active {
+  display: block;
+}
+
+.workshop-shield-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(205,127,50,0.35);
+}
+
+.workshop-shield-detail-header h4 {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f0d29a;
+  border: none;
+}
+
+.workshop-shield-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.workshop-shield-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workshop-shield-detail-item label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tools-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workshop-shield-detail-item span {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tools-text);
+}
+
+.workshop-shield-detail-bonuses {
+  grid-column: span 3;
+}
+
+.workshop-shield-detail-bonuses span {
+  font-size: 11px;
+  color: #e2a85f;
+}
+
+.workshop-shield-detail-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.workshop-shield-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--tools-bg0);
+  border: 1px solid var(--tools-bevel);
+  border-radius: 4px;
+  color: var(--tools-muted);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workshop-shield-detail-btn:hover {
+  border-color: #cd7f32;
+  color: #fff;
+  box-shadow: 0 0 6px rgba(205,127,50,0.4);
+}
+
+.workshop-shield-detail-btn i {
+  font-size: 10px;
+}
+
+.workshop-shield-detail-delete:hover {
+  border-color: #ff5555;
+  color: #ff5555;
+  box-shadow: 0 0 6px rgba(255,85,85,0.4);
+}
+
+/* ============================================================================
+   WORKSHOP QUICKBAR — + NEW button at the top of a sub-panel
+   ============================================================================ */
+
+.workshop-quickbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+}
+
+.workshop-weapon-new-btn {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 80px !important;
+  min-width: 80px;
+  max-width: 80px;
+  height: 26px;
+  padding: 0 !important;
+  background: linear-gradient(180deg, #C43C3C 0%, #6c1818 100%);
+  border: 2px solid #C43C3C;
+  outline: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow:
+    0 3px 10px rgba(196,60,60,0.4),
+    0 1px 3px rgba(0,0,0,0.6),
+    inset 1px 1px 2px rgba(255,255,255,0.18),
+    inset -1px -1px 2px rgba(0,0,0,0.4);
+}
+
+.workshop-weapon-new-btn:hover {
+  background: linear-gradient(180deg, #e85c5c 0%, #8b2020 100%);
+  box-shadow:
+    0 4px 14px rgba(196,60,60,0.6),
+    0 2px 4px rgba(0,0,0,0.7),
+    inset 1px 1px 3px rgba(255,255,255,0.22),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.workshop-weapon-new-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.7),
+    inset 2px 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   SHIELDS — NEW pill (aged bronze), matching shield sub-panel theme
+   ============================================================================ */
+
+.workshop-shield-new-btn {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 80px !important;
+  min-width: 80px;
+  max-width: 80px;
+  height: 26px;
+  padding: 0 !important;
+  background: linear-gradient(180deg, #cd7f32 0%, #6b3f15 100%);
+  border: 2px solid #cd7f32;
+  outline: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow:
+    0 3px 10px rgba(205,127,50,0.4),
+    0 1px 3px rgba(0,0,0,0.6),
+    inset 1px 1px 2px rgba(255,255,255,0.20),
+    inset -1px -1px 2px rgba(0,0,0,0.4);
+}
+
+.workshop-shield-new-btn:hover {
+  background: linear-gradient(180deg, #e2a85f 0%, #8b5a2b 100%);
+  box-shadow:
+    0 4px 14px rgba(205,127,50,0.6),
+    0 2px 4px rgba(0,0,0,0.7),
+    inset 1px 1px 2px rgba(255,255,255,0.24),
+    inset -1px -1px 2px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.workshop-shield-new-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.7),
+    inset 2px 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   SHIELDS NEW DIALOG — parchment inputs (shared) + bronze FORGE
+   ============================================================================ */
+
+.ws-new-shield-form > * {
+  margin: 0;
+}
+
+.ws-new-shield-form .ws-input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  margin: 0;
+  background: linear-gradient(180deg, #d2c4a4 0%, #b8a884 100%);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #1a0d04;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  font-family: inherit;
+  line-height: 34px;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(205,127,50,0.5);
+  outline: none;
+}
+
+.ws-new-shield-form .ws-input::placeholder {
+  color: rgba(26,13,4,0.55);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ws-new-shield-form .ws-input:focus {
+  border-color: #cd7f32;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px #cd7f32,
+    0 0 10px rgba(205,127,50,0.4);
+}
+
+.ws-new-shield-form .ws-image-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--tools-bg0);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #cd7f32;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ws-new-shield-form .ws-image-pick:hover {
+  border-color: #cd7f32;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(205,127,50,0.4);
+}
+
+/* Bonus rows inside the dialog: smaller inputs */
+.ws-new-shield-form .ws-shield-bonus-row .ws-input {
+  height: 30px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 26px;
+}
+
+/* FORGE button in shield dialog — bronze */
+.ws-new-shield-dialog .dialog-button[data-action="forge"],
+.ws-new-shield-dialog button[data-action="forge"] {
+  background: linear-gradient(180deg, #cd7f32 0%, #6b3f15 100%);
+  border: 2px solid #cd7f32;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  padding: 10px 28px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  box-shadow:
+    0 3px 10px rgba(205,127,50,0.4),
+    inset 1px 1px 3px rgba(255,255,255,0.20),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.ws-new-shield-dialog .dialog-button[data-action="forge"]:hover,
+.ws-new-shield-dialog button[data-action="forge"]:hover {
+  background: linear-gradient(180deg, #e2a85f 0%, #8b5a2b 100%);
+  box-shadow:
+    0 4px 14px rgba(205,127,50,0.6),
+    inset 1px 1px 3px rgba(255,255,255,0.24),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   ARMOR — NEW pill (cold-steel blue), matching armor sub-panel theme
+   ============================================================================ */
+
+.workshop-armor-new-btn {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 80px !important;
+  min-width: 80px;
+  max-width: 80px;
+  height: 26px;
+  padding: 0 !important;
+  background: linear-gradient(180deg, #87CEEB 0%, #2C5F7F 100%);
+  border: 2px solid #87CEEB;
+  outline: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow:
+    0 3px 10px rgba(135,206,235,0.4),
+    0 1px 3px rgba(0,0,0,0.6),
+    inset 1px 1px 2px rgba(255,255,255,0.20),
+    inset -1px -1px 2px rgba(0,0,0,0.4);
+}
+
+.workshop-armor-new-btn:hover {
+  background: linear-gradient(180deg, #B0DBF0 0%, #3a7099 100%);
+  box-shadow:
+    0 4px 14px rgba(135,206,235,0.6),
+    0 2px 4px rgba(0,0,0,0.7),
+    inset 1px 1px 2px rgba(255,255,255,0.24),
+    inset -1px -1px 2px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.workshop-armor-new-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.7),
+    inset 2px 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   ARMOR NEW DIALOG — parchment inputs (shared with weapon dialog) + steel-blue FORGE
+   ============================================================================ */
+
+.ws-new-armor-form > * {
+  margin: 0;
+}
+
+.ws-new-armor-form .ws-input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  margin: 0;
+  background: linear-gradient(180deg, #d2c4a4 0%, #b8a884 100%);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #1a0d04;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  font-family: inherit;
+  line-height: 34px;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(135,206,235,0.5);
+  outline: none;
+}
+
+.ws-new-armor-form .ws-input::placeholder {
+  color: rgba(26,13,4,0.55);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ws-new-armor-form select.ws-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(180deg, #d2c4a4 0%, #b8a884 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path fill='%231a0d04' d='M0 0l5 6 5-6z'/></svg>");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 10px;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.ws-new-armor-form .ws-input:focus {
+  border-color: #87CEEB;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px #87CEEB,
+    0 0 10px rgba(135,206,235,0.4);
+}
+
+.ws-new-armor-form .ws-image-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--tools-bg0);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #87CEEB;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ws-new-armor-form .ws-image-pick:hover {
+  border-color: #87CEEB;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(135,206,235,0.4);
+}
+
+/* Bonus rows inside the dialog: smaller inputs */
+.ws-new-armor-form .ws-armor-bonus-row .ws-input {
+  height: 30px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 26px;
+}
+
+/* FORGE button in armor dialog — steel-blue */
+.ws-new-armor-dialog .dialog-button[data-action="forge"],
+.ws-new-armor-dialog button[data-action="forge"] {
+  background: linear-gradient(180deg, #87CEEB 0%, #2C5F7F 100%);
+  border: 2px solid #87CEEB;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  padding: 10px 28px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  box-shadow:
+    0 3px 10px rgba(135,206,235,0.4),
+    inset 1px 1px 3px rgba(255,255,255,0.20),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.ws-new-armor-dialog .dialog-button[data-action="forge"]:hover,
+.ws-new-armor-dialog button[data-action="forge"]:hover {
+  background: linear-gradient(180deg, #B0DBF0 0%, #3a7099 100%);
+  box-shadow:
+    0 4px 14px rgba(135,206,235,0.6),
+    inset 1px 1px 3px rgba(255,255,255,0.24),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   WORKSHOP NEW-WEAPON DIALOG — parchment inputs, hot-iron forge button
+   ============================================================================ */
+
+.ws-new-weapon-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 4px 6px;
+}
+
+/* Override any Foundry dialog default margins on form children */
+.ws-new-weapon-form > * {
+  margin: 0;
+}
+
+.ws-new-weapon-form .ws-row {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ws-new-weapon-form .ws-row-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.ws-new-weapon-form .ws-row-grid > * {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  width: 100%;
+}
+
+.ws-new-weapon-form .ws-row-image {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.ws-new-weapon-form .ws-row-image > .ws-input {
+  flex: 1 1 0 !important;
+  min-width: 0;
+}
+
+.ws-new-weapon-form .ws-row-image > .ws-image-pick {
+  flex: 0 0 38px !important;
+}
+
+.ws-new-weapon-form .ws-input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  margin: 0;
+  background: linear-gradient(180deg, #d2c4a4 0%, #b8a884 100%);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #1a0d04;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  font-family: inherit;
+  line-height: 34px;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(196,60,60,0.5);
+  outline: none;
+}
+
+.ws-new-weapon-form .ws-input::placeholder {
+  color: rgba(26,13,4,0.55);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ws-new-weapon-form select.ws-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(180deg, #d2c4a4 0%, #b8a884 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path fill='%231a0d04' d='M0 0l5 6 5-6z'/></svg>");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 10px;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.ws-new-weapon-form .ws-input:focus {
+  border-color: #C43C3C;
+  box-shadow:
+    inset 1px 1px 2px rgba(0,0,0,0.25),
+    0 0 0 1px #C43C3C,
+    0 0 10px rgba(196,60,60,0.4);
+}
+
+.ws-new-weapon-form .ws-textarea {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 12px;
+  line-height: 1.4;
+  resize: vertical;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.ws-new-weapon-form .ws-image-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--tools-bg0);
+  border: 2px solid #2a1a0a;
+  border-radius: 4px;
+  color: #f0a0a0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ws-new-weapon-form .ws-image-pick:hover {
+  border-color: #C43C3C;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(196,60,60,0.4);
+}
+
+/* Make the Forge button inside the dialog match the hot-iron theme */
+.ws-new-weapon-dialog .dialog-button[data-action="forge"],
+.ws-new-weapon-dialog button[data-action="forge"] {
+  background: linear-gradient(180deg, #C43C3C 0%, #6c1818 100%);
+  border: 2px solid #C43C3C;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  padding: 10px 28px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  box-shadow:
+    0 3px 10px rgba(196,60,60,0.4),
+    inset 1px 1px 3px rgba(255,255,255,0.15),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+.ws-new-weapon-dialog .dialog-button[data-action="forge"]:hover,
+.ws-new-weapon-dialog button[data-action="forge"]:hover {
+  background: linear-gradient(180deg, #e85c5c 0%, #8b2020 100%);
+  box-shadow:
+    0 4px 14px rgba(196,60,60,0.6),
+    inset 1px 1px 3px rgba(255,255,255,0.2),
+    inset -1px -1px 3px rgba(0,0,0,0.4);
+}
+
+/* ============================================================================
+   WEAPONS SUB-PANEL — FORGE / HOT IRON THEME
+   Scoped to [data-subpanel="weapons"] so future Armor / Skills / Magic
+   sub-panels can have their own independent themes.
+   Within BPM rules: subtle tinted backgrounds (<10% alpha), red used as
+   sharp accent for action surfaces, no rainbow accents, no glassmorphism.
+   ============================================================================ */
+
+/* Subpanel background — very subtle warm gradient suggesting forge heat */
+.workshop-subpanel[data-subpanel="weapons"] {
+  position: relative;
+  padding: 14px 16px 4px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(225,6,0,0.16) 0%, transparent 55%),
+    transparent;
+  border-radius: 6px;
+}
+
+/* ============================================================================
+   WORKSHOP TAB BACKGROUND IMAGES — bottom-most layer of the Workshop panel.
+   A dedicated .workshop-bg-layer div sits at z-index 0, absolute-positioned to
+   fill the panel from edge to edge. The image is pinned to the bottom and
+   scales with container size (background-size: cover; position: bottom center).
+   :has() swaps the image based on the active sub-tab.
+   ============================================================================ */
+
+/* Scoped to .active so we don't override the base .tools-panel { display: none } rule
+   when the workshop tab is inactive (would otherwise stack the workshop content under
+   whichever tab the user is actually viewing). */
+.tools-panel[data-panel="workshop"].active {
+  position: relative;
+  /* Fill the Albert window's available vertical space so the bg reaches the bottom border */
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.workshop-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--tools-bg0);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: bottom center;
+  pointer-events: none;
+}
+
+/* Dark overlay on the bg layer to keep UI readable across the whole workshop */
+.workshop-bg-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(11,11,13,0.20) 0%, rgba(11,11,13,0.30) 60%, rgba(11,11,13,0.45) 100%);
+  pointer-events: none;
+}
+
+/* All sub-nav and sub-panels sit above the bg layer */
+.tools-panel[data-panel="workshop"] > .workshop-subnav,
+.tools-panel[data-panel="workshop"] > .workshop-subpanel {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sub-nav row — transparent so the bg image shows behind the sub-tab buttons */
+.tools-panel[data-panel="workshop"] .workshop-subnav {
+  background: transparent;
+}
+
+/* Per-subtab image swap via :has() */
+.tools-panel[data-panel="workshop"]:has(.workshop-subpanel.active[data-subpanel="weapons"]) .workshop-bg-layer {
+  background-image: url('../images/workshop_weapon.png');
+}
+
+.tools-panel[data-panel="workshop"]:has(.workshop-subpanel.active[data-subpanel="armor"]) .workshop-bg-layer {
+  background-image: url('../images/workshop_armor.png');
+}
+
+.tools-panel[data-panel="workshop"]:has(.workshop-subpanel.active[data-subpanel="shields"]) .workshop-bg-layer {
+  background-image: url('../images/workshop_shield.png');
+}
+
+/* Top-edge "hot blade" glow strip */
+.workshop-subpanel[data-subpanel="weapons"]::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--tools-accent) 20%, #FF6B35 50%, var(--tools-accent) 80%, transparent 100%);
+  box-shadow: 0 0 8px var(--tools-accent-glow);
+  opacity: 0.85;
+  border-radius: 2px;
+}
+
+/* Section headers get a red leading bar (forge-mark) */
+.workshop-subpanel[data-subpanel="weapons"] .tools-section-header h3 {
+  position: relative;
+  padding-left: 14px;
+  letter-spacing: 0.10em;
+}
+
+.workshop-subpanel[data-subpanel="weapons"] .tools-section-header h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, var(--tools-accent) 0%, #8B0000 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--tools-accent-glow);
+}
+
+/* Tile label gets a warm tone in this context */
+.workshop-subpanel[data-subpanel="weapons"] .workshop-weapon-tile-label {
+  color: #FFE6CC;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+.workshop-subpanel[data-subpanel="weapons"] .workshop-weapon-tile:hover .workshop-weapon-tile-label {
+  color: #fff;
+}
+
+/* Direct label hover turns red — specificity matches the tile-hover rule above so this wins on direct mouseover */
+.workshop-subpanel[data-subpanel="weapons"] .workshop-weapon-tile .workshop-weapon-tile-label:hover {
+  color: #ff5555;
+  text-shadow: 0 0 6px rgba(255,85,85,0.5);
+}
+
+/* Count badge — keep the red theme */
+.workshop-subpanel[data-subpanel="weapons"] .workshop-weapon-count {
+  background: rgba(225,6,0,0.18);
+  border-color: var(--tools-accent);
+  color: #FF8866;
+  box-shadow: 0 0 6px rgba(225,6,0,0.25);
+}
+
 /* Under Construction overlay */
 .tools-construction-overlay {
   position: absolute;
@@ -6172,6 +8271,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+  position: relative; /* anchor for .stat-name-tooltip absolute positioning */
 }
 .enemy-ccg-card .stat-btn:hover {
   border-color: var(--theme-accent, #C4A574);
@@ -6185,27 +8285,9 @@
 }
 .enemy-ccg-card .stat-btn .stat-name { display: none; }
 
-/* Stat name tooltip (hover, child of button — can't orphan) */
-.enemy-ccg-card .stat-name-tooltip {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  right: calc(100% - 8px);
-  background: rgba(10,10,12,0.95);
-  border: 1px solid var(--theme-border, #8B7355);
-  border-radius: 3px;
-  padding: 2px 7px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--theme-accent, #C4A574);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 20;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-}
-.enemy-ccg-card .stat-btn:hover .stat-name-tooltip { display: block; }
+/* Inline stat tooltip span is a data source only — never shown inline.
+   The actual tooltip is rendered to <body> via JS to escape card overflow:hidden. */
+.enemy-ccg-card .stat-name-tooltip { display: none; }
 .enemy-ccg-card .stat-die {
   font-size: 10px;
   font-weight: 700;
@@ -6247,26 +8329,41 @@
 .enemy-ccg-card .weapon-btn .weapon-range {
   display: none;
 }
-.enemy-ccg-card .weapon-tooltip {
-  display: none;
-  position: absolute;
-  right: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
+/* Inline weapon tooltip span is a data source only — never shown inline.
+   The actual tooltip is rendered to <body> via JS to escape card overflow:hidden. */
+.enemy-ccg-card .weapon-tooltip { display: none; }
+
+/* ============================================================================
+   Floating tooltips (body-level, JS-positioned).
+   Anchored to .stat-btn or .weapon-btn but rendered outside the dialog so the
+   card's overflow:hidden doesn't clip them.
+   ============================================================================ */
+.conan-floating-tooltip {
+  position: fixed;
+  z-index: 10000;
   background: rgba(10,10,12,0.95);
-  border: 1px solid #E10600;
   border-radius: 4px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   font-size: 11px;
   color: #ccc;
   white-space: nowrap;
-  z-index: 20;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
   pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
-.enemy-ccg-card .weapon-btn:hover .weapon-tooltip { display: block; }
-.enemy-ccg-card .weapon-tooltip .wp-dmg { color: #E10600; font-weight: 700; }
-.enemy-ccg-card .weapon-tooltip .wp-range { color: #888; }
+.conan-floating-tooltip.tip-stat {
+  border: 1px solid #8B7355;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #C4A574;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.conan-floating-tooltip.tip-weapon {
+  border: 1px solid #E10600;
+}
+.conan-floating-tooltip .wp-dmg { color: #E10600; font-weight: 700; }
+.conan-floating-tooltip .wp-range { color: #888; }
 
 /* Dialog frame adjustments for new card */
 .conan-enemy-roll-dialog.new-card-layout .window-content {

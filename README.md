@@ -337,49 +337,6 @@ Spells cast from the character sheet can affect enemy cards. **Tide of Stone** r
 
 ---
 
-## Howard the Chronicler
-
-A built-in **comic book creation and presentation tool** for storytelling. Create visual tales with panels, speech bubbles, narration, and skill checks — then present them to your players page by page with dramatic reveals.
-
-### Tale Structure
-
-Each tale is a comic book with a cover page and numbered story pages. Pages use one of **8 templates**: Splash (1 giant panel), Cinematic (3 horizontal strips), Standard (6-panel grid), Dense (9-panel grid), Split (2 vertical halves), L-Shape (1 large + 2 stacked), Stat Block, and Handout.
-
-### Three Editor Modes
-
-| Mode | Purpose |
-|------|---------|
-| **GM** | View and organize tales, GM notes visible, manage content |
-| **Forge** | Build pages with 4 tools: PAGE (image layers), PANEL (freeform panels), TEXT (rich text), SPEECH (speech bubbles with tails) |
-| **Presentation** | Broadcast to players with dramatic reveals, zoom, and hidden elements |
-
-### Forge Mode Tools
-
-- **PAGE**: Add and position image layers on the page background. Drag to move, scroll to zoom, layer ordering.
-- **PANEL**: Draw freeform panels anywhere on the page. Configurable size, position, transparency, and image layers.
-- **TEXT**: Place rich text blocks with formatting (bold, italic, color, font). Draw a rectangle, type your text.
-- **SPEECH**: Create speech bubbles with 8-direction tails. Assign to characters, write dialogue.
-
-### Presentation Mode
-
-Enter Presentation from Forge mode. Your players see a read-only comic viewer.
-
-- **Show**: Broadcasts the current tale to all players
-- **Reveal**: Click hidden elements one by one to dramatically reveal them to players
-- **Zoom**: Click a panel to zoom it full-size on both GM and player screens
-- **Undo**: Re-hide the last revealed element
-- **Hidden Pages**: Entire pages can be hidden from players and revealed during presentation
-
-### Skill Checks
-
-Place skill check markers on pages during Forge mode. Set the skill, DC, and hidden success text. During presentation, players can click to roll — pass or fail, with the success text revealed only on a pass.
-
-### Roll Call
-
-Ad-hoc skill checks from Presentation mode. Open the Roll Call dialog, set the skill and DC, and all players roll — with hidden success text that you reveal after the results.
-
----
-
 ## YouTube
 
 How-to videos, tips and tricks, and feature walkthroughs — **coming soon**.
@@ -395,6 +352,58 @@ How-to videos, tips and tricks, and feature walkthroughs — **coming soon**.
 ---
 
 ## Release History
+
+### v0.9.6 — 2026-05-29
+
+**Major release — Workshop redesign, Custom Armor/Shield pipeline, Fighting Styles (Dual Wielder + Ambidextrous), ARMS-tab Armor section overhaul, Howard module spin-out.**
+
+**Fighting Styles — Dual Wielder + Ambidextrous**
+- The book's "Fighting Styles" subsystem (last-page Advanced Rules) is now an automated feature. Dual Wielder is fully wired end-to-end; the chassis hosts the remaining five styles (Defensive Fighter, Flexible Fighter, Great-Weapon Fighter, Deadeye Shooter, Phalanx Fighter) for future passes
+- **Advanced Skills tier** added to the skill catalog (book convention: `"6+ skills"` prerequisite, auto-sorted to the bottom of the Legendary tier). First entry: **Ambidextrous** (2 XP) — extends Dual Wielder's qualification to allow a One-Handed Heavy + One-Handed Light/Medium combo
+- New **STANCE row** appears between ARMS and ARMOR on the character sheet, but only when the character has both a qualifying weapon loadout AND a purchased Advanced Skill that unlocks at least one style. Tile-style icons match the weapon card visual treatment exactly (95×95 frame, dark border, 3D bevel, neutral-cream-at-rest, accent-red-on-hover)
+- Click a stance icon → cost dialog (1 SP / 2 Actions / Cancel) with current Stamina shown. Click a stance name → details panel expands with Bonus + Hindrance + Adoption Cost
+- Drop the active stance via click + confirm dialog. Locks fighting styles for the rest of combat (book rule). Reset happens automatically on combat end, or manually by clicking the Initiative button
+- **Dual Wielder mechanical effects**: -1 AR shown via a rotated red-on-parchment stamp in the bottom-right corner of the AR shield + applied in the damage reduction pipeline. Attack rolls both weapons' damage independently (primary gets stat + bonuses, off-hand is die-only — only one stat counted per the rule). Chat shows two side-by-side damage boxes with parallel breakdowns; shift+click on a target applies the sum
+- Flex damage threaded through both paths — Stamina choice posts the standard two-box card; Massive! choice renders two boxes with `roll + maxDie` for each weapon
+- Attack + damage chat titles read `{primary} + {offhand} Attack/Damage` with a bronze `⚔ DUAL WIELDER` badge under the header
+
+**ARMS tab — Armor section overhaul**
+- The 7-button always-visible armor row (Unarmored / Light / Medium / Heavy / Shield / Custom Armor / Custom Shield) was replaced with **2 display tiles** (current armor + equipped shield)
+- New **ARMOR header button** mirrors the existing ARMS pattern
+- **ARMOR picker menu overlay** with 5 armor cards (Unarmored / Light / Medium / Heavy / Custom slot) + 3 shield cards (None / Shield / Custom slot). Drag workshop-forged items onto custom slots; right-click clears
+- The always-visible description textarea + "Armor Rule" note are gone. Replaced with a **click-to-expand info sub-panel** below the tile grid (click an armor or shield tile name; click outside dismisses)
+- 165 lines of dead CSS + 3 dead JS bindings removed in the cleanup
+
+**Workshop — major UI redesign (Albert / GM Tools)**
+- All three Workshop sub-tabs (Weapons, Armor, Shields) reworked from inline forms into **compact forging dialogs** that pop up on demand
+- Forged item lists are now **tile grids** modeled on the character-sheet armed-weapon pattern (95×95, dark border, themed corner badge — ammo for weapons, AR for armor, +Phys Def for shields)
+- Click a tile's name label → inline detail panel expands right after that tile's row showing full stats + EDIT and DELETE buttons. Only one open at a time
+- Themed background images per sub-tab (forge interior for Weapons, armory at night for Armor, bronze hall for Shields). New `+ NEW` pills in sub-tab accent colors (hot-iron red / cold-steel blue / aged bronze)
+- HTML5 form validation, regex-enforced damage formula (`2d6+3` style), nine specific Range options, integrated Foundry FilePicker rooted at the appropriate folder per item type
+- Drag from anywhere on a tile to drop onto a character sheet (image, label, or border — all three work)
+
+**Custom Armor + Custom Shield (Workshop pipeline)**
+- New **Workshop → Forged Armors** sub-tab: forge custom armors with name, AR, Min Might, Recovery Penalty flag, free-text Encumbrance / Penalty / Move notes, plus an unlimited Bonuses repeater (each bonus has a target stat or defense and a value)
+- New **Workshop → Forged Shields** sub-tab: same flow for shields with Phys Def Bonus, Sorc Def Bonus, Min Might, Min Edge gating, and the same Bonuses repeater (stat-only for shields)
+- Character sheet's **Custom Armor slot** and **Custom Shield slot** (now inside the refactored ARMOR menu) accept drag-drops from these Workshop sub-tabs. Equip / unequip swaps stat values cleanly. AR + Phys Def + bonuses cascade through the damage breakdown
+- **Custom armor stat bonuses surface in the damage breakdown** — e.g., a "+1 Might Steel Cuirass" shows as a "Custom Armor: +1 Steel Cuirass" line under the Might line so the math is transparent to the player
+
+**Min-Might Encumbrance — now actually enforced**
+- Standard armors and shields each have a `Min Might` value from the rulebook. Until this release the value was displayed but never enforced. Now: if the wearer's effective Might is below the threshold, **all stat dice degrade by one tier** (D10→D8→D6→D4→2) and a "ENCUMBERED" indicator appears next to the affected stat blocks. Recovers automatically when armor is removed or Might is raised
+- **Soldier's Endurance** skill ignores the encumbrance penalty (and, for Heavy Armor, lets the character treat the armor's stipulations as Medium). The skill's effect text was updated to the canonical rulebook wording
+
+**Howard the Chronicler spun out into its own module**
+- Howard's actor type, sheet, and all its dependencies were removed from the system and published as a **standalone Foundry module** at <https://github.com/antoniosantos8520-cyber/Howard-the-Chronicler>. Manifest URL: `https://raw.githubusercontent.com/antoniosantos8520-cyber/Howard-the-Chronicler/main/module.json`
+- Existing Howard actors in worlds where the user installs the module continue to work transparently. Worlds without the module need to either install it or delete those actors
+- Rationale: Howard is scenario-specific tooling for one campaign module, not a core engine capability. Splitting keeps the system focused on the rule engine
+
+**Enemy / scene polish**
+- **Body-level floating tooltips on enemy cards** — hover over an enemy token to see its full enemy card without clicking. Tracks token movement and respects token visibility
+- **Color/shape marker prefixes on spawned enemies** — every new enemy token gets a unique colored shape emoji (circle / square / heart / diamond, 32 markers total) prepended to its name (e.g. `🔵 Veteran Guard 💀💀`). Lets players call targets by color at the table. Marker auto-frees when the token is deleted
+
+**Fixes**
+- **"Spell Bonus" mislabeling**: bows have flat damage built into their formula (`1d6+1`, `1d8+1`). The breakdown parser was labeling any static formula part as "Spell Bonus" regardless of source — confusing for ranged characters from the Steppes origin (which adds its own separate +1 Ranged Damage). Now labeled **"Weapon Bonus"** for non-spells; spell damage keeps the "Spell Bonus" label. The Origin Bonus line continues to display Steppes' contribution separately so both `+1`s are visible with correct labels
+- Various smaller polish items captured in the per-session notes during development
 
 ### v0.9.5 — 2026-05-25
 

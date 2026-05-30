@@ -95,7 +95,7 @@
         {{#if hasSoldiersEndurance}}
         <img src="systems/conan/images/icons/soldier's_endurance_icon.png"
              class="sheet2-combatSkillIcon active"
-             alt="Soldier's Endurance" title="Soldier's Endurance (Ignore armor encumbrance, Heavy=Medium stipulations)"/>
+             alt="Soldier's Endurance" title="Soldier's Endurance — Ignore the Encumbrance Value of Armor. In addition, when wearing Heavy Armor, the Character may treat the armor's Stipulations as though it were Medium Armor."/>
         {{/if}}
         {{!-- Passive: Legendary Sword Arm (bonus melee attack once per turn) --}}
         {{#if hasLegendarySwordArm}}
@@ -311,37 +311,221 @@
   </div>
   </div>
 
+  {{!-- ===== STANCE SECTION (Fighting Styles) =====
+       Conditional — only renders when the character has at least one qualifying fighting style.
+       Qualification = weapon loadout req met AND required advanced skill purchased.
+       Empty inside for now; Phase 3 populates with stance tiles. --}}
+  {{#if qualifyingFightingStyles.length}}
+  <div class="sheet2-stanceSection">
+    <div class="sheet2-stanceHeader">
+      <div class="sheet2-stanceSkillsColumn">
+        {{!-- Stance-related skill indicators inserted here in later phases --}}
+      </div>
+      <div class="sheet2-stanceHeaderLabel">
+        <span class="sheet2-stanceTitle">STANCE</span>
+      </div>
+    </div>
+    <div class="sheet2-stanceGrid">
+      {{#each qualifyingFightingStyles as |style|}}
+      <div class="sheet2-stanceItem" data-style-id="{{style.id}}">
+        {{!-- Icon wrapper: click to activate (handler in Phase 3d).
+             Overlays show state: cost badge when available, dot when active, lock when spent. --}}
+        <div class="sheet2-stanceIconWrapper {{#if style.isActive}}active{{/if}} {{#if style.isSpent}}spent{{/if}} activate-fighting-style"
+             data-style-id="{{style.id}}"
+             title="{{style.name}} — {{style.short}}{{#unless style.isActive}}{{#unless style.isSpent}} (Click to adopt: {{style.costSP}} SP){{/unless}}{{/unless}}">
+          <i class="{{style.icon}} sheet2-stanceIcon"></i>
+          {{#if style.isActive}}
+          <span class="sheet2-stanceActiveOverlay">●</span>
+          {{else if style.isSpent}}
+          <span class="sheet2-stanceSpentOverlay"><i class="fas fa-lock"></i></span>
+          {{else}}
+          <span class="sheet2-stanceCostOverlay">{{style.costSP}}SP</span>
+          {{/if}}
+        </div>
+        {{!-- Name label: click to open details dialog (handler in Phase 3g) --}}
+        <span class="sheet2-stanceLabel show-fighting-style-details"
+              data-style-id="{{style.id}}"
+              title="Click for full rules">{{style.name}}</span>
+      </div>
+      {{/each}}
+    </div>
+
+    {{!-- Stance details panel — mirrors .sheet2-weaponEditPanel. One panel per
+         qualifying style; the one with matching data-for opens when its name label
+         is clicked. Shows the book's Bonus + Hindrance text plus the cost row. --}}
+    <div class="sheet2-stanceEditPanel">
+      {{#each qualifyingFightingStyles as |style|}}
+      <div class="sheet2-stanceEdit" data-for="{{style.id}}">
+        <div class="sheet2-stanceEditHeader">
+          <h4>{{style.name}}</h4>
+        </div>
+        <div class="sheet2-stanceEditBody">
+          <div class="sheet2-stanceEditBlock sheet2-stanceEditBonus">
+            <label>Bonus</label>
+            <p>{{style.bonus}}</p>
+          </div>
+          <div class="sheet2-stanceEditBlock sheet2-stanceEditHindrance">
+            <label>Hindrance</label>
+            <p>{{style.hindrance}}</p>
+          </div>
+          <div class="sheet2-stanceEditCost">
+            <strong>Adoption cost:</strong> {{style.costSP}} SP or {{style.costActions}} Actions
+          </div>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
   {{!-- ===== ARMOR SECTION ===== --}}
   <div class="sheet2-armsArmorSection">
-    <div class="sheet2-armsArmorHeader">
-      <span class="sheet2-armsArmorTitle">ARMOR</span>
+    {{!-- Header: mirrors ARMS pattern (skills column on left, ARMOR button on right).
+         ARMOR button will open the armor/shield picker menu (handler wired in Phase 2d). --}}
+    <div class="sheet2-attacksHeader sheet2-armsArmorHeader">
+      <div class="sheet2-combatSkillsColumn">
+        {{!-- Armor-related skill icons go here in a later step
+             (Soldier's Endurance, Sacrifice Armor) --}}
+      </div>
+      <button type="button" class="sheet2-attacksHeaderBtn open-armor-menu" title="Change Armor or Shield">
+        <span class="sheet2-attacksTitle">ARMOR</span>
+      </button>
     </div>
 
     <div class="sheet2-armsArmorContent">
-      <div class="sheet2-armsArmorButtons">
-        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'unarmored')}}active{{/if}}" data-armor-type="unarmored" title="Unarmored (AR 0)">
-          <img src="systems/conan/images/armor_unarmored.png" class="sheet2-armsArmorImg" alt="Unarmored"/>
-        </button>
-        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'light')}}active{{/if}}" data-armor-type="light" title="Light Armor (AR 3)">
-          <img src="systems/conan/images/armor_light.png" class="sheet2-armsArmorImg" alt="Light Armor"/>
-        </button>
-        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'medium')}}active{{/if}}" data-armor-type="medium" title="Medium Armor (AR 5)">
-          <img src="systems/conan/images/armor_medium.png" class="sheet2-armsArmorImg" alt="Medium Armor"/>
-        </button>
-        <button type="button" class="sheet2-armsArmorBtn {{#if (eq system.armorEquipped.type 'heavy')}}active{{/if}}" data-armor-type="heavy" title="Heavy Armor (AR 8)">
-          <img src="systems/conan/images/armor_heavy.png" class="sheet2-armsArmorImg" alt="Heavy Armor"/>
-        </button>
-        <button type="button" class="sheet2-armsArmorBtn sheet2-armsShieldBtn {{#if system.armorEquipped.shield}}active{{/if}}" data-armor-type="shield" title="Shield (+1 Physical Def)">
-          <img src="systems/conan/images/armor_shield.png" class="sheet2-armsArmorImg" alt="Shield"/>
-        </button>
+      {{!-- Armor + Shield tile grid (replaces the previous 7-button row).
+           Reuses sheet2-weaponItem/sheet2-weaponsGrid classes for now;
+           dedicated sheet2-armorTile styling comes in Phase 2c. --}}
+      <div class="sheet2-weaponsGrid sheet2-armorTilesGrid">
+        {{!-- Armor tile (always rendered, shows currently equipped armor) --}}
+        <div class="sheet2-weaponItem sheet2-armorTile" data-armor-slot="armor" title="Click to change armor">
+          <div class="sheet2-weaponRollWrapper">
+            {{#if (eq system.armorEquipped.type 'custom')}}
+              {{#if actor.flags.conan.customArmor.image}}
+              <img src="{{actor.flags.conan.customArmor.image}}" class="sheet2-weaponRollIcon" alt="{{actor.flags.conan.customArmor.name}}"/>
+              {{else}}
+              <img src="systems/conan/images/armor_unarmored.png" class="sheet2-weaponRollIcon" alt="Custom Armor"/>
+              {{/if}}
+            {{else if (eq system.armorEquipped.type 'light')}}
+              <img src="systems/conan/images/armor_light.png" class="sheet2-weaponRollIcon" alt="Light Armor"/>
+            {{else if (eq system.armorEquipped.type 'medium')}}
+              <img src="systems/conan/images/armor_medium.png" class="sheet2-weaponRollIcon" alt="Medium Armor"/>
+            {{else if (eq system.armorEquipped.type 'heavy')}}
+              <img src="systems/conan/images/armor_heavy.png" class="sheet2-weaponRollIcon" alt="Heavy Armor"/>
+            {{else}}
+              <img src="systems/conan/images/armor_unarmored.png" class="sheet2-weaponRollIcon" alt="Unarmored"/>
+            {{/if}}
+          </div>
+          <span class="sheet2-weaponLabel armor-toggle" title="Click for armor details">
+            {{#if (eq system.armorEquipped.type 'custom')}}{{actor.flags.conan.customArmor.name}}
+            {{else if (eq system.armorEquipped.type 'light')}}Light
+            {{else if (eq system.armorEquipped.type 'medium')}}Medium
+            {{else if (eq system.armorEquipped.type 'heavy')}}Heavy
+            {{else}}Unarmored
+            {{/if}}
+          </span>
+        </div>
+
+        {{!-- Shield tile (only when a shield is equipped — base or custom) --}}
+        {{#if system.useCustomShield}}
+        <div class="sheet2-weaponItem sheet2-armorTile" data-armor-slot="shield" title="{{actor.flags.conan.customShield.name}}">
+          <div class="sheet2-weaponRollWrapper">
+            {{#if actor.flags.conan.customShield.image}}
+            <img src="{{actor.flags.conan.customShield.image}}" class="sheet2-weaponRollIcon" alt="{{actor.flags.conan.customShield.name}}"/>
+            {{else}}
+            <img src="systems/conan/images/armor_shield.png" class="sheet2-weaponRollIcon" alt="Custom Shield"/>
+            {{/if}}
+          </div>
+          <span class="sheet2-weaponLabel armor-toggle" title="Click for armor details">{{actor.flags.conan.customShield.name}}</span>
+        </div>
+        {{else if system.armorEquipped.shield}}
+        <div class="sheet2-weaponItem sheet2-armorTile" data-armor-slot="shield" title="Shield (+1 Physical Defense)">
+          <div class="sheet2-weaponRollWrapper">
+            <img src="systems/conan/images/armor_shield.png" class="sheet2-weaponRollIcon" alt="Shield"/>
+          </div>
+          <span class="sheet2-weaponLabel armor-toggle" title="Click for armor details">Shield</span>
+        </div>
+        {{/if}}
       </div>
 
-      <div class="sheet2-armsArmorDesc">
-        <textarea readonly class="sheet2-armsArmorDetails">{{system.armorEquipped.description}}</textarea>
+      {{!-- Armor info sub-panel — mirrors sheet2-weaponEditPanel pattern.
+           Hidden by default (inline display:none for safety; CSS rule replaces this in a later step).
+           Shows when armor or shield tile label is clicked (handler wired in a later step). --}}
+      <div class="sheet2-armorEditPanel">
+        <div class="sheet2-armorEdit" data-for="armor">
+          <div class="sheet2-armorEditHeader">
+            <h4>Armor &amp; Shield</h4>
+          </div>
+          <div class="sheet2-armorEditBody">
+            <pre class="sheet2-armorEditText">{{system.armorEquipped.description}}</pre>
+            <div class="sheet2-armorEditNote">
+              <strong>Armor Rule:</strong> Subtract AR from incoming damage. A hit always deals at least 1 damage regardless of AR.
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
 
-      <div class="sheet2-armsArmorNote">
-        <strong>Armor Rule:</strong> Subtract AR from incoming damage. If attack hits, always deal at least 1 damage regardless of AR.
+    {{!-- ===== ARMOR PICKER MENU (overlay) =====
+         Hidden by default via CSS. Add .active class to show.
+         Click handlers wired in Phase 2d-2f. --}}
+    <div class="sheet2-armorMenu">
+      <div class="sheet2-armorMenuHeader">
+        <h3>ARMOR &amp; SHIELD</h3>
+        <button type="button" class="sheet2-closeArmorMenu close-armor-menu" title="Close">×</button>
+      </div>
+      <div class="sheet2-armorMenuBody">
+        {{!-- Armor row: 4 base types + 1 custom slot --}}
+        <div class="sheet2-armorMenuGroupLabel">Armor</div>
+        <div class="sheet2-armorMenuRow">
+          <div class="sheet2-armorMenuCard {{#if (eq system.armorEquipped.type 'unarmored')}}active{{/if}}" data-armor-type="unarmored" title="Unarmored (AR 0)">
+            <img src="systems/conan/images/armor_unarmored.png" class="sheet2-armorMenuCardImg" alt="Unarmored"/>
+            <span class="sheet2-armorMenuCardLabel">Unarm</span>
+          </div>
+          <div class="sheet2-armorMenuCard {{#if (eq system.armorEquipped.type 'light')}}active{{/if}}" data-armor-type="light" title="Light Armor (AR 3)">
+            <img src="systems/conan/images/armor_light.png" class="sheet2-armorMenuCardImg" alt="Light"/>
+            <span class="sheet2-armorMenuCardLabel">Light</span>
+          </div>
+          <div class="sheet2-armorMenuCard {{#if (eq system.armorEquipped.type 'medium')}}active{{/if}}" data-armor-type="medium" title="Medium Armor (AR 5)">
+            <img src="systems/conan/images/armor_medium.png" class="sheet2-armorMenuCardImg" alt="Medium"/>
+            <span class="sheet2-armorMenuCardLabel">Medium</span>
+          </div>
+          <div class="sheet2-armorMenuCard {{#if (eq system.armorEquipped.type 'heavy')}}active{{/if}}" data-armor-type="heavy" title="Heavy Armor (AR 8)">
+            <img src="systems/conan/images/armor_heavy.png" class="sheet2-armorMenuCardImg" alt="Heavy"/>
+            <span class="sheet2-armorMenuCardLabel">Heavy</span>
+          </div>
+          {{!-- Custom armor slot — drop target for forged armor --}}
+          <div class="sheet2-armorMenuCard sheet2-armorMenuCustomSlot {{#if actor.flags.conan.customArmor}}populated{{/if}} {{#if (eq system.armorEquipped.type 'custom')}}active{{/if}}" data-armor-type="custom" title="{{#if actor.flags.conan.customArmor}}{{actor.flags.conan.customArmor.name}}{{else}}Custom Armor — drop a forged armor here{{/if}}">
+            {{#if actor.flags.conan.customArmor.image}}
+            <img src="{{actor.flags.conan.customArmor.image}}" class="sheet2-armorMenuCardImg" alt="{{actor.flags.conan.customArmor.name}}"/>
+            {{else}}
+            <i class="fas fa-hammer sheet2-armorMenuCustomIcon"></i>
+            {{/if}}
+            <span class="sheet2-armorMenuCardLabel">Custom</span>
+          </div>
+        </div>
+
+        {{!-- Shield row: 2 base options + 1 custom slot --}}
+        <div class="sheet2-armorMenuGroupLabel">Shield</div>
+        <div class="sheet2-armorMenuRow">
+          <div class="sheet2-armorMenuCard {{#unless system.armorEquipped.shield}}active{{/unless}}" data-shield-type="none" title="No Shield">
+            <i class="fas fa-ban sheet2-armorMenuCustomIcon"></i>
+            <span class="sheet2-armorMenuCardLabel">None</span>
+          </div>
+          <div class="sheet2-armorMenuCard {{#if system.armorEquipped.shield}}{{#unless system.useCustomShield}}active{{/unless}}{{/if}}" data-shield-type="shield" title="Shield (+1 Physical Defense)">
+            <img src="systems/conan/images/armor_shield.png" class="sheet2-armorMenuCardImg" alt="Shield"/>
+            <span class="sheet2-armorMenuCardLabel">Shield</span>
+          </div>
+          {{!-- Custom shield slot --}}
+          <div class="sheet2-armorMenuCard sheet2-armorMenuCustomSlot {{#if actor.flags.conan.customShield}}populated{{/if}} {{#if system.useCustomShield}}active{{/if}}" data-shield-type="custom" title="{{#if actor.flags.conan.customShield}}{{actor.flags.conan.customShield.name}}{{else}}Custom Shield — drop a forged shield here{{/if}}">
+            {{#if actor.flags.conan.customShield.image}}
+            <img src="{{actor.flags.conan.customShield.image}}" class="sheet2-armorMenuCardImg" alt="{{actor.flags.conan.customShield.name}}"/>
+            {{else}}
+            <i class="fas fa-hammer sheet2-armorMenuCustomIcon"></i>
+            {{/if}}
+            <span class="sheet2-armorMenuCardLabel">Custom</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

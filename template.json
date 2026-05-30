@@ -1,7 +1,7 @@
 {
-  "_comment": "Actor types: character2 (player sheet), npc2 (enemy card shell — auto-created by GM Tools, not user-creatable), tools (GM Tools singleton), howard (Howard the Chronicler). Legacy types 'character' and 'npc' were removed — see CLEANUP_SHEET.md Phase 1.",
+  "_comment": "Actor types: character2 (player sheet), npc2 (enemy card shell — auto-created by GM Tools, not user-creatable), tools (GM Tools singleton). Legacy types 'character' and 'npc' were removed — see CLEANUP_SHEET.md Phase 1. Howard the Chronicler was moved to a separate module.",
   "Actor": {
-    "types": ["character2", "npc2", "tools", "howard"],
+    "types": ["character2", "npc2", "tools"],
     "character2": {
       "origin": {
         "id": "",
@@ -217,13 +217,6 @@
           "borderRadius": 8,
           "padding": 12
         }
-      }
-    },
-    "howard": {
-      "tales": {},
-      "activeTale": null,
-      "settings": {
-        "viewMode": "default"
       }
     }
   },

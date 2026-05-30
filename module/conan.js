@@ -1,7 +1,6 @@
 import ConanActorSheet2 from "../sheet2/actor-sheet2.js";
 import ConanNPCSheet2 from "./npc-sheet2.js";
 import ConanToolsSheet from "./tools-sheet.js";
-import HowardSheet from "./howard-sheet.js";
 import { dreadClock } from "../scripts/dread-clock.js";
 
 // Handlebars helpers (previously in legacy actor-sheet.js / npc-sheet.js)
@@ -343,13 +342,6 @@ Hooks.once('init', async function() {
     label: "CONAN.SheetLabels.Tools"
   });
 
-  // Register Howard the Chronicler sheet
-  Actors.registerSheet("conan", HowardSheet, {
-    types: ["howard"],
-    makeDefault: true,
-    label: "CONAN.SheetLabels.Howard"
-  });
-
   // Install shift+click damage handler early, before canvas creates tokens
   // (Must be in init, not ready — Foundry's MouseInteractionManager captures
   // callback references when tokens are drawn, which happens before ready)
@@ -359,22 +351,12 @@ Hooks.once('init', async function() {
   return preloadHandlebarsTemplates();
 });
 
-// Prevent creation of howard actors via normal means (auto-create only)
-// Also set default image and name for tools actors
+// Set default image and name for tools actors; block manual npc2 creation
 Hooks.on('preCreateActor', (actor, data, options, userId) => {
   // Block manual creation of npc2 (Enemy Card) — only spawned via GM Tools
   if (actor.type === 'npc2' && !options.conanEnemySpawn) {
     ui.notifications.warn('Enemy Cards are created automatically when dragging enemies from GM Tools.');
     return false;
-  }
-
-  // Block manual creation of howard type (it's auto-created)
-  if (actor.type === 'howard' && !options.conanAutoCreate) {
-    const existingHoward = game.actors.find(a => a.type === 'howard');
-    if (existingHoward) {
-      ui.notifications.warn('Howard the Chronicler already exists. There can be only one!');
-      return false;
-    }
   }
 
   if (actor.type === 'tools') {
@@ -398,25 +380,6 @@ Hooks.on('preCreateActor', (actor, data, options, userId) => {
 
     if (Object.keys(updates).length > 0) {
       actor.updateSource(updates);
-    }
-  }
-});
-
-// Prevent deletion of Howard the Chronicler
-Hooks.on('preDeleteActor', (actor, options, userId) => {
-  if (actor.type === 'howard') {
-    ui.notifications.error('Howard the Chronicler cannot be deleted. He is eternal.');
-    return false;
-  }
-});
-
-// Hide 'howard' from the create actor type dropdown
-Hooks.on('renderDialog', (dialog, html, data) => {
-  // Check if this is the create actor dialog
-  if (dialog.data?.title === 'Create New Actor' || dialog.title === 'Create New Actor') {
-    const select = html.find('select[name="type"]');
-    if (select.length) {
-      select.find('option[value="howard"]').remove();
     }
   }
 });
@@ -808,63 +771,6 @@ Hooks.on('createChatMessage', (message, options, userId) => {
     }
   }
 
-  // Howard — Show to Players
-  if (message.getFlag('conan', 'howardShow')) {
-    if (!game.user.isGM) {
-      const taleId = message.getFlag('conan', 'taleId');
-      const pageIndex = message.getFlag('conan', 'pageIndex') ?? 0;
-      HowardSheet.handleShowBroadcast(taleId, pageIndex);
-    }
-  }
-
-  // Howard — Panel/text block reveal/hide on player screens
-  if (message.getFlag('conan', 'howardReveal')) {
-    if (!game.user.isGM) {
-      const action = message.getFlag('conan', 'action');
-      const key = message.getFlag('conan', 'key');
-      const pageId = message.getFlag('conan', 'pageId');
-      HowardSheet.handleRevealBroadcast(action, key, pageId);
-    }
-  }
-
-  // Howard — Presentation mode reveal/hide on player screens
-  if (message.getFlag('conan', 'howardPresReveal')) {
-    if (!game.user.isGM) {
-      const action = message.getFlag('conan', 'action');
-      const elId = message.getFlag('conan', 'elId');
-      const taleId = message.getFlag('conan', 'taleId');
-      const pageIndex = message.getFlag('conan', 'pageIndex');
-      HowardSheet.handlePresRevealBroadcast(action, elId, taleId, pageIndex);
-    }
-  }
-
-  // Howard — Presentation mode zoom on player screens
-  if (message.getFlag('conan', 'howardPresZoom')) {
-    if (!game.user.isGM) {
-      const taleId = message.getFlag('conan', 'taleId');
-      const pageIndex = message.getFlag('conan', 'pageIndex');
-      const elId = message.getFlag('conan', 'elId');
-      HowardSheet.handlePresZoomBroadcast(taleId, pageIndex, elId);
-    }
-  }
-
-  // Howard — Page visibility changed, re-render player view
-  if (message.getFlag('conan', 'howardPageVisibility')) {
-    if (!game.user.isGM) {
-      const howard = game.actors.find(a => a.type === 'howard');
-      if (howard?.sheet?.rendered) {
-        howard.sheet.render(false);
-      }
-    }
-  }
-
-  // Howard — Dismiss on all player screens
-  if (message.getFlag('conan', 'howardDismiss')) {
-    if (!game.user.isGM) {
-      HowardSheet.handleDismissBroadcast();
-    }
-  }
-
   // Poison — Apply effects to player character via invisible message
   if (message.getFlag('conan', 'poisonApply')) {
     const actorId = message.getFlag('conan', 'actorId');
@@ -994,24 +900,6 @@ Hooks.once('ready', async function() {
     ui.notifications.info('Albert (GM Tools) has been created in your Actors tab.');
   }
 
-  /* Theater scene — commented out pending tile projection implementation
-  if (game.user.isGM && !game.scenes.find(s => s.getFlag('conan', 'howardPresentation'))) {
-    const scene = await Scene.create({
-      name: 'Theater',
-      width: 520, height: 780, padding: 0,
-      backgroundColor: '#1a1a1a',
-      grid: { type: 0, size: 50 },
-      tokenVision: false, fogExploration: false, globalLight: true,
-      flags: { conan: { howardPresentation: true } }
-    });
-    await scene.createEmbeddedDocuments('Tile', [{
-      texture: { src: 'systems/conan/images/howard-page-bg.svg' },
-      x: 0, y: 0, width: 520, height: 780, overhead: false,
-      flags: { conan: { theaterTile: true } }
-    }]);
-  }
-  */
-
   // Counter Ward — Wits contest triggered by clicking glowing icon
   game.conan.triggerCounterWard = async function() {
     const alert = game.conan?.counterWardAlert;
@@ -1121,61 +1009,6 @@ Hooks.once('ready', async function() {
       default: 'counter'
     }).render(true);
   };
-
-  // Auto-create Howard the Chronicler if missing (GM only)
-  if (game.user.isGM) {
-    const existingHoward = game.actors.find(a => a.type === 'howard');
-    const howardImg = 'systems/conan/images/howard.png';
-
-    if (!existingHoward) {
-      console.log('Conan | Creating Howard the Chronicler');
-      await Actor.create({
-        name: 'Howard the Chronicler',
-        type: 'howard',
-        img: howardImg,
-        ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
-        prototypeToken: {
-          name: 'Howard',
-          actorLink: true,
-          texture: {
-            src: howardImg
-          },
-          lockRotation: true,
-          displayName: CONST.TOKEN_DISPLAY_MODES.ALWAYS
-        }
-      }, { conanAutoCreate: true });
-      ui.notifications.info('Howard the Chronicler has arrived to record your tales.');
-    } else {
-      // Update Howard's image and token settings if needed
-      const defaultImages = [
-        'icons/svg/mystery-man.svg',
-        'icons/sundries/books/book-worn-brown.svg'
-      ];
-      const needsUpdate = defaultImages.includes(existingHoward.img) ||
-                          existingHoward.prototypeToken.name !== 'Howard' ||
-                          !existingHoward.prototypeToken.actorLink;
-
-      // Ensure players have Observer access (needed for Show to Players)
-      const needsOwnership = (existingHoward.ownership?.default ?? 0) < CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
-
-      if (needsUpdate || needsOwnership) {
-        console.log('Conan | Updating Howard the Chronicler');
-        const updateData = {};
-        if (needsUpdate) {
-          updateData.img = howardImg;
-          updateData['prototypeToken.name'] = 'Howard';
-          updateData['prototypeToken.actorLink'] = true;
-          updateData['prototypeToken.texture.src'] = howardImg;
-          updateData['prototypeToken.lockRotation'] = true;
-          updateData['prototypeToken.displayName'] = CONST.TOKEN_DISPLAY_MODES.ALWAYS;
-        }
-        if (needsOwnership) {
-          updateData['ownership.default'] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
-        }
-        await existingHoward.update(updateData);
-      }
-    }
-  }
 
   // Preload random quotes for character sheets
   try {
@@ -1388,17 +1221,51 @@ function _getEffectiveStatValue(actor, statName) {
     if (hasLegendary) bonus += 1;
   }
 
-  return baseValue + bonus;
+  // Custom armor + custom shield stat bonuses
+  const customArmor = actor.getFlag?.('conan', 'customArmor');
+  const customShield = actor.getFlag?.('conan', 'customShield');
+  const armorType = actor.system.armorEquipped?.type;
+  const useCustomShield = !!actor.system.useCustomShield;
+  let customArmorBonus = 0;
+  if (armorType === 'custom' && customArmor && Array.isArray(customArmor.bonuses)) {
+    customArmorBonus = customArmor.bonuses
+      .filter(b => b.target === statName)
+      .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+  }
+  let customShieldBonus = 0;
+  if (useCustomShield && customShield && Array.isArray(customShield.bonuses)) {
+    customShieldBonus = customShield.bonuses
+      .filter(b => b.target === statName)
+      .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+  }
+
+  console.log('[Damage/StatHelper]', statName, '| base:', baseValue, '| skills:', bonus, '| customArmor:', customArmorBonus, customArmor?.name, '| customShield:', customShieldBonus, customShield?.name, '| total:', baseValue + bonus + customArmorBonus + customShieldBonus);
+  return baseValue + bonus + customArmorBonus + customShieldBonus;
 }
 
 // Handle damage button clicks in chat messages
 Hooks.on('renderChatMessage', (message, html, data) => {
   // Capture damage value from damage roll messages for shift+click application
   // Check for player damage rolls (.damage-result-box)
-  const damageBox = html.find('.damage-result-box').first();
+  // Dual Wielder: when .dual-damage-row is present, SUM all damage boxes within
+  // (each weapon rolled its own damage; both apply when target is clicked).
+  const dualRow = html.find('.dual-damage-row');
+  const damageBox = dualRow.length > 0
+    ? dualRow.find('.damage-result-box').first()
+    : html.find('.damage-result-box').first();
   if (damageBox.length > 0) {
-    const damageText = damageBox.text().trim();
-    const damageValue = parseInt(damageText);
+    let damageValue;
+    if (dualRow.length > 0) {
+      let sum = 0;
+      dualRow.find('.damage-result-box').each((i, el) => {
+        const v = parseInt($(el).text().trim());
+        if (!isNaN(v)) sum += v;
+      });
+      damageValue = sum;
+    } else {
+      const damageText = damageBox.text().trim();
+      damageValue = parseInt(damageText);
+    }
     if (!isNaN(damageValue) && damageValue > 0) {
       game.conan = game.conan || {};
       // Check if this is a healing spell (data-healing attribute)
@@ -1733,13 +1600,37 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       damageFormula = damageFormula.replace(/WitsDie/g, `1${witsAttr.die}`);
     }
 
+    // Dual Wielder: off-hand damage is rolled SEPARATELY below (after the main roll),
+    // not appended to this formula. Each weapon produces its own damage box.
+
     // Add damage stat bonus if applicable (using effective value with skill bonuses)
+    // Dual Wielder rule: only ONE stat bonus is added to the combined attack. When both
+    // weapons supply a damage stat (e.g., a future skill makes the off-hand use Edge while
+    // the primary uses Might), compare effective values and use the higher one. The chosen
+    // stat's name is stored on damageData so the breakdown shows it correctly.
+    let chosenDamageStat = damageData.damageStat;
+    let chosenStatValue = 0;
     if (damageData.damageStat) {
       const damageAttr = actor.system.attributes[damageData.damageStat];
       if (damageAttr) {
-        // Calculate effective stat value including skill bonuses (Steely Thews, Legendary, etc.)
-        const effectiveStatValue = _getEffectiveStatValue(actor, damageData.damageStat);
-        damageFormula += ` + ${effectiveStatValue}`;
+        chosenStatValue = _getEffectiveStatValue(actor, damageData.damageStat);
+      }
+      // Compare against off-hand's damage stat (Dual Wielder)
+      if (damageData.dualWielderSecondaryDamageStat &&
+          damageData.dualWielderSecondaryDamageStat !== damageData.damageStat) {
+        const offhandStatAttr = actor.system.attributes[damageData.dualWielderSecondaryDamageStat];
+        if (offhandStatAttr) {
+          const offhandStatVal = _getEffectiveStatValue(actor, damageData.dualWielderSecondaryDamageStat);
+          if (offhandStatVal > chosenStatValue) {
+            chosenDamageStat = damageData.dualWielderSecondaryDamageStat;
+            chosenStatValue = offhandStatVal;
+          }
+        }
+      }
+      // Stash the chosen stat back onto damageData so downstream breakdown uses it
+      damageData.damageStat = chosenDamageStat;
+      if (chosenStatValue > 0) {
+        damageFormula += ` + ${chosenStatValue}`;
       }
     }
 
@@ -1795,6 +1686,28 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const damageRoll = new Roll(damageFormula, actor.getRollData());
     await damageRoll.evaluate();
 
+    // Dual Wielder: roll the off-hand weapon's damage as JUST the die roll.
+    // Per rule, the stat bonus (Might/Edge) and other bonuses are added ONCE to the
+    // combined attack — they live on the primary weapon's box. The off-hand box shows
+    // its raw die roll alone. Total damage applied = primary + off-hand = die1 + die2
+    // + stat + bonuses (all counted once across both).
+    //
+    // For future weapons that may use Edge for damage instead of Might: the primary's
+    // damageStat is used. If both weapons supplied stat info, we'd pick the higher
+    // value (TODO: pass off-hand damageStat through from actor-sheet2.js to compare).
+    let offhandRoll = null;
+    let offhandDamage = 0;
+    const offhandBreakdownLines = [];
+    if (damageData.dualWielderSecondaryDamage) {
+      const offhandFormula = damageData.dualWielderSecondaryDamage; // die only, no bonuses
+      offhandRoll = new Roll(offhandFormula, actor.getRollData());
+      await offhandRoll.evaluate();
+      offhandDamage = offhandRoll.total;
+
+      const offhandDieRoll = offhandRoll.terms[0]?.total || offhandRoll.total;
+      offhandBreakdownLines.push({ label: 'Base Damage', value: damageData.dualWielderSecondaryDamage, roll: offhandDieRoll });
+    }
+
     // Apply Impaling Throw double damage
     let impalingThrowDamage = null;
     if (damageData.impalingThrow) {
@@ -1831,12 +1744,26 @@ Hooks.on('renderChatMessage', (message, html, data) => {
 
     // Calculate massive damage if flex triggered
     let massiveDamage = null;
+    let primaryMassive = null;
+    let offhandMassive = null;
     if (flexData.triggered) {
       const dieMatch = damageData.damage.match(/(\d+)?d(\d+)/i);
       if (dieMatch) {
-        massiveDamage = damageRoll.total + parseInt(dieMatch[2]);
+        primaryMassive = damageRoll.total + parseInt(dieMatch[2]);
       } else {
-        massiveDamage = damageRoll.total * 2;
+        primaryMassive = damageRoll.total * 2;
+      }
+      // Dual Wielder: compute off-hand massive too and use the combined total
+      if (damageData.dualWielderSecondaryDamage && offhandRoll) {
+        const offhandDieMatch = damageData.dualWielderSecondaryDamage.match(/(\d+)?d(\d+)/i);
+        if (offhandDieMatch) {
+          offhandMassive = offhandRoll.total + parseInt(offhandDieMatch[2]);
+        } else {
+          offhandMassive = offhandRoll.total * 2;
+        }
+        massiveDamage = primaryMassive + offhandMassive;
+      } else {
+        massiveDamage = primaryMassive;
       }
     }
 
@@ -1852,11 +1779,26 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const staticPart = diePartMatch ? diePartMatch[2].trim() : '';
     breakdownLines.push({ label: isWitsDieSpell ? 'Wits Die' : 'Base Damage', value: dieOnly, roll: damageDieRoll });
     if (staticPart) {
-      breakdownLines.push({ label: 'Spell Bonus', value: staticPart });
+      // "Spell Bonus" only applies to spell damage. For weapons, the static part is
+      // a built-in weapon bonus (e.g., Short Bow's "1d6+1") — distinct from the Origin
+      // Bonus that comes via damageData.damageBonus (the Steppes +1 etc.).
+      const staticLabel = damageData.isSpell ? 'Spell Bonus' : 'Weapon Bonus';
+      breakdownLines.push({ label: staticLabel, value: staticPart });
     }
     if (damageData.damageStat) {
       const effectiveStatValue = _getEffectiveStatValue(actor, damageData.damageStat);
       breakdownLines.push({ label: damageData.damageStat.charAt(0).toUpperCase() + damageData.damageStat.slice(1), value: `+${effectiveStatValue}` });
+
+      // Surface custom armor contribution as its own line (informational, already in effectiveStatValue)
+      const customArmorForDmg = actor.getFlag?.('conan', 'customArmor');
+      if (actor.system.armorEquipped?.type === 'custom' && customArmorForDmg && Array.isArray(customArmorForDmg.bonuses)) {
+        const armorStatBonus = customArmorForDmg.bonuses
+          .filter(b => b.target === damageData.damageStat)
+          .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+        if (armorStatBonus > 0) {
+          breakdownLines.push({ label: 'Custom Armor', value: `+${armorStatBonus} ${customArmorForDmg.name}`, isSkill: true });
+        }
+      }
     }
     if (damageData.damageBonus > 0) breakdownLines.push({ label: 'Origin Bonus', value: `+${damageData.damageBonus}` });
     for (const contrib of skillContributions) {
@@ -1924,7 +1866,12 @@ Hooks.on('renderChatMessage', (message, html, data) => {
 
     // Build breakdown HTML for expandable panel
     let breakdownHtml = `<div class="damage-breakdown" style="display: none;">`;
-    breakdownHtml += `<div class="breakdown-header">Damage Breakdown</div>`;
+    // When Dual Wielder, use the primary weapon name in the header so both
+    // breakdowns (primary + off-hand) follow the same "{Weapon} Damage" format.
+    const breakdownHeaderText = (damageData.dualWielderSecondaryDamage && offhandRoll)
+      ? `${damageData.weaponName} Damage`
+      : 'Damage Breakdown';
+    breakdownHtml += `<div class="breakdown-header">${breakdownHeaderText}</div>`;
     for (const line of breakdownLines) {
       const skillClass = line.isSkill ? 'breakdown-skill' : '';
       if (line.roll !== undefined) {
@@ -1950,6 +1897,25 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     breakdownHtml += `<div class="breakdown-total"><span class="breakdown-label">Total</span><span class="breakdown-value">${finalBaseDamage}</span></div>`;
     breakdownHtml += `</div>`;
 
+    // Dual Wielder: build the off-hand breakdown panel (full damage breakdown, just like primary).
+    // Use both .damage-breakdown (for the existing nice styling: gradient bg, gold header bar,
+    // red TOTAL footer) and .offhand-breakdown (for the off-hand click handler to target it).
+    let offhandBreakdownHtml = '';
+    if (damageData.dualWielderSecondaryDamage && offhandDamage > 0) {
+      offhandBreakdownHtml = `<div class="damage-breakdown offhand-breakdown" style="display: none;">`;
+      offhandBreakdownHtml += `<div class="breakdown-header">${damageData.dualWielderSecondaryName} Damage</div>`;
+      for (const line of offhandBreakdownLines) {
+        const skillClass = line.isSkill ? 'breakdown-skill' : '';
+        if (line.roll !== undefined) {
+          offhandBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value} → ${line.roll}</span></div>`;
+        } else {
+          offhandBreakdownHtml += `<div class="breakdown-line ${skillClass}"><span class="breakdown-label">${line.label}</span><span class="breakdown-value">${line.value}</span></div>`;
+        }
+      }
+      offhandBreakdownHtml += `<div class="breakdown-total"><span class="breakdown-label">Total</span><span class="breakdown-value">${offhandDamage}</span></div>`;
+      offhandBreakdownHtml += `</div>`;
+    }
+
     // Build skill icons grid HTML
     let skillIconsHtml = '';
     if (damageSkillIcons.length > 0) {
@@ -1967,8 +1933,17 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       let content = `<div class="conan-roll damage-roll" style="border-color: ${ownerColor};">`;
       content += `<div class="roll-header">`;
       content += `<img src="${tokenImg}" class="token-img" alt="${actor.name}">`;
-      content += `<div class="roll-title">${damageData.weaponName} Damage</div>`;
+      // Dual Wielder: title includes both weapon names so the damage card matches the
+      // attack card's "Hunting Spear + Rapier" format. Badge below mirrors the attack badge.
+      const dwActiveDmg = damageData.dualWielderSecondaryDamage && offhandDamage > 0;
+      const damageTitle = dwActiveDmg
+        ? `${damageData.weaponName} + ${damageData.dualWielderSecondaryName} Damage`
+        : `${damageData.weaponName} Damage`;
+      content += `<div class="roll-title">${damageTitle}</div>`;
       content += `</div>`;
+      if (dwActiveDmg) {
+        content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ Dual Wielder</div>`;
+      }
 
       // Show damage with skill icons
       const baneAttr = baneWeaponDie ? ' data-bane-weapon="true"' : '';
@@ -1993,10 +1968,21 @@ Hooks.on('renderChatMessage', (message, html, data) => {
         content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #4a0080 0%, #2d004d 100%); border-color: #9040ff; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
         content += `</div>`;
       } else {
-        content += `<div class="roll-result-wrapper">`;
-        content += skillIconsHtml;
-        content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="cursor: pointer;">${finalDamage}</div>`;
-        content += `</div>`;
+        // Dual Wielder produces two complete damage boxes side by side (one per weapon).
+        // Wrapped in .dual-damage-row so the apply-pipeline can detect it and sum both.
+        const isDualWielder = damageData.dualWielderSecondaryDamage && offhandDamage > 0;
+        if (isDualWielder) {
+          content += `<div class="roll-result-wrapper dual-damage-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">`;
+          content += skillIconsHtml;
+          content += `<div class="damage-result-box clickable-breakdown"${baneAttr} title="${damageData.weaponName}" style="cursor: pointer;">${finalDamage}</div>`;
+          content += `<div class="damage-result-box clickable-offhand-breakdown"${baneAttr} title="${damageData.dualWielderSecondaryName}" style="cursor: pointer;">${offhandDamage}</div>`;
+          content += `</div>`;
+        } else {
+          content += `<div class="roll-result-wrapper">`;
+          content += skillIconsHtml;
+          content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="cursor: pointer;">${finalDamage}</div>`;
+          content += `</div>`;
+        }
       }
       // SP damage boost buttons (+1d4 / +2d4)
       content += `<div class="sp-boost-row">`;
@@ -2004,6 +1990,7 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       content += `<button type="button" class="sp-dmg-boost-btn" data-dice="2" data-cost="2" data-actor-id="${damageData.actorId}">+2</button>`;
       content += `</div>`;
       content += breakdownHtml;
+      content += offhandBreakdownHtml;
 
       content += `<div class="flex-result">`;
       content += `<strong>Flex Die (${flexData.die}):</strong> ${flexData.result}`;
@@ -2019,7 +2006,17 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       const effectiveTotal = damageData.impalingThrow ? impalingThrowDamage : damageRoll.total;
       const dieMatch = damageData.damage.match(/(\d+)?d(\d+)/i);
       const maxDieValue = dieMatch ? parseInt(dieMatch[2]) : effectiveTotal;
-      const effectiveMassive = effectiveTotal + maxDieValue;
+
+      // Dual Wielder: combine both weapons' damage for the flex card numbers
+      const isDualW = !!(damageData.dualWielderSecondaryDamage && offhandRoll);
+      const dualBaseDamage = isDualW ? (effectiveTotal + offhandRoll.total) : effectiveTotal;
+      const effectiveMassive = isDualW ? massiveDamage : (effectiveTotal + maxDieValue);
+      // Compute off-hand max die face for its own massive breakdown injection
+      let offhandMaxDieValue = 0;
+      if (isDualW) {
+        const offhandDieMatch = damageData.dualWielderSecondaryDamage.match(/(\d+)?d(\d+)/i);
+        offhandMaxDieValue = offhandDieMatch ? parseInt(offhandDieMatch[2]) : offhandRoll.total;
+      }
 
       const flexType = damageData.weaponType === 'sorcery' ? 'spell_damage' :
                        damageData.weaponType === 'melee' ? 'melee_damage' : 'ranged_damage';
@@ -2028,13 +2025,22 @@ Hooks.on('renderChatMessage', (message, html, data) => {
         actorId: actor.id,
         rollType: flexType,
         celebData: flexData.celebData,
-        baseDamage: effectiveTotal,
+        baseDamage: dualBaseDamage,
         massiveDamage: effectiveMassive,
         maxDieValue: maxDieValue,
         normalContent: buildNormalContent(),
         breakdownHtml: breakdownHtml,
         spellCostLp: damageData.spellCostLp || 0,
-        spellCostSp: damageData.spellCostSp || 0
+        spellCostSp: damageData.spellCostSp || 0,
+        // Dual Wielder pass-through so the Massive! choice handler can render two boxes
+        isDualWielder: isDualW,
+        dualPrimaryMassive: primaryMassive,
+        dualOffhandMassive: offhandMassive,
+        dualPrimaryName: damageData.weaponName,
+        dualOffhandName: damageData.dualWielderSecondaryName,
+        // For the off-hand massive breakdown injection (parallel to primary's breakdownHtml + maxDieValue)
+        offhandBreakdownHtml: offhandBreakdownHtml,
+        offhandMaxDieValue: offhandMaxDieValue
       };
 
       const flexCardContent = _buildFlexChoiceCard(actor, 'damage', flexData, flexChoiceData, tokenImg, ownerColor);
@@ -2090,52 +2096,6 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     button.disabled = true;
     button.textContent = 'ROLLED';
   });
-
-  // ========== HOWARD CHECK: Roll button triggers _onRollAttribute ==========
-  html.find('.howard-check-roll-btn').off('click').on('click', (ev) => {
-    ev.preventDefault();
-    const btn = ev.currentTarget;
-    const attribute = btn.dataset.attribute;
-    if (!attribute) return;
-
-    // Find the clicking player's character — try assigned character first, then owned character2 actors
-    let actor = game.user.character;
-    if (!actor || actor.type !== 'character2') {
-      actor = game.actors.find(a => a.type === 'character2' && a.isOwner && !a.pack);
-    }
-    if (!actor) {
-      ui.notifications.warn("No character found. Make sure you own a character.");
-      return;
-    }
-
-    // Get their sheet and call _onRollAttribute
-    const sheet = actor.sheet;
-    if (sheet?._onRollAttribute) {
-      sheet._onRollAttribute(null, { forceAttribute: attribute, howardCheckInstance: btn.dataset.checkInstance });
-    }
-  });
-
-  // ========== HOWARD CHECK: Auto-detect rolls tagged with data-howard-check ==========
-  if (game.user.isGM) {
-    const rollEl = html.find('[data-howard-check]');
-    if (rollEl.length) {
-      const checkInstanceId = rollEl.attr('data-howard-check');
-      const resultBox = rollEl.find('.skill-result-box').first();
-      const rollTotal = resultBox.length ? parseInt(resultBox.text()) : NaN;
-      const actorId = message.speaker?.actor;
-      const actor = actorId ? game.actors.get(actorId) : null;
-
-      // Find the Howard sheet with this active check
-      const howard = game.actors.find(a => a.type === 'howard');
-      const howardSheet = howard?.sheet;
-      if (howardSheet?._activeCheck?.checkInstanceId === checkInstanceId && actor) {
-        const dc = howardSheet._activeCheck.dc;
-        const passed = !isNaN(rollTotal) && rollTotal >= dc;
-        const tokenImg = actor.prototypeToken?.texture?.src || actor.img || 'icons/svg/mystery-man.svg';
-        howardSheet._addCheckResult(actor.id, actor.name, tokenImg, rollTotal, passed);
-      }
-    }
-  }
 
   // ========== SP BOOST: +1/+2 stamina spend buttons on skill checks ==========
   html.find('.sp-boost-btn').each((i, btn) => {
@@ -2510,6 +2470,23 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     }
   });
 
+  // Dual Wielder: clicking the off-hand box toggles its own .offhand-breakdown panel
+  html.find('.clickable-offhand-breakdown').off('click').on('click', (event) => {
+    const box = event.currentTarget;
+    const messageEl = box.closest('.conan-roll');
+    if (!messageEl) return;
+    const breakdown = messageEl.querySelector('.offhand-breakdown');
+    if (!breakdown) return;
+    const glowColor = 'rgba(205, 133, 63, 0.6)'; // Bronze for off-hand
+    if (breakdown.style.display === 'none' || !breakdown.style.display) {
+      breakdown.style.display = 'block';
+      box.style.boxShadow = `0 0 15px ${glowColor}`;
+    } else {
+      breakdown.style.display = 'none';
+      box.style.boxShadow = '';
+    }
+  });
+
   // Handle flex choice button clicks
   html.find('.flex-choice-btn').off('click').on('click', async (event) => {
     const button = event.currentTarget;
@@ -2543,14 +2520,28 @@ Hooks.on('renderChatMessage', (message, html, data) => {
 
     // Handle the choice
     if (choice === 'stamina') {
-      // Add +1 stamina
+      // Base +1 from flex, plus custom armor "Stamina Bonus" if equipped
       const currentStamina = actor.system.stamina || 0;
-      await actor.update({ 'system.stamina': currentStamina + 1 });
+      const customArmor = actor.getFlag?.('conan', 'customArmor');
+      const wearingCustom = actor.system.armorEquipped?.type === 'custom' && customArmor;
+      let armorStaminaBonus = 0;
+      if (wearingCustom && Array.isArray(customArmor.bonuses)) {
+        for (const b of customArmor.bonuses) {
+          if (b.target === 'stamina') armorStaminaBonus += Number(b.value) || 0;
+        }
+      }
+      const totalGain = 1 + armorStaminaBonus;
+      const newStamina = currentStamina + totalGain;
+      await actor.update({ 'system.stamina': newStamina });
+      console.log('[FlexStamina] base:+1 | customArmor:+', armorStaminaBonus, customArmor?.name, '| total:+', totalGain);
 
       // Post confirmation
+      const bonusLine = armorStaminaBonus > 0
+        ? `<div style="font-size: 11px; color: #87CEEB; margin-top: 4px;">+1 base, +${armorStaminaBonus} ${customArmor.name}</div>`
+        : '';
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: actor }),
-        content: `<div class="conan-roll flex-result-message" style="border-color: #4CAF50; background: linear-gradient(180deg, #1a3d1a 0%, #0d1f0d 100%);"><div class="roll-header" style="background: linear-gradient(180deg, #2d5a2d 0%, #1a3d1a 100%);"><div class="roll-title" style="color: #90EE90;">⚡ +1 Stamina!</div></div><div style="text-align: center; padding: 10px; color: #90EE90;">Flex bonus applied. Stamina is now ${currentStamina + 1}.</div></div>`,
+        content: `<div class="conan-roll flex-result-message" style="border-color: #4CAF50; background: linear-gradient(180deg, #1a3d1a 0%, #0d1f0d 100%);"><div class="roll-header" style="background: linear-gradient(180deg, #2d5a2d 0%, #1a3d1a 100%);"><div class="roll-title" style="color: #90EE90;">⚡ +${totalGain} Stamina!</div></div><div style="text-align: center; padding: 10px; color: #90EE90;">Flex bonus applied. Stamina is now ${newStamina}.${bonusLine}</div></div>`,
         rollMode: game.settings.get('core', 'rollMode')
       });
 
@@ -2603,9 +2594,31 @@ Hooks.on('renderChatMessage', (message, html, data) => {
         massiveBreakdown = massiveBreakdown
           .replace(/<div class="breakdown-total">.*?<\/div>/, `${maxDieLine}<div class="breakdown-total"><span class="breakdown-label">Total</span><span class="breakdown-value">${massiveTotal}</span></div>`);
       }
+
+      // Dual Wielder: render two damage boxes side by side AND build a parallel
+      // off-hand massive breakdown (same injection treatment as primary).
+      let damageBoxesHtml;
+      let offhandMassiveBreakdown = '';
+      if (flexData.isDualWielder && flexData.dualPrimaryMassive !== undefined) {
+        damageBoxesHtml = `<div class="dual-damage-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; margin: 10px auto;">`;
+        damageBoxesHtml += `<div class="damage-result-box clickable-breakdown" title="${flexData.dualPrimaryName}" style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${flexData.dualPrimaryMassive}</div>`;
+        damageBoxesHtml += `<div class="damage-result-box clickable-offhand-breakdown" title="${flexData.dualOffhandName}" style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${flexData.dualOffhandMassive}</div>`;
+        damageBoxesHtml += `</div>`;
+        // Build the off-hand massive breakdown — inject "Max Die (Massive)" line + update total
+        offhandMassiveBreakdown = flexData.offhandBreakdownHtml || '';
+        const offhandMaxDie = flexData.offhandMaxDieValue || 0;
+        if (offhandMassiveBreakdown && offhandMaxDie > 0) {
+          const offhandMaxLine = `<div class="breakdown-line breakdown-skill"><span class="breakdown-label">Max Die (Massive)</span><span class="breakdown-value">+${offhandMaxDie}</span></div>`;
+          offhandMassiveBreakdown = offhandMassiveBreakdown
+            .replace(/<div class="breakdown-total">.*?<\/div>/, `${offhandMaxLine}<div class="breakdown-total"><span class="breakdown-label">Total</span><span class="breakdown-value">${flexData.dualOffhandMassive}</span></div>`);
+        }
+      } else {
+        damageBoxesHtml = `<div class="damage-result-box clickable-breakdown" style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 32px; margin: 10px auto; cursor: pointer;">${massiveTotal}</div>`;
+      }
+
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: actor }),
-        content: `<div class="conan-roll flex-result-message damage-roll" style="border-color: #E10600; background: linear-gradient(180deg, #3d1a1a 0%, #1f0d0d 100%);"><div class="roll-header" style="background: linear-gradient(180deg, #5a2d2d 0%, #3d1a1a 100%);"><div class="roll-title" style="color: #ff6b6b;">⚡ MASSIVE DAMAGE!</div></div><div class="damage-result-box clickable-breakdown" style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 32px; margin: 10px auto; cursor: pointer;">${massiveTotal}</div><div class="sp-boost-row"><button type="button" class="sp-dmg-boost-btn" data-dice="1" data-cost="1" data-actor-id="${actor.id}">+1</button><button type="button" class="sp-dmg-boost-btn" data-dice="2" data-cost="2" data-actor-id="${actor.id}">+2</button></div>${massiveBreakdown}</div>`,
+        content: `<div class="conan-roll flex-result-message damage-roll" style="border-color: #E10600; background: linear-gradient(180deg, #3d1a1a 0%, #1f0d0d 100%);"><div class="roll-header" style="background: linear-gradient(180deg, #5a2d2d 0%, #3d1a1a 100%);"><div class="roll-title" style="color: #ff6b6b;">⚡ MASSIVE DAMAGE!</div></div>${damageBoxesHtml}<div class="sp-boost-row"><button type="button" class="sp-dmg-boost-btn" data-dice="1" data-cost="1" data-actor-id="${actor.id}">+1</button><button type="button" class="sp-dmg-boost-btn" data-dice="2" data-cost="2" data-actor-id="${actor.id}">+2</button></div>${massiveBreakdown}${offhandMassiveBreakdown}</div>`,
         rollMode: game.settings.get('core', 'rollMode')
       });
 
@@ -2952,6 +2965,17 @@ async function _rollDamageFromFlexChoice(actor, damageData) {
   if (damageData.damageStat) {
     const effectiveStatValue = _getEffectiveStatValue(actor, damageData.damageStat);
     breakdownLines.push({ label: damageData.damageStat.charAt(0).toUpperCase() + damageData.damageStat.slice(1), value: `+${effectiveStatValue}` });
+
+    // Surface custom armor contribution as its own line (informational, already in effectiveStatValue)
+    const customArmorForFlexDmg = actor.getFlag?.('conan', 'customArmor');
+    if (actor.system.armorEquipped?.type === 'custom' && customArmorForFlexDmg && Array.isArray(customArmorForFlexDmg.bonuses)) {
+      const armorStatBonus = customArmorForFlexDmg.bonuses
+        .filter(b => b.target === damageData.damageStat)
+        .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+      if (armorStatBonus > 0) {
+        breakdownLines.push({ label: 'Custom Armor', value: `+${armorStatBonus} ${customArmorForFlexDmg.name}`, isSkill: true });
+      }
+    }
   }
   if (damageData.damageBonus > 0) breakdownLines.push({ label: 'Origin Bonus', value: `+${damageData.damageBonus}` });
   for (const contrib of skillContributions) {
@@ -3351,6 +3375,12 @@ async function applyDamageToToken(token) {
         const eagleReduction = Math.min(2, baseAR);
         baseAR = Math.max(0, baseAR - eagleReduction);
         reductionSources.push(`Eagle Eye (-${eagleReduction} AR pierced)`);
+      }
+      // Dual Wielder Fighting Style hindrance: -1 AR (min 0)
+      const fightingStyleAR = actor?.getFlag('conan', 'fightingStyle');
+      if (fightingStyleAR?.id === 'dual-wielder' && baseAR > 0) {
+        baseAR = Math.max(0, baseAR - 1);
+        reductionSources.push('Dual Wielder (-1 AR)');
       }
       if (baseAR > 0) {
         damageReduction += baseAR;
@@ -5760,6 +5790,19 @@ Hooks.on('deleteCombat', async (combat, options, userId) => {
     }
   }
 
+  // Phase 3f — Reset Fighting Style state on all player characters at combat end.
+  // Clears active stance + spent lock so the stance row resets to "inactive ready"
+  // for the next combat. Per book rule, the once-per-combat lock is per-combat only.
+  for (const actor of game.actors) {
+    if (actor.type !== 'character2') continue;
+    if (actor.getFlag('conan', 'fightingStyle')) {
+      await actor.unsetFlag('conan', 'fightingStyle');
+    }
+    if (actor.getFlag('conan', 'fightingStyleSpent')) {
+      await actor.unsetFlag('conan', 'fightingStyleSpent');
+    }
+  }
+
   // Clear Bound debuffs (Garrote) from all tokens
   for (const tokenDoc of game.scenes.active?.tokens || []) {
     const boundData = tokenDoc.actor?.getFlag('conan', 'boundDebuff');
@@ -7381,7 +7424,6 @@ function _onAreaPointerMove(event) {
 async function preloadHandlebarsTemplates() {
   return loadTemplates([
     "systems/conan/templates/tools-sheet.html",
-    "systems/conan/templates/howard-sheet.hbs",
     "systems/conan/sheet2/actor-sheet2.hbs",
     "systems/conan/sheet2/parts/tab-home.hbs",
     "systems/conan/sheet2/parts/tab-attacks.hbs",

@@ -360,6 +360,34 @@ const THREAT_POOLS = {
 // Flat union for trait badge lookups (resolves any trait ID regardless of pool)
 const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS, ...THREAT_TRAITS_BLACKSOULS];
 
+// ============================================
+// ENEMY TOKEN MARKERS
+// Prepends a color/shape emoji to each newly-spawned enemy's token name so
+// players can quickly call out which token they're targeting ("I attack the
+// blue circle"). Pool is scanned per-scene at spawn time — used markers are
+// skipped; deleted enemies free their marker for reuse automatically.
+// 32 markers total: 9 circles + 9 squares + 9 hearts + 5 diamonds.
+// ============================================
+const ENEMY_MARKERS = [
+  '🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫','⚪',
+  '🟥','🟧','🟨','🟩','🟦','🟪','🟫','⬛','⬜',
+  '❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍',
+  '🔶','🔷','💠','💎','♦️'
+];
+
+function _pickEnemyMarker(scene) {
+  const used = new Set();
+  for (const t of (scene?.tokens || [])) {
+    const m = t.flags?.conan?.enemyMarker;
+    if (m) used.add(m);
+  }
+  for (const m of ENEMY_MARKERS) {
+    if (!used.has(m)) return m;
+  }
+  // Pool exhausted — wrap around (rare; would need 33+ live enemies on scene)
+  return ENEMY_MARKERS[0];
+}
+
 // Hyborian name pool — gendered for flavor text pronouns
 const HYBORIAN_NAMES_M = [
   'Aldric','Artos','Balthus','Brennus','Cassian','Corvus','Demetros','Drago','Falco','Gaius',
@@ -719,6 +747,7 @@ export default class ConanToolsSheet extends ActorSheet {
   // ========== STATE PRESERVATION ==========
   _scrollTop = 0;
   _activeTab = 'enemies';
+  _activeWorkshopSubTab = 'weapons';
 
   // Enemy data cache
   _enemyData = null;
@@ -773,12 +802,6 @@ export default class ConanToolsSheet extends ActorSheet {
 
   // Areas tab state (session-only)
   _areaDefaultSize = 200;  // Default bounding box size in pixels
-
-  // Chat capture state (session-only)
-  _chatCaptureListening = false;
-  _chatCapturedRolls = [];
-  _chatCaptureSelectedIndex = null;
-  _chatCaptureHookId = null;
 
   /** @override */
   async _render(force = false, options = {}) {
@@ -1159,18 +1182,6 @@ export default class ConanToolsSheet extends ActorSheet {
       _pixelsPerUnit: pixelsPerUnit
     };
 
-    // ===== CHAT CAPTURE DATA =====
-    context.chatCapture = {
-      listening: this._chatCaptureListening,
-      rolls: this._chatCapturedRolls.map((roll, index) => ({
-        ...roll,
-        selected: index === this._chatCaptureSelectedIndex
-      })),
-      selectedRoll: this._chatCaptureSelectedIndex !== null
-        ? this._chatCapturedRolls[this._chatCaptureSelectedIndex]
-        : null
-    };
-
     return context;
   }
 
@@ -1485,12 +1496,6 @@ export default class ConanToolsSheet extends ActorSheet {
     // Celebration badge click - opens programming window
     html.find('.flex-celeb-badge').click(this._onCelebrationBadgeClick.bind(this));
 
-    // ========== CHAT CAPTURE TAB LISTENERS ==========
-    html.find('.chat-capture-toggle').click(this._onChatCaptureToggle.bind(this));
-    html.find('.chat-capture-clear').click(this._onChatCaptureClear.bind(this));
-    html.find('.chat-capture-item').click(this._onChatCaptureSelect.bind(this));
-    html.find('.chat-capture-export').click(this._onChatCaptureExport.bind(this));
-
     // ========== TRAVEL TAB LISTENERS ==========
     // Add waypoint button - enters placement mode
     html.find('.travel-add-waypoint-btn').click(this._onTravelAddWaypoint.bind(this));
@@ -1538,6 +1543,45 @@ export default class ConanToolsSheet extends ActorSheet {
     html.find('.travel-save-btn').click(this._onTravelSave.bind(this));
     html.find('.travel-load-btn').click(this._onTravelLoad.bind(this));
     html.find('.travel-delete-btn').click(this._onTravelDelete.bind(this));
+
+    // ========== WORKSHOP — WEAPON FORGE LISTENERS ==========
+    this._renderWorkshopWeapons(html);
+    html.find('.workshop-weapon-new-btn').click(this._onWorkshopWeaponNew.bind(this));
+    html.find('.workshop-weapon-edit').click(this._onWorkshopWeaponEdit.bind(this));
+    html.find('.workshop-weapon-delete').click(this._onWorkshopWeaponDelete.bind(this));
+    html.find('.workshop-weapon-detail-toggle').click(this._onWorkshopWeaponDetailToggle.bind(this));
+    // Draggable weapon cards — same _onDragStart router as area markers / enemies
+    html.find('.workshop-weapon-card').on('dragstart', this._onDragStart.bind(this));
+
+    // ========== WORKSHOP — SUB-TAB SWITCHING ==========
+    html.find('.workshop-subtab').on('click', this._onWorkshopSubTabClick.bind(this));
+
+    // Restore previously-active workshop sub-tab after re-render (e.g., after Forge).
+    if (this._activeWorkshopSubTab && this._activeWorkshopSubTab !== 'weapons') {
+      const root = html.find('.tools-panel[data-panel="workshop"]');
+      root.find('.workshop-subtab').removeClass('active');
+      root.find('.workshop-subpanel').removeClass('active');
+      root.find(`.workshop-subtab[data-subtab="${this._activeWorkshopSubTab}"]`).addClass('active');
+      root.find(`.workshop-subpanel[data-subpanel="${this._activeWorkshopSubTab}"]`).addClass('active');
+    }
+
+    // ========== WORKSHOP — ARMOR FORGE LISTENERS ==========
+    this._renderWorkshopArmors(html);
+    html.find('.workshop-armor-new-btn').click(this._onWorkshopArmorNew.bind(this));
+    html.find('.workshop-armor-edit').click(this._onWorkshopArmorEdit.bind(this));
+    html.find('.workshop-armor-delete').click(this._onWorkshopArmorDelete.bind(this));
+    html.find('.workshop-armor-detail-toggle').click(this._onWorkshopArmorDetailToggle.bind(this));
+    // Draggable armor cards — same _onDragStart router as weapon cards
+    html.find('.workshop-armor-card').on('dragstart', this._onDragStart.bind(this));
+
+    // ========== WORKSHOP — SHIELD FORGE LISTENERS ==========
+    this._renderWorkshopShields(html);
+    html.find('.workshop-shield-new-btn').click(this._onWorkshopShieldNew.bind(this));
+    html.find('.workshop-shield-edit').click(this._onWorkshopShieldEdit.bind(this));
+    html.find('.workshop-shield-delete').click(this._onWorkshopShieldDelete.bind(this));
+    html.find('.workshop-shield-detail-toggle').click(this._onWorkshopShieldDetailToggle.bind(this));
+    // Draggable shield cards — must bind here because they're painted AFTER the .workshop-armor-card dragstart bind above
+    html.find('.workshop-shield-card').on('dragstart', this._onDragStart.bind(this));
 
     // ========== AREAS TAB LISTENERS ==========
     this._renderAreaPalette(html);
@@ -1930,6 +1974,76 @@ export default class ConanToolsSheet extends ActorSheet {
       // Use generated image as drag preview
       const dragImg = this._generateAreaLetterImage(label, 60);
       dt.setDragImage(dragImg, 30, 30);
+      return;
+    }
+
+    // Check if this is a Workshop weapon card drag
+    if (token.classList.contains('workshop-weapon-card')) {
+      const weaponId = token.dataset.weaponId;
+      const weapons = this.actor.getFlag('conan', 'workshopWeapons') || {};
+      const weapon = weapons[weaponId];
+      if (!weapon) {
+        console.warn('Conan | Could not find workshop weapon for drag:', weaponId);
+        return;
+      }
+      console.log('Conan | Drag started on workshop weapon:', weapon.name);
+      const dragData = {
+        type: 'ConanWeapon',
+        weapon: weapon  // full snapshot — receiver translates to armedWeapons shape
+      };
+      const dt = (event.originalEvent || event).dataTransfer;
+      dt.setData('text/plain', JSON.stringify(dragData));
+      // Use the weapon's image as drag preview
+      const imgEl = token.querySelector('.workshop-weapon-card-img');
+      if (imgEl && imgEl.complete) {
+        dt.setDragImage(imgEl, 20, 20);
+      }
+      return;
+    }
+
+    // Check if this is a Workshop shield card drag (shields also have workshop-armor-card class for styling — check shield first)
+    if (token.classList.contains('workshop-shield-card')) {
+      const shieldId = token.dataset.shieldId;
+      const shields = this.actor.getFlag('conan', 'workshopShields') || {};
+      const shield = shields[shieldId];
+      if (!shield) {
+        console.warn('Conan | Could not find workshop shield for drag:', shieldId);
+        return;
+      }
+      console.log('Conan | Drag started on workshop shield:', shield.name);
+      const dragData = {
+        type: 'ConanShield',
+        shield: shield
+      };
+      const dt = (event.originalEvent || event).dataTransfer;
+      dt.setData('text/plain', JSON.stringify(dragData));
+      const imgEl = token.querySelector('.workshop-armor-card-img');
+      if (imgEl && imgEl.complete) {
+        dt.setDragImage(imgEl, 20, 20);
+      }
+      return;
+    }
+
+    // Check if this is a Workshop armor card drag
+    if (token.classList.contains('workshop-armor-card')) {
+      const armorId = token.dataset.armorId;
+      const armors = this.actor.getFlag('conan', 'workshopArmors') || {};
+      const armor = armors[armorId];
+      if (!armor) {
+        console.warn('Conan | Could not find workshop armor for drag:', armorId);
+        return;
+      }
+      console.log('Conan | Drag started on workshop armor:', armor.name);
+      const dragData = {
+        type: 'ConanArmor',
+        armor: armor  // full snapshot — receiver translates to custom armor slot
+      };
+      const dt = (event.originalEvent || event).dataTransfer;
+      dt.setData('text/plain', JSON.stringify(dragData));
+      const imgEl = token.querySelector('.workshop-armor-card-img');
+      if (imgEl && imgEl.complete) {
+        dt.setDragImage(imgEl, 20, 20);
+      }
       return;
     }
 
@@ -5672,231 +5786,962 @@ export default class ConanToolsSheet extends ActorSheet {
     this.render(false);
   }
 
-  // ========== CHAT CAPTURE METHODS ==========
+  // ========== WORKSHOP — WEAPON FORGE ==========
 
-  /**
-   * Toggle chat capture listening on/off
-   */
-  _onChatCaptureToggle(event) {
-    event.preventDefault();
-
-    if (this._chatCaptureListening) {
-      // Stop listening
-      this._stopChatCapture();
-    } else {
-      // Start listening
-      this._startChatCapture();
-    }
-
-    this.render(false);
-  }
-
-  /**
-   * Start listening for chat messages with conan rolls
-   */
-  _startChatCapture() {
-    if (this._chatCaptureHookId) return; // Already listening
-
-    this._chatCaptureListening = true;
-
-    // Register hook to capture new chat messages
-    this._chatCaptureHookId = Hooks.on('createChatMessage', (message, options, userId) => {
-      this._captureMessage(message);
-    });
-
-    console.log('Conan | Chat capture started');
-    ui.notifications.info('Chat capture started - make some rolls!');
-  }
-
-  /**
-   * Stop listening for chat messages
-   */
-  _stopChatCapture() {
-    if (this._chatCaptureHookId) {
-      Hooks.off('createChatMessage', this._chatCaptureHookId);
-      this._chatCaptureHookId = null;
-    }
-
-    this._chatCaptureListening = false;
-    console.log('Conan | Chat capture stopped');
-    ui.notifications.info('Chat capture stopped');
-  }
-
-  /**
-   * Process an incoming chat message and capture if it's a conan roll
-   */
-  _captureMessage(message) {
-    const content = message.content || '';
-
-    // Check if this is a conan roll
-    if (!content.includes('conan-roll')) return;
-
-    // Determine roll type
-    let rollType = 'unknown';
-    let title = 'Unknown Roll';
-
-    if (content.includes('spell-cast')) {
-      rollType = 'spell';
-      title = this._extractTitle(content) || 'Spell Cast';
-    } else if (content.includes('flex-choice-card')) {
-      rollType = 'flex';
-      title = 'Flex Triggered';
-    } else if (content.includes('attack-result-box')) {
-      rollType = 'attack';
-      title = this._extractTitle(content) || 'Attack Roll';
-    } else if (content.includes('damage-result-box')) {
-      rollType = 'damage';
-      title = this._extractTitle(content) || 'Damage Roll';
-    } else if (content.includes('skill-result-box')) {
-      rollType = 'skill';
-      title = this._extractTitle(content) || 'Skill Check';
-    }
-
-    // Get actor name from speaker
-    const actorName = message.speaker?.alias || 'Unknown';
-
-    // Get timestamp
-    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-    // Build capture object
-    const capture = {
-      version: '1.0',
-      capturedAt: new Date().toISOString(),
-      rollType: rollType,
-      title: title,
-      actorName: actorName,
-      time: time,
-      html: content,
-      messageId: message.id
+  /** Category options keyed by weapon type. Mirrors the player Arms catalog. */
+  _getWorkshopCategoryOptions() {
+    return {
+      melee: ['Unarmed', 'One-Handed Light', 'One-Handed Medium', 'One-Handed Heavy', 'Two-Handed Light', 'Two-Handed Medium', 'Two-Handed Heavy'],
+      thrown: ['Improvised Light', 'Thrown Light', 'Thrown Medium', 'Thrown Heavy'],
+      ranged: ['Ranged Light', 'Ranged Medium', 'Ranged Heavy']
     };
-
-    // Add to captured rolls (most recent first)
-    this._chatCapturedRolls.unshift(capture);
-
-    // Limit to 20 captured rolls
-    if (this._chatCapturedRolls.length > 20) {
-      this._chatCapturedRolls.pop();
-    }
-
-    // Auto-select the new roll
-    this._chatCaptureSelectedIndex = 0;
-
-    console.log(`Conan | Captured ${rollType} roll: ${title}`);
-    this.render(false);
   }
 
-  /**
-   * Extract the title from roll content
-   */
-  _extractTitle(content) {
-    const match = content.match(/roll-title[^>]*>([^<]+)</);
-    return match ? match[1].trim() : null;
-  }
+  /** Render the saved-weapons list in the Workshop weapons sub-panel. */
+  _renderWorkshopWeapons(html) {
+    const list = html.find('.workshop-weapon-list');
+    if (!list.length) return;
 
-  /**
-   * Clear all captured rolls
-   */
-  _onChatCaptureClear(event) {
-    event.preventDefault();
+    const weapons = this.actor.getFlag('conan', 'workshopWeapons') || {};
+    const ids = Object.keys(weapons);
+    html.find('.workshop-weapon-count').text(ids.length);
 
-    this._chatCapturedRolls = [];
-    this._chatCaptureSelectedIndex = null;
-
-    console.log('Conan | Cleared captured rolls');
-    this.render(false);
-  }
-
-  /**
-   * Select a captured roll
-   */
-  _onChatCaptureSelect(event) {
-    event.preventDefault();
-
-    const item = event.currentTarget;
-    const index = parseInt(item.dataset.captureIndex, 10);
-
-    this._chatCaptureSelectedIndex = index;
-    this.render(false);
-  }
-
-  /**
-   * Export selected roll for the Layout Designer
-   */
-  async _onChatCaptureExport(event) {
-    event.preventDefault();
-
-    if (this._chatCaptureSelectedIndex === null) {
-      ui.notifications.warn('Select a captured roll first');
+    if (ids.length === 0) {
+      list.html('<p class="tools-muted-text" style="text-align:center;padding:18px 0;">No forged weapons yet. Use <strong>+ NEW</strong> to create one.</p>');
       return;
     }
 
-    const roll = this._chatCapturedRolls[this._chatCaptureSelectedIndex];
-    if (!roll) return;
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
-    // Get current CSS variables from document
-    const cssVariables = this._getChatCSSVariables();
+    // Tile + its detail panel are interleaved in the grid so the panel appears
+    // immediately after the clicked tile's row. CSS grid-auto-flow: dense + the
+    // panel's grid-column: 1 / -1 + display:none-when-inactive does the placement.
+    let items = '';
+    for (const id of ids) {
+      const w = weapons[id] || {};
+      const img = w.image || 'icons/svg/sword.svg';
+      const safeName = esc(w.name || 'Unnamed');
+      const ammoBadge = (w.ammo && w.ammo.max > 0)
+        ? `<span class="workshop-weapon-tile-ammo" title="Ammo: ${w.ammo.max}">${w.ammo.max}</span>`
+        : '';
+      const tooltipBits = [w.weaponType, w.category, w.damage, w.range].filter(Boolean).join(' · ');
 
-    // Build export object (same format as capture-roll.js)
-    const exportData = {
-      version: '1.0',
-      capturedAt: roll.capturedAt,
-      rollType: roll.rollType,
-      actorName: roll.actorName,
-      html: roll.html,
-      outerHtml: roll.html, // For compatibility
-      styles: {},
-      cssVariables: cssVariables
-    };
+      items += `
+        <div class="workshop-weapon-card workshop-weapon-tile" data-weapon-id="${id}" draggable="true" title="${safeName}${tooltipBits ? '\n' + tooltipBits : ''}">
+          <div class="workshop-weapon-tile-imgwrap">
+            <img class="workshop-weapon-tile-img" src="${img}" alt="${safeName}" draggable="false" onerror="this.src='icons/svg/sword.svg';">
+            ${ammoBadge}
+          </div>
+          <span class="workshop-weapon-tile-label workshop-weapon-detail-toggle" data-weapon-id="${id}">${safeName.toUpperCase()}</span>
+        </div>
+      `;
 
-    const json = JSON.stringify(exportData, null, 2);
+      const typeLabel = (w.weaponType || 'melee').replace(/^./, c => c.toUpperCase());
+      const ammoLine = (w.ammo && w.ammo.max > 0)
+        ? `<div class="workshop-weapon-detail-item"><label>Ammo:</label><span>${w.ammo.max}</span></div>`
+        : '';
+      const rulesLine = w.rules
+        ? `<div class="workshop-weapon-detail-item workshop-weapon-detail-rules"><label>Rules:</label><span>${esc(w.rules)}</span></div>`
+        : '';
 
-    try {
-      await navigator.clipboard.writeText(json);
-
-      // Show success feedback
-      const btn = event.currentTarget;
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-      btn.classList.add('copied');
-
-      setTimeout(() => {
-        btn.innerHTML = originalHtml;
-        btn.classList.remove('copied');
-      }, 2000);
-
-      ui.notifications.info('Roll exported! Paste into Layout Designer.');
-      console.log('Conan | Exported roll for designer:', roll.rollType);
-    } catch (err) {
-      console.error('Conan | Export failed:', err);
-      ui.notifications.error('Failed to copy to clipboard');
+      items += `
+        <div class="workshop-weapon-detail" data-for="${id}">
+          <div class="workshop-weapon-detail-header">
+            <h4>${safeName}</h4>
+          </div>
+          <div class="workshop-weapon-detail-grid">
+            <div class="workshop-weapon-detail-item"><label>Type:</label><span>${typeLabel}${w.category ? ` <em>(${esc(w.category)})</em>` : ''}</span></div>
+            <div class="workshop-weapon-detail-item"><label>Damage:</label><span>${esc(w.damage)}</span></div>
+            <div class="workshop-weapon-detail-item"><label>Range:</label><span>${esc(w.range) || '—'}</span></div>
+            ${ammoLine}
+            ${rulesLine}
+          </div>
+          <div class="workshop-weapon-detail-actions">
+            <button type="button" class="workshop-weapon-detail-btn workshop-weapon-edit" data-weapon-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i> EDIT</button>
+            <button type="button" class="workshop-weapon-detail-btn workshop-weapon-detail-delete workshop-weapon-delete" data-weapon-id="${id}" title="Delete"><i class="fas fa-trash"></i> DELETE</button>
+          </div>
+        </div>
+      `;
     }
+    list.html(items);
   }
 
-  /**
-   * Get current chat-related CSS variables
-   */
-  _getChatCSSVariables() {
-    const vars = {};
-    const rootStyles = getComputedStyle(document.documentElement);
+  /** Open the Forge Weapon dialog. Pass an optional editingId to edit an existing weapon. */
+  _onWorkshopWeaponNew(event, editingId = null) {
+    event?.preventDefault?.();
 
-    const varNames = [
-      '--player-color', '--player-bar-width',
-      '--msg-frame-border', '--msg-frame-radius', '--msg-frame-bg',
-      '--card-bg', '--card-border-color', '--card-border-width', '--card-radius', '--card-padding',
-      '--header-bg', '--header-text', '--header-font-size', '--header-padding', '--header-radius',
-      '--token-size', '--token-radius', '--token-border',
-      '--result-size', '--result-border-color', '--result-border-width', '--result-radius', '--result-font-size', '--result-text', '--result-bg',
-      '--flex-bg', '--flex-border', '--flex-radius', '--flex-padding',
-      '--btn-bg', '--btn-border', '--btn-text', '--btn-radius', '--btn-padding', '--btn-font-size',
-      '--note-bg', '--note-radius', '--note-padding'
-    ];
+    const editingWeapon = editingId
+      ? (this.actor.getFlag('conan', 'workshopWeapons') || {})[editingId]
+      : null;
+    const isEditing = !!editingWeapon;
 
-    varNames.forEach(name => {
-      const value = rootStyles.getPropertyValue(name).trim();
-      if (value) vars[name] = value;
+    const currentType = editingWeapon?.weaponType || 'melee';
+    const typeOpts = ['melee', 'thrown', 'ranged'].map(t => {
+      const sel = t === currentType ? ' selected' : '';
+      return `<option value="${t}"${sel}>${t.toUpperCase()}</option>`;
+    }).join('');
+
+    const cats = this._getWorkshopCategoryOptions()[currentType] || [];
+    const catOpts = cats.map(c => {
+      const sel = c === editingWeapon?.category ? ' selected' : '';
+      return `<option value="${c}"${sel}>${c}</option>`;
+    }).join('');
+
+    const rangeChoices = ['Touch 0','Close 1','Close 2','Medium 3','Long 4','Long 5','Long 6','Distant 7','Distant 8'];
+    const matchingRange = rangeChoices.includes(editingWeapon?.range) ? editingWeapon.range : null;
+    const rangePlaceholder = matchingRange ? '' : '<option value="" disabled selected>RANGE</option>';
+    const rangeOpts = rangeChoices.map(r => {
+      const sel = r === matchingRange ? ' selected' : '';
+      return `<option value="${r}"${sel}>${r.toUpperCase()}</option>`;
+    }).join('');
+
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;');
+    const nameVal = esc(editingWeapon?.name);
+    const damageVal = esc(editingWeapon?.damage);
+    const imageVal = esc(editingWeapon?.image);
+    const rulesVal = String(editingWeapon?.rules ?? '').replace(/</g, '&lt;');
+    const ammoVal = editingWeapon?.ammo?.max ?? '';
+
+    const rowStyle = 'display:flex; flex-direction:row; gap:14px; width:100%; align-items:center;';
+    const halfStyle = 'flex:1 1 0; min-width:0;';
+    const content = `
+      <form class="ws-new-weapon-form" style="display:flex; flex-direction:column; gap:14px; padding:10px 4px 6px;">
+        <input type="text" class="ws-input" name="name" placeholder="NAME" value="${nameVal}" required style="width:100%;">
+
+        <div style="${rowStyle}">
+          <select class="ws-input" name="weaponType" style="${halfStyle}">${typeOpts}</select>
+          <select class="ws-input" name="category" style="${halfStyle}">${catOpts}</select>
+        </div>
+
+        <div style="${rowStyle}">
+          <input type="text" class="ws-input" name="damage" placeholder="DAMAGE (e.g. 2d6+3)"
+                 value="${damageVal}"
+                 pattern="^\\d+d\\d+([+\\-]\\d+)?$"
+                 title="Dice formula: NdN, optional +N or -N (e.g., 1d8, 2d6+3, 1d10-1)"
+                 required
+                 style="${halfStyle}">
+          <select class="ws-input" name="range" style="${halfStyle}">${rangePlaceholder}${rangeOpts}</select>
+        </div>
+
+        <div style="display:flex; flex-direction:row; gap:10px; width:100%; align-items:center;">
+          <input type="text" class="ws-input" name="image" placeholder="IMAGE" value="${imageVal}" style="flex:1 1 0; min-width:0;">
+          <button type="button" class="ws-image-pick" title="Browse" style="flex:0 0 38px; width:38px; height:38px;"><i class="fas fa-file-image"></i></button>
+          <input type="number" class="ws-input" name="ammo" placeholder="AMMO" min="0" step="1" value="${ammoVal}" title="Max ammo (thrown / ranged only). Loaded full when forged." style="flex:0 0 90px; width:90px; text-align:center;">
+        </div>
+
+        <textarea class="ws-input ws-textarea" name="rules" placeholder="SPECIAL RULES (optional — e.g., 'On a 20+: trip target', 'Ignores 2 AR', 'Two-handed')" style="width:100%;">${rulesVal}</textarea>
+      </form>
+    `;
+
+    const self = this;
+    const dialog = new foundry.applications.api.DialogV2({
+      window: { title: isEditing ? 'Edit' : 'New' },
+      content,
+      classes: ['ws-new-weapon-dialog'],
+      position: { width: 460 },
+      modal: false,
+      buttons: [{
+        action: 'forge',
+        label: isEditing ? 'SAVE CHANGES' : 'FORGE',
+        icon: 'fas fa-hammer',
+        default: true,
+        callback: async (event, button, dialog) => {
+          const form = dialog.element.querySelector('form');
+          if (!form) return;
+
+          if (!form.reportValidity()) {
+            throw new Error('Validation failed');
+          }
+
+          const fd = new FormData(form);
+          const name = (fd.get('name') || '').trim();
+          const weaponType = fd.get('weaponType') || 'melee';
+          const category = fd.get('category') || '';
+          const damage = (fd.get('damage') || '').trim();
+          const range = fd.get('range') || '';
+          const image = (fd.get('image') || '').trim();
+          const rules = (fd.get('rules') || '').trim();
+          const ammoMax = parseInt(fd.get('ammo'), 10);
+
+          const id = isEditing ? editingId : `weapon-${Date.now()}`;
+          const weapon = { id, name, weaponType, category, damage, range };
+          if (image) weapon.image = image;
+          if (rules) weapon.rules = rules;
+
+          if ((weaponType === 'thrown' || weaponType === 'ranged') && !isNaN(ammoMax) && ammoMax > 0) {
+            // Editing: preserve current ammo if max didn't change; otherwise reload full
+            const prevAmmo = editingWeapon?.ammo;
+            if (isEditing && prevAmmo && prevAmmo.max === ammoMax) {
+              weapon.ammo = { current: prevAmmo.current, max: ammoMax };
+            } else {
+              weapon.ammo = { current: ammoMax, max: ammoMax };
+            }
+          }
+
+          const weapons = { ...(self.actor.getFlag('conan', 'workshopWeapons') || {}) };
+          weapons[id] = weapon;
+          await self.actor.setFlag('conan', 'workshopWeapons', weapons);
+
+          ui.notifications.info(`${isEditing ? 'Updated' : 'Forged'} ${weapon.name}`);
+        }
+      }],
+      rejectClose: false
     });
 
-    return vars;
+    dialog.render({ force: true }).then(() => {
+      const root = dialog.element;
+      if (!root) return;
+
+      // Image picker
+      const pickerBtn = root.querySelector('.ws-image-pick');
+      const imageInput = root.querySelector('input[name="image"]');
+      if (pickerBtn && imageInput) {
+        pickerBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          new FilePicker({
+            type: 'image',
+            current: imageInput.value || 'systems/conan/images/weapons/',
+            callback: (path) => { imageInput.value = path; }
+          }).render(true);
+        });
+      }
+
+      // Type → Category cascade
+      const typeSelect = root.querySelector('select[name="weaponType"]');
+      const categorySelect = root.querySelector('select[name="category"]');
+      if (typeSelect && categorySelect) {
+        typeSelect.addEventListener('change', () => {
+          const newCats = self._getWorkshopCategoryOptions()[typeSelect.value] || [];
+          categorySelect.innerHTML = newCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        });
+      }
+    });
+  }
+
+  /** Load a saved weapon back into the form for editing. */
+  _onWorkshopWeaponEdit(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.weaponId;
+    if (!id) return;
+    this._onWorkshopWeaponNew(event, id);
+  }
+
+  /** Toggle the detail panel for a forged weapon (label click). Only one panel open at a time. */
+  _onWorkshopWeaponDetailToggle(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.weaponId;
+    if (!id) return;
+    const list = this.element.find('.workshop-weapon-list');
+    const target = list.find(`.workshop-weapon-detail[data-for="${id}"]`);
+    const wasActive = target.hasClass('active');
+    list.find('.workshop-weapon-detail').removeClass('active');
+    if (!wasActive) target.addClass('active');
+  }
+
+  /** Delete a saved weapon (with confirm). */
+  async _onWorkshopWeaponDelete(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    const id = event.currentTarget.dataset.weaponId;
+    console.log('[WeaponDelete] CLICK id=', id);
+    const weapons = this.actor.getFlag('conan', 'workshopWeapons') || {};
+    console.log('[WeaponDelete] keys before:', Object.keys(weapons));
+    const w = weapons[id];
+    if (!w) { console.warn('[WeaponDelete] no weapon found'); return; }
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: 'Delete Weapon' },
+      content: `<p>Delete <strong>${w.name}</strong>?</p><p style="font-size:11px;color:#aaa;">Players who already have this weapon on their sheet keep their copy — only the Workshop entry is removed.</p>`,
+      rejectClose: false,
+      modal: true
+    });
+    console.log('[WeaponDelete] confirmed:', confirmed);
+    if (!confirmed) return;
+
+    console.log('[WeaponDelete] ForcedDeletion operator:', foundry.data?.operators?.ForcedDeletion);
+    await this.actor.update({
+      'flags.conan.workshopWeapons': { [id]: new foundry.data.operators.ForcedDeletion() }
+    });
+    const after = this.actor.getFlag('conan', 'workshopWeapons') || {};
+    console.log('[WeaponDelete] keys after:', Object.keys(after));
+    ui.notifications.info(`Deleted ${w.name}`);
+    this._renderWorkshopWeapons(this.element);
+    this.element.find('.workshop-weapon-edit').off('click').on('click', this._onWorkshopWeaponEdit.bind(this));
+    this.element.find('.workshop-weapon-delete').off('click').on('click', this._onWorkshopWeaponDelete.bind(this));
+    this.element.find('.workshop-weapon-detail-toggle').off('click').on('click', this._onWorkshopWeaponDetailToggle.bind(this));
+    this.element.find('.workshop-weapon-card').off('dragstart').on('dragstart', this._onDragStart.bind(this));
+  }
+
+  // ========== WORKSHOP — SUB-TAB SWITCHING ==========
+
+  /** Switch which Workshop sub-tab is active (Weapons / Armor / etc). */
+  _onWorkshopSubTabClick(event) {
+    event.preventDefault();
+    const btn = event.currentTarget;
+    if (btn.disabled || btn.classList.contains('workshop-subtab-disabled')) return;
+    const target = btn.dataset.subtab;
+    this._activeWorkshopSubTab = target;
+    const root = this.element.find('.tools-panel[data-panel="workshop"]');
+    root.find('.workshop-subtab').removeClass('active');
+    root.find('.workshop-subpanel').removeClass('active');
+    root.find(`.workshop-subtab[data-subtab="${target}"]`).addClass('active');
+    root.find(`.workshop-subpanel[data-subpanel="${target}"]`).addClass('active');
+  }
+
+  // ========== WORKSHOP — ARMOR FORGE ==========
+
+  /** Valid bonus targets for armor/shield. */
+  _getWorkshopBonusTargets() {
+    return [
+      { id: 'might', label: 'Might' },
+      { id: 'edge', label: 'Edge' },
+      { id: 'grit', label: 'Grit' },
+      { id: 'wits', label: 'Wits' },
+      { id: 'lifePoints', label: 'Life Points (Max)' },
+      { id: 'stamina', label: 'Stamina Bonus (per Flex)' },
+      { id: 'physicalDefense', label: 'Physical Defense' },
+      { id: 'sorceryDefense', label: 'Sorcery Defense' },
+      { id: 'ar', label: 'AR' }
+    ];
+  }
+
+  /** Render saved armors list in the Armor sub-panel. */
+  _renderWorkshopArmors(html) {
+    const list = html.find('.workshop-armor-list');
+    if (!list.length) return;
+
+    const armors = this.actor.getFlag('conan', 'workshopArmors') || {};
+    const ids = Object.keys(armors);
+    html.find('.workshop-armor-count').text(ids.length);
+
+    if (ids.length === 0) {
+      list.html('<p class="tools-muted-text" style="text-align:center;padding:18px 0;">No forged armors yet. Use <strong>+ NEW</strong> to create one.</p>');
+      return;
+    }
+
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+    let items = '';
+    for (const id of ids) {
+      const a = armors[id] || {};
+      const img = a.image || 'icons/svg/shield.svg';
+      const safeName = esc(a.name || 'Unnamed');
+      const arBadge = (a.ar > 0)
+        ? `<span class="workshop-armor-tile-ar" title="AR: ${a.ar}">${a.ar}</span>`
+        : '';
+      const tooltipBits = [a.baseType, a.ar ? `AR ${a.ar}` : null, a.minMight ? `Min ${a.minMight}` : null].filter(Boolean).join(' · ');
+
+      items += `
+        <div class="workshop-armor-card workshop-armor-tile" data-armor-id="${id}" draggable="true" title="${safeName}${tooltipBits ? '\n' + tooltipBits : ''}">
+          <div class="workshop-armor-tile-imgwrap">
+            <img class="workshop-armor-tile-img" src="${img}" alt="${safeName}" draggable="false" onerror="this.src='icons/svg/shield.svg';">
+            ${arBadge}
+          </div>
+          <span class="workshop-armor-tile-label workshop-armor-detail-toggle" data-armor-id="${id}">${safeName.toUpperCase()}</span>
+        </div>
+      `;
+
+      // Detail panel (inline grid child; label-click toggles .active)
+      const baseTypeLabel = (a.baseType || 'unarmored').replace(/^./, c => c.toUpperCase());
+      const minMightLine = (a.minMight > 0)
+        ? `<div class="workshop-armor-detail-item"><label>Min Might:</label><span>${a.minMight}</span></div>`
+        : '';
+      const recPenLine = a.recoveryPenalty
+        ? `<div class="workshop-armor-detail-item"><label>Recovery:</label><span>Penalty (1 / Rest)</span></div>`
+        : '';
+      const recBonusLine = (a.recoveryBonus > 0)
+        ? `<div class="workshop-armor-detail-item"><label>Recovery Bonus:</label><span>+${a.recoveryBonus} LP</span></div>`
+        : '';
+      const bonusBits = (a.bonuses || [])
+        .map(b => `${b.value >= 0 ? '+' : ''}${b.value} ${b.target}`)
+        .join(', ');
+      const bonusLine = bonusBits
+        ? `<div class="workshop-armor-detail-item workshop-armor-detail-bonuses"><label>Bonuses:</label><span>${esc(bonusBits)}</span></div>`
+        : '';
+      const encLine = a.encumbranceText
+        ? `<div class="workshop-armor-detail-item workshop-armor-detail-text"><label>Encumbrance:</label><span>${esc(a.encumbranceText)}</span></div>`
+        : '';
+      const penLine = a.penaltyText
+        ? `<div class="workshop-armor-detail-item workshop-armor-detail-text"><label>Penalty:</label><span>${esc(a.penaltyText)}</span></div>`
+        : '';
+      const moveLine = a.moveText
+        ? `<div class="workshop-armor-detail-item workshop-armor-detail-text"><label>Movement:</label><span>${esc(a.moveText)}</span></div>`
+        : '';
+
+      items += `
+        <div class="workshop-armor-detail" data-for="${id}">
+          <div class="workshop-armor-detail-header">
+            <h4>${safeName}</h4>
+          </div>
+          <div class="workshop-armor-detail-grid">
+            <div class="workshop-armor-detail-item"><label>Base Type:</label><span>${baseTypeLabel}</span></div>
+            <div class="workshop-armor-detail-item"><label>AR:</label><span>${a.ar ?? 0}</span></div>
+            ${minMightLine}
+            ${recPenLine}
+            ${recBonusLine}
+            ${bonusLine}
+            ${encLine}
+            ${penLine}
+            ${moveLine}
+          </div>
+          <div class="workshop-armor-detail-actions">
+            <button type="button" class="workshop-armor-detail-btn workshop-armor-edit" data-armor-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i> EDIT</button>
+            <button type="button" class="workshop-armor-detail-btn workshop-armor-detail-delete workshop-armor-delete" data-armor-id="${id}" title="Delete"><i class="fas fa-trash"></i> DELETE</button>
+          </div>
+        </div>
+      `;
+    }
+    list.html(items);
+  }
+
+  /** Open the Forge Armor dialog. Pass an optional editingId to edit an existing armor. */
+  _onWorkshopArmorNew(event, editingId = null) {
+    event?.preventDefault?.();
+
+    const editing = editingId
+      ? (this.actor.getFlag('conan', 'workshopArmors') || {})[editingId]
+      : null;
+    const isEditing = !!editing;
+
+    const baseType = editing?.baseType || 'unarmored';
+    const baseTypeOpts = ['unarmored','light','medium','heavy'].map(t => {
+      const sel = t === baseType ? ' selected' : '';
+      return `<option value="${t}"${sel}>${t.toUpperCase()}</option>`;
+    }).join('');
+
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;');
+    const escText = (s) => String(s ?? '').replace(/</g, '&lt;');
+    const nameVal = esc(editing?.name);
+    const arVal = editing?.ar ?? '';
+    const minMightVal = editing?.minMight ?? '';
+    const recBonusVal = editing?.recoveryBonus ?? '';
+    const recPenChecked = editing?.recoveryPenalty ? ' checked' : '';
+    const imageVal = esc(editing?.image);
+    const encumbranceVal = esc(editing?.encumbranceText);
+    const penaltyVal = esc(editing?.penaltyText);
+    const moveVal = esc(editing?.moveText);
+
+    // Bonus rows — pre-fill if editing
+    const targets = this._getWorkshopBonusTargets();
+    const renderBonusRow = (bonus = { target: 'might', value: 1 }) => {
+      const opts = targets.map(t => {
+        const sel = t.id === bonus.target ? ' selected' : '';
+        return `<option value="${t.id}"${sel}>${t.label}</option>`;
+      }).join('');
+      return `
+        <div class="ws-armor-bonus-row" style="display:flex; flex-direction:row; gap:8px; align-items:center; width:100%;">
+          <select class="ws-input ws-bonus-target" name="bonus-target" style="flex:1 1 0; min-width:0;">${opts}</select>
+          <input type="number" class="ws-input ws-bonus-value" name="bonus-value" value="${bonus.value}" step="1" style="flex:0 0 70px; width:70px; text-align:center;">
+          <button type="button" class="ws-bonus-remove" title="Remove bonus" style="flex:0 0 28px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:var(--tools-bg0); border:1px solid #3a4a5a; border-radius:4px; color:#f0a0a0; cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+      `;
+    };
+    const existingBonusRows = (editing?.bonuses || []).map(renderBonusRow).join('');
+
+    const rowStyle = 'display:flex; flex-direction:row; gap:14px; width:100%; align-items:center;';
+    const halfStyle = 'flex:1 1 0; min-width:0;';
+
+    const content = `
+      <form class="ws-new-armor-form" style="display:flex; flex-direction:column; gap:12px; padding:10px 4px 6px;">
+        <input type="text" class="ws-input" name="name" placeholder="NAME" value="${nameVal}" required style="width:100%;">
+
+        <div style="${rowStyle}">
+          <select class="ws-input ws-armor-basetype" name="baseType" style="${halfStyle}">${baseTypeOpts}</select>
+          <input type="number" class="ws-input" name="ar" placeholder="AR" min="0" step="1" value="${arVal}" style="${halfStyle}">
+        </div>
+
+        <div style="${rowStyle}">
+          <input type="number" class="ws-input" name="minMight" placeholder="MIN MIGHT" min="0" step="1" value="${minMightVal}" title="Encumbers character if base Might is below this" style="${halfStyle}">
+          <input type="number" class="ws-input" name="recoveryBonus" placeholder="REC. BONUS" min="0" step="1" value="${recBonusVal}" title="Extra LP per Recovery" style="${halfStyle}">
+        </div>
+
+        <label class="ws-checkbox-row" style="display:flex; flex-direction:row; gap:8px; align-items:center; width:100%; padding:6px 10px; background:rgba(135,206,235,0.08); border:1px solid #2C4452; border-radius:4px; cursor:pointer; font-size:11px; font-weight:700; letter-spacing:0.08em; color:#CCE8F5; text-transform:uppercase;">
+          <input type="checkbox" name="recoveryPenalty" class="ws-armor-recpen"${recPenChecked} style="margin:0;">
+          <span>RECOVERY PENALTY (1 / Rest)</span>
+        </label>
+
+        <div style="display:flex; flex-direction:row; gap:10px; width:100%; align-items:center;">
+          <input type="text" class="ws-input" name="image" placeholder="IMAGE" value="${imageVal}" style="flex:1 1 0; min-width:0;">
+          <button type="button" class="ws-image-pick" title="Browse" style="flex:0 0 38px; width:38px; height:38px;"><i class="fas fa-file-image"></i></button>
+        </div>
+
+        <input type="text" class="ws-input" name="encumbranceText" placeholder="ENCUMBRANCE TEXT (e.g., '5 Might')" value="${encumbranceVal}" style="width:100%;">
+        <input type="text" class="ws-input" name="penaltyText" placeholder="PENALTY TEXT (e.g., '-3 Sorcery, -3 Stealth')" value="${penaltyVal}" style="width:100%;">
+        <input type="text" class="ws-input" name="moveText" placeholder="MOVEMENT TEXT (e.g., 'Max 1 Move Action')" value="${moveVal}" style="width:100%;">
+
+        <div class="ws-armor-bonuses-block" style="display:flex; flex-direction:column; gap:8px; padding:10px 8px; background:rgba(0,0,0,0.25); border:1px solid #2a323a; border-radius:6px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:#B0DBF0; text-transform:uppercase;">Stat / Defense Bonuses</span>
+            <button type="button" class="ws-armor-bonus-add" title="Add bonus" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--tools-bg0); border:1px solid #2C4452; border-radius:4px; color:#87CEEB; cursor:pointer;"><i class="fas fa-plus"></i></button>
+          </div>
+          <div class="ws-armor-bonus-list" style="display:flex; flex-direction:column; gap:6px;">${existingBonusRows}</div>
+        </div>
+      </form>
+    `;
+
+    const self = this;
+    const dialog = new foundry.applications.api.DialogV2({
+      window: { title: isEditing ? 'Edit Armor' : 'New Armor' },
+      content,
+      classes: ['ws-new-armor-dialog'],
+      position: { width: 480 },
+      modal: false,
+      buttons: [{
+        action: 'forge',
+        label: isEditing ? 'SAVE CHANGES' : 'FORGE',
+        icon: 'fas fa-hammer',
+        default: true,
+        callback: async (event, button, dlg) => {
+          const form = dlg.element.querySelector('form');
+          if (!form) return;
+          if (!form.reportValidity()) throw new Error('Validation failed');
+
+          const fd = new FormData(form);
+          const name = (fd.get('name') || '').trim();
+          const bt = fd.get('baseType') || 'unarmored';
+          const ar = parseInt(fd.get('ar'), 10) || 0;
+          const minMight = parseInt(fd.get('minMight'), 10) || 0;
+          const recoveryBonus = parseInt(fd.get('recoveryBonus'), 10) || 0;
+          const recoveryPenalty = form.querySelector('input[name="recoveryPenalty"]')?.checked || false;
+          const image = (fd.get('image') || '').trim();
+          const encumbranceText = (fd.get('encumbranceText') || '').trim();
+          const penaltyText = (fd.get('penaltyText') || '').trim();
+          const moveText = (fd.get('moveText') || '').trim();
+
+          // Bonuses — iterate each row in the repeater
+          const bonuses = [];
+          form.querySelectorAll('.ws-armor-bonus-row').forEach(row => {
+            const target = row.querySelector('select[name="bonus-target"]')?.value;
+            const value = parseInt(row.querySelector('input[name="bonus-value"]')?.value, 10);
+            if (target && !isNaN(value) && value !== 0) bonuses.push({ target, value });
+          });
+
+          const id = isEditing ? editingId : `armor-${Date.now()}`;
+          const armor = { id, name, baseType: bt, ar, minMight, recoveryPenalty, recoveryBonus, bonuses };
+          if (image) armor.image = image;
+          if (encumbranceText) armor.encumbranceText = encumbranceText;
+          if (penaltyText) armor.penaltyText = penaltyText;
+          if (moveText) armor.moveText = moveText;
+
+          const armors = { ...(self.actor.getFlag('conan', 'workshopArmors') || {}) };
+          armors[id] = armor;
+          await self.actor.setFlag('conan', 'workshopArmors', armors);
+
+          ui.notifications.info(`${isEditing ? 'Updated' : 'Forged'} ${armor.name}`);
+        }
+      }],
+      rejectClose: false
+    });
+
+    dialog.render({ force: true }).then(() => {
+      const root = dialog.element;
+      if (!root) return;
+
+      // Image picker
+      const pickerBtn = root.querySelector('.ws-image-pick');
+      const imageInput = root.querySelector('input[name="image"]');
+      if (pickerBtn && imageInput) {
+        pickerBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          new FilePicker({
+            type: 'image',
+            current: imageInput.value || 'systems/conan/images/armors/',
+            callback: (path) => { imageInput.value = path; }
+          }).render(true);
+        });
+      }
+
+      // Base type → auto-toggle Recovery Penalty (matches the existing inline form behavior)
+      const baseSelect = root.querySelector('select[name="baseType"]');
+      const recPenCheckbox = root.querySelector('input[name="recoveryPenalty"]');
+      if (baseSelect && recPenCheckbox) {
+        baseSelect.addEventListener('change', () => {
+          recPenCheckbox.checked = baseSelect.value === 'heavy';
+        });
+      }
+
+      // Bonuses repeater — add / remove
+      const bonusList = root.querySelector('.ws-armor-bonus-list');
+      const addBonusBtn = root.querySelector('.ws-armor-bonus-add');
+      const wireRemove = () => {
+        bonusList.querySelectorAll('.ws-bonus-remove').forEach(btn => {
+          btn.onclick = (ev) => {
+            ev.preventDefault();
+            btn.closest('.ws-armor-bonus-row')?.remove();
+          };
+        });
+      };
+      wireRemove();
+      if (addBonusBtn && bonusList) {
+        addBonusBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          const tmp = document.createElement('div');
+          tmp.innerHTML = renderBonusRow();
+          bonusList.appendChild(tmp.firstElementChild);
+          wireRemove();
+        });
+      }
+    });
+  }
+
+  /** Load an armor into the form for editing. */
+  _onWorkshopArmorEdit(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.armorId;
+    if (!id) return;
+    this._onWorkshopArmorNew(event, id);
+  }
+
+  /** Toggle the detail panel for a forged armor (label click). Only one panel open at a time. */
+  _onWorkshopArmorDetailToggle(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.armorId;
+    if (!id) return;
+    const list = this.element.find('.workshop-armor-list');
+    const target = list.find(`.workshop-armor-detail[data-for="${id}"]`);
+    const wasActive = target.hasClass('active');
+    list.find('.workshop-armor-detail').removeClass('active');
+    if (!wasActive) target.addClass('active');
+  }
+
+  /** Delete a saved armor (with confirm). */
+  async _onWorkshopArmorDelete(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    const id = event.currentTarget.dataset.armorId;
+    console.log('[ArmorDelete] CLICK id=', id);
+    const armors = this.actor.getFlag('conan', 'workshopArmors') || {};
+    console.log('[ArmorDelete] keys before:', Object.keys(armors));
+    const a = armors[id];
+    if (!a) { console.warn('[ArmorDelete] no armor found'); return; }
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: 'Delete Armor' },
+      content: `<p>Delete <strong>${a.name}</strong>?</p><p style="font-size:11px;color:#aaa;">Players who already have this armor equipped keep their copy — only the Workshop entry is removed.</p>`,
+      rejectClose: false,
+      modal: true
+    });
+    console.log('[ArmorDelete] confirmed:', confirmed);
+    if (!confirmed) return;
+
+    console.log('[ArmorDelete] ForcedDeletion operator:', foundry.data?.operators?.ForcedDeletion);
+    await this.actor.update({
+      'flags.conan.workshopArmors': { [id]: new foundry.data.operators.ForcedDeletion() }
+    });
+    const after = this.actor.getFlag('conan', 'workshopArmors') || {};
+    console.log('[ArmorDelete] keys after:', Object.keys(after));
+    ui.notifications.info(`Deleted ${a.name}`);
+    this._renderWorkshopArmors(this.element);
+    this.element.find('.workshop-armor-edit').off('click').on('click', this._onWorkshopArmorEdit.bind(this));
+    this.element.find('.workshop-armor-delete').off('click').on('click', this._onWorkshopArmorDelete.bind(this));
+    this.element.find('.workshop-armor-detail-toggle').off('click').on('click', this._onWorkshopArmorDetailToggle.bind(this));
+    this.element.find('.workshop-armor-card').off('dragstart').on('dragstart', this._onDragStart.bind(this));
+  }
+
+  // ========== WORKSHOP — SHIELD FORGE ==========
+
+  /** Stat-only bonus targets for shield form (defense bumps use dedicated fields). */
+  _getWorkshopShieldBonusTargets() {
+    return [
+      { id: 'might', label: 'Might' },
+      { id: 'edge', label: 'Edge' },
+      { id: 'grit', label: 'Grit' },
+      { id: 'wits', label: 'Wits' }
+    ];
+  }
+
+  /** Open the Forge Shield dialog. Pass an optional editingId to edit an existing shield. */
+  _onWorkshopShieldNew(event, editingId = null) {
+    event?.preventDefault?.();
+
+    const editing = editingId
+      ? (this.actor.getFlag('conan', 'workshopShields') || {})[editingId]
+      : null;
+    const isEditing = !!editing;
+
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;');
+    const nameVal = esc(editing?.name);
+    const physDefBonusVal = editing?.physDefBonus ?? '';
+    const sorcDefBonusVal = editing?.sorcDefBonus ?? '';
+    const edgeGateVal = editing?.edgeGate ?? '';
+    const minMightVal = editing?.minMight ?? '';
+    const imageVal = esc(editing?.image);
+
+    // Bonus rows — pre-fill if editing
+    const targets = this._getWorkshopShieldBonusTargets();
+    const renderBonusRow = (bonus = { target: 'might', value: 1 }) => {
+      const opts = targets.map(t => {
+        const sel = t.id === bonus.target ? ' selected' : '';
+        return `<option value="${t.id}"${sel}>${t.label}</option>`;
+      }).join('');
+      return `
+        <div class="ws-shield-bonus-row" style="display:flex; flex-direction:row; gap:8px; align-items:center; width:100%;">
+          <select class="ws-input ws-bonus-target" name="bonus-target" style="flex:1 1 0; min-width:0;">${opts}</select>
+          <input type="number" class="ws-input ws-bonus-value" name="bonus-value" value="${bonus.value}" step="1" style="flex:0 0 70px; width:70px; text-align:center;">
+          <button type="button" class="ws-bonus-remove" title="Remove bonus" style="flex:0 0 28px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:var(--tools-bg0); border:1px solid #4a3a25; border-radius:4px; color:#e2a85f; cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+      `;
+    };
+    const existingBonusRows = (editing?.bonuses || []).map(renderBonusRow).join('');
+
+    const rowStyle = 'display:flex; flex-direction:row; gap:14px; width:100%; align-items:center;';
+    const halfStyle = 'flex:1 1 0; min-width:0;';
+
+    const content = `
+      <form class="ws-new-shield-form" style="display:flex; flex-direction:column; gap:12px; padding:10px 4px 6px;">
+        <input type="text" class="ws-input" name="name" placeholder="NAME" value="${nameVal}" required style="width:100%;">
+
+        <div style="${rowStyle}">
+          <input type="number" class="ws-input" name="physDefBonus" placeholder="PHYS DEF (default 1)" min="0" step="1" value="${physDefBonusVal}" style="${halfStyle}">
+          <input type="number" class="ws-input" name="sorcDefBonus" placeholder="SORC DEF (default 0)" min="0" step="1" value="${sorcDefBonusVal}" style="${halfStyle}">
+        </div>
+
+        <div style="${rowStyle}">
+          <input type="number" class="ws-input" name="edgeGate" placeholder="EDGE GATE (default 3)" min="0" step="1" value="${edgeGateVal}" title="Minimum Edge to benefit from the defense bonuses" style="${halfStyle}">
+          <input type="number" class="ws-input" name="minMight" placeholder="MIN MIGHT (default 3)" min="0" step="1" value="${minMightVal}" title="Encumbers if base Might is below this" style="${halfStyle}">
+        </div>
+
+        <div style="display:flex; flex-direction:row; gap:10px; width:100%; align-items:center;">
+          <input type="text" class="ws-input" name="image" placeholder="IMAGE" value="${imageVal}" style="flex:1 1 0; min-width:0;">
+          <button type="button" class="ws-image-pick" title="Browse" style="flex:0 0 38px; width:38px; height:38px;"><i class="fas fa-file-image"></i></button>
+        </div>
+
+        <div class="ws-shield-bonuses-block" style="display:flex; flex-direction:column; gap:8px; padding:10px 8px; background:rgba(0,0,0,0.25); border:1px solid #4a3a25; border-radius:6px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:#e2a85f; text-transform:uppercase;">Stat Bonuses</span>
+            <button type="button" class="ws-shield-bonus-add" title="Add stat bonus" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--tools-bg0); border:1px solid #4a3a25; border-radius:4px; color:#cd7f32; cursor:pointer;"><i class="fas fa-plus"></i></button>
+          </div>
+          <div class="ws-shield-bonus-list" style="display:flex; flex-direction:column; gap:6px;">${existingBonusRows}</div>
+        </div>
+      </form>
+    `;
+
+    const self = this;
+    const dialog = new foundry.applications.api.DialogV2({
+      window: { title: isEditing ? 'Edit Shield' : 'New Shield' },
+      content,
+      classes: ['ws-new-shield-dialog'],
+      position: { width: 460 },
+      modal: false,
+      buttons: [{
+        action: 'forge',
+        label: isEditing ? 'SAVE CHANGES' : 'FORGE',
+        icon: 'fas fa-hammer',
+        default: true,
+        callback: async (event, button, dlg) => {
+          const form = dlg.element.querySelector('form');
+          if (!form) return;
+          if (!form.reportValidity()) throw new Error('Validation failed');
+
+          const fd = new FormData(form);
+          const name = (fd.get('name') || '').trim();
+          const physDefBonus = parseInt(fd.get('physDefBonus'), 10) || 0;
+          const sorcDefBonus = parseInt(fd.get('sorcDefBonus'), 10) || 0;
+          const edgeGate = parseInt(fd.get('edgeGate'), 10) || 0;
+          const minMight = parseInt(fd.get('minMight'), 10) || 0;
+          const image = (fd.get('image') || '').trim();
+
+          // Bonuses — iterate each row in the repeater
+          const bonuses = [];
+          form.querySelectorAll('.ws-shield-bonus-row').forEach(row => {
+            const target = row.querySelector('select[name="bonus-target"]')?.value;
+            const value = parseInt(row.querySelector('input[name="bonus-value"]')?.value, 10);
+            if (target && !isNaN(value) && value !== 0) bonuses.push({ target, value });
+          });
+
+          const id = isEditing ? editingId : `shield-${Date.now()}`;
+          const shield = { id, name, physDefBonus, sorcDefBonus, edgeGate, minMight, bonuses };
+          if (image) shield.image = image;
+
+          const shields = { ...(self.actor.getFlag('conan', 'workshopShields') || {}) };
+          shields[id] = shield;
+          await self.actor.setFlag('conan', 'workshopShields', shields);
+
+          ui.notifications.info(`${isEditing ? 'Updated' : 'Forged'} ${shield.name}`);
+        }
+      }],
+      rejectClose: false
+    });
+
+    dialog.render({ force: true }).then(() => {
+      const root = dialog.element;
+      if (!root) return;
+
+      // Image picker
+      const pickerBtn = root.querySelector('.ws-image-pick');
+      const imageInput = root.querySelector('input[name="image"]');
+      if (pickerBtn && imageInput) {
+        pickerBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          new FilePicker({
+            type: 'image',
+            current: imageInput.value || 'systems/conan/images/shields/',
+            callback: (path) => { imageInput.value = path; }
+          }).render(true);
+        });
+      }
+
+      // Bonuses repeater — add / remove
+      const bonusList = root.querySelector('.ws-shield-bonus-list');
+      const addBonusBtn = root.querySelector('.ws-shield-bonus-add');
+      const wireRemove = () => {
+        bonusList.querySelectorAll('.ws-bonus-remove').forEach(btn => {
+          btn.onclick = (ev) => {
+            ev.preventDefault();
+            btn.closest('.ws-shield-bonus-row')?.remove();
+          };
+        });
+      };
+      wireRemove();
+      if (addBonusBtn && bonusList) {
+        addBonusBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          const tmp = document.createElement('div');
+          tmp.innerHTML = renderBonusRow();
+          bonusList.appendChild(tmp.firstElementChild);
+          wireRemove();
+        });
+      }
+    });
+  }
+
+  /** Render the forged shields list. */
+  _renderWorkshopShields(html) {
+    const list = html.find('.workshop-shield-list');
+    if (!list.length) return;
+
+    const shields = this.actor.getFlag('conan', 'workshopShields') || {};
+    const ids = Object.keys(shields);
+    html.find('.workshop-shield-count').text(ids.length);
+
+    if (ids.length === 0) {
+      list.html('<p class="tools-muted-text" style="text-align:center;padding:18px 0;">No forged shields yet. Use <strong>+ NEW</strong> to create one.</p>');
+      return;
+    }
+
+    const esc = (s) => String(s ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+    let items = '';
+    for (const id of ids) {
+      const s = shields[id] || {};
+      const img = s.image || 'icons/svg/shield.svg';
+      const safeName = esc(s.name || 'Unnamed');
+      const physDefBadge = (s.physDefBonus > 0)
+        ? `<span class="workshop-shield-tile-def" title="Phys Def Bonus: +${s.physDefBonus}">${s.physDefBonus}</span>`
+        : '';
+      const tooltipBits = [
+        s.physDefBonus ? `+${s.physDefBonus} Phys` : null,
+        s.sorcDefBonus ? `+${s.sorcDefBonus} Sorc` : null,
+        s.edgeGate ? `Edge ${s.edgeGate}` : null
+      ].filter(Boolean).join(' · ');
+
+      items += `
+        <div class="workshop-shield-card workshop-shield-tile" data-shield-id="${id}" draggable="true" title="${safeName}${tooltipBits ? '\n' + tooltipBits : ''}">
+          <div class="workshop-shield-tile-imgwrap">
+            <img class="workshop-shield-tile-img" src="${img}" alt="${safeName}" draggable="false" onerror="this.src='icons/svg/shield.svg';">
+            ${physDefBadge}
+          </div>
+          <span class="workshop-shield-tile-label workshop-shield-detail-toggle" data-shield-id="${id}">${safeName.toUpperCase()}</span>
+        </div>
+      `;
+
+      // Detail panel (inline grid child; label-click toggles .active)
+      const physDefLine = (s.physDefBonus > 0)
+        ? `<div class="workshop-shield-detail-item"><label>Phys Def:</label><span>+${s.physDefBonus}</span></div>`
+        : '';
+      const sorcDefLine = (s.sorcDefBonus > 0)
+        ? `<div class="workshop-shield-detail-item"><label>Sorc Def:</label><span>+${s.sorcDefBonus}</span></div>`
+        : '';
+      const edgeGateLine = (s.edgeGate > 0)
+        ? `<div class="workshop-shield-detail-item"><label>Edge Gate:</label><span>${s.edgeGate}</span></div>`
+        : '';
+      const minMightLine = (s.minMight > 0)
+        ? `<div class="workshop-shield-detail-item"><label>Min Might:</label><span>${s.minMight}</span></div>`
+        : '';
+      const bonusBits = (s.bonuses || [])
+        .map(b => `${b.value >= 0 ? '+' : ''}${b.value} ${b.target}`)
+        .join(', ');
+      const bonusLine = bonusBits
+        ? `<div class="workshop-shield-detail-item workshop-shield-detail-bonuses"><label>Stat Bonuses:</label><span>${esc(bonusBits)}</span></div>`
+        : '';
+
+      items += `
+        <div class="workshop-shield-detail" data-for="${id}">
+          <div class="workshop-shield-detail-header">
+            <h4>${safeName}</h4>
+          </div>
+          <div class="workshop-shield-detail-grid">
+            ${physDefLine}
+            ${sorcDefLine}
+            ${edgeGateLine}
+            ${minMightLine}
+            ${bonusLine}
+          </div>
+          <div class="workshop-shield-detail-actions">
+            <button type="button" class="workshop-shield-detail-btn workshop-shield-edit" data-shield-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i> EDIT</button>
+            <button type="button" class="workshop-shield-detail-btn workshop-shield-detail-delete workshop-shield-delete" data-shield-id="${id}" title="Delete"><i class="fas fa-trash"></i> DELETE</button>
+          </div>
+        </div>
+      `;
+    }
+    list.html(items);
+  }
+
+  /** Load a shield into the form for editing. */
+  _onWorkshopShieldEdit(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.shieldId;
+    if (!id) return;
+    this._onWorkshopShieldNew(event, id);
+  }
+
+  /** Toggle the detail panel for a forged shield (label click). Only one panel open at a time. */
+  _onWorkshopShieldDetailToggle(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = event.currentTarget.dataset.shieldId;
+    if (!id) return;
+    const list = this.element.find('.workshop-shield-list');
+    const target = list.find(`.workshop-shield-detail[data-for="${id}"]`);
+    const wasActive = target.hasClass('active');
+    list.find('.workshop-shield-detail').removeClass('active');
+    if (!wasActive) target.addClass('active');
+  }
+
+  /** Delete a shield (with confirm). */
+  async _onWorkshopShieldDelete(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    const id = event.currentTarget.dataset.shieldId;
+    const shields = this.actor.getFlag('conan', 'workshopShields') || {};
+    const s = shields[id];
+    if (!s) return;
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: 'Delete Shield' },
+      content: `<p>Delete <strong>${s.name}</strong>?</p><p style="font-size:11px;color:#aaa;">Players who already have this shield on their sheet keep their copy — only the Workshop entry is removed.</p>`,
+      rejectClose: false,
+      modal: true
+    });
+    if (!confirmed) return;
+
+    await this.actor.update({
+      'flags.conan.workshopShields': { [id]: new foundry.data.operators.ForcedDeletion() }
+    });
+    ui.notifications.info(`Deleted ${s.name}`);
+    this._renderWorkshopShields(this.element);
+    this.element.find('.workshop-shield-edit').off('click').on('click', this._onWorkshopShieldEdit.bind(this));
+    this.element.find('.workshop-shield-delete').off('click').on('click', this._onWorkshopShieldDelete.bind(this));
+    this.element.find('.workshop-shield-detail-toggle').off('click').on('click', this._onWorkshopShieldDetailToggle.bind(this));
+    this.element.find('.workshop-shield-card').off('dragstart').on('dragstart', this._onDragStart.bind(this));
   }
 
   // ========== AREAS TAB METHODS ==========
@@ -7815,6 +8660,13 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
     // Create the token on the active scene
     const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
 
+    // Color/shape marker prefix — quick visual ID for "I attack the blue circle"
+    const marker = _pickEnemyMarker(scene);
+    await createdToken.update({
+      name: `${marker} ${createdToken.name}`,
+      'flags.conan.enemyMarker': marker
+    });
+
     // Store the full enemy data in token flags for our custom dialog
     // Also store the actor ID so we can delete it when the token is removed
     await createdToken.setFlag('conan', 'enemyData', {
@@ -8759,6 +9611,7 @@ function showEnemyRollDialog(enemyData, token = null) {
   // Track hooks for cleanup
   let updateHookId = null;
   let tokenUpdateHookId = null;
+  let floatingTip = null; // body-level tooltip element for stat/weapon hovers
 
   const dialog = new Dialog({
     title: `${enemyData.name}${isPlaced ? '' : ' (Preview)'}`,
@@ -11905,6 +12758,42 @@ function showEnemyRollDialog(enemyData, token = null) {
           ev.currentTarget.blur();
         }
       });
+
+      // === Floating tooltips (body-level — escape card overflow:hidden) ===
+      // Stat and weapon buttons have inline .stat-name-tooltip / .weapon-tooltip
+      // spans as content sources. On hover, copy their HTML into a body-level
+      // tooltip and position it relative to the hovered button.
+      floatingTip = document.createElement('div');
+      floatingTip.className = 'conan-floating-tooltip';
+      floatingTip.style.display = 'none';
+      document.body.appendChild(floatingTip);
+
+      const showFloatingTip = (target, innerHTML, variant) => {
+        floatingTip.innerHTML = innerHTML;
+        floatingTip.className = `conan-floating-tooltip ${variant}`;
+        floatingTip.style.display = 'block';
+        floatingTip.style.left = '0px';
+        floatingTip.style.top = '0px';
+        const rect = target.getBoundingClientRect();
+        const tipRect = floatingTip.getBoundingClientRect();
+        let left = rect.left + rect.width / 2 - tipRect.width / 2;
+        let top = rect.top - tipRect.height - 6;
+        left = Math.max(4, Math.min(left, window.innerWidth - tipRect.width - 4));
+        if (top < 4) top = rect.bottom + 6; // flip below if no room above
+        floatingTip.style.left = left + 'px';
+        floatingTip.style.top = top + 'px';
+      };
+      const hideFloatingTip = () => { if (floatingTip) floatingTip.style.display = 'none'; };
+
+      html.find('.stat-btn').on('mouseenter.conanTip', (e) => {
+        const src = e.currentTarget.querySelector('.stat-name-tooltip');
+        if (src) showFloatingTip(e.currentTarget, src.innerHTML, 'tip-stat');
+      }).on('mouseleave.conanTip', hideFloatingTip);
+
+      html.find('.weapon-btn').on('mouseenter.conanTip', (e) => {
+        const src = e.currentTarget.querySelector('.weapon-tooltip');
+        if (src) showFloatingTip(e.currentTarget, src.innerHTML, 'tip-weapon');
+      }).on('mouseleave.conanTip', hideFloatingTip);
     },
     close: () => {
       // Clean up hooks when dialog closes
@@ -11915,6 +12804,11 @@ function showEnemyRollDialog(enemyData, token = null) {
       if (tokenUpdateHookId !== null) {
         Hooks.off('updateToken', tokenUpdateHookId);
         tokenUpdateHookId = null;
+      }
+      // Remove floating tooltip element
+      if (floatingTip) {
+        floatingTip.remove();
+        floatingTip = null;
       }
       // Remove from open dialogs tracker
       _openEnemyDialogs.delete(dialogKey);
@@ -12038,6 +12932,13 @@ async function spawnHordePictAtPosition(x, y) {
   const tokenData = await actor.getTokenDocument({ x: dropPosition.x, y: dropPosition.y, actorLink: false });
   const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
 
+  // Color/shape marker prefix — quick visual ID for "I attack the blue circle"
+  const marker = _pickEnemyMarker(scene);
+  await createdToken.update({
+    name: `${marker} ${createdToken.name}`,
+    'flags.conan.enemyMarker': marker
+  });
+
   await createdToken.setFlag('conan', 'enemyData', {
     id: enemy.id, name: enemy.name, type: enemy.type,
     category: enemy.category, group: enemy.group, groupBackground: enemy.groupBackground,
@@ -12138,6 +13039,13 @@ async function spawnDedicatedServantNightmare(x, y) {
 
   const tokenData = await actor.getTokenDocument({ x: dropPosition.x, y: dropPosition.y, actorLink: false });
   const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
+
+  // Color/shape marker prefix — quick visual ID for "I attack the blue circle"
+  const marker = _pickEnemyMarker(scene);
+  await createdToken.update({
+    name: `${marker} ${createdToken.name}`,
+    'flags.conan.enemyMarker': marker
+  });
 
   await createdToken.setFlag('conan', 'enemyData', {
     id: enemy.id, name: enemy.name, type: enemy.type,
@@ -12243,6 +13151,13 @@ async function spawnDemonAtPosition(x, y, demonType) {
 
   const tokenData = await actor.getTokenDocument({ x: dropPosition.x, y: dropPosition.y, actorLink: false });
   const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
+
+  // Color/shape marker prefix — quick visual ID for "I attack the blue circle"
+  const marker = _pickEnemyMarker(scene);
+  await createdToken.update({
+    name: `${marker} ${createdToken.name}`,
+    'flags.conan.enemyMarker': marker
+  });
 
   // DUAL LP WRITE — set both currentHP flag and actor LP
   const initHP = enemy.lifePoints || 0;
@@ -12379,6 +13294,13 @@ async function spawnFirstWifeEnchantress(x, y, traits, tier) {
 
   const tokenData = await actor.getTokenDocument({ x: dropPosition.x, y: dropPosition.y, actorLink: false });
   const [createdToken] = await scene.createEmbeddedDocuments('Token', [tokenData]);
+
+  // Color/shape marker prefix — quick visual ID for "I attack the blue circle"
+  const marker = _pickEnemyMarker(scene);
+  await createdToken.update({
+    name: `${marker} ${createdToken.name}`,
+    'flags.conan.enemyMarker': marker
+  });
 
   await createdToken.setFlag('conan', 'enemyData', {
     id: enemy.id, name: enemy.name, type: enemy.type,

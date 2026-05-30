@@ -33,6 +33,117 @@ const VENOM_SPELL_MESSAGES = [
   "Your mind reaches for the spell — the poison pulls you back into your suffering body."
 ];
 
+// ============================================
+// FIGHTING STYLES (Advanced Rules)
+// ============================================
+// Per-style metadata: weapon requirement predicate, required skill IDs (any of which unlocks),
+// cost, FontAwesome icon, short description, and rules text for the details dialog.
+// Used by getData() detection (Phase 3b) and adoption handler (Phase 3d).
+// The actual bonus application is wired per-style in Phases 4–10.
+const FIGHTING_STYLE_CONFIGS = {
+  'dual-wielder': {
+    id: 'dual-wielder',
+    name: 'Dual Wielder',
+    icon: 'fa-solid fa-khanda',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons, shieldEquipped, hasSkill) => {
+      // Default: two One-Handed Light or Medium melee weapons.
+      // With Ambidextrous: one 1H Heavy + one 1H L/M also qualifies (but not two Heavies).
+      const meleeOH = weapons.filter(w => w.type === 'melee' && w.category && w.category.startsWith('One-Handed'));
+      if (meleeOH.length < 2) return false;
+      const lmCount = meleeOH.filter(w => w.category === 'One-Handed Light' || w.category === 'One-Handed Medium').length;
+      if (lmCount >= 2) return true;
+      if (hasSkill && hasSkill('ambidextrous')) {
+        const heavyCount = meleeOH.filter(w => w.category === 'One-Handed Heavy').length;
+        return heavyCount >= 1 && lmCount >= 1;
+      }
+      return false;
+    },
+    skillReq: ['ambidextrous', 'martial-training'],
+    short: '+ both wpn dmg · -1 AR',
+    bonus: 'When making an Attack, the Character adds both weapons\' Damage rolls to their Might.',
+    hindrance: '-1 AR (down to a minimum of 0). May not take the Manipulate Action.'
+  },
+  'defensive-fighter': {
+    id: 'defensive-fighter',
+    name: 'Defensive Fighter',
+    icon: 'fa-solid fa-shield-halved',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons, shieldEquipped) => {
+      // Any One-Handed weapon + Shield equipped
+      const has1H = weapons.some(w => w.category && w.category.startsWith('One-Handed'));
+      return has1H && shieldEquipped;
+    },
+    skillReq: ['shield-master', 'martial-training'],
+    short: '+1 AR · +2 if no Move',
+    bonus: 'The Character gains +1 AR. The Character gains an additional +1 AR during any Round in which they do not take the Move Action.',
+    hindrance: 'Taking the Move Action more than once in a Round (even through Stamina spends or other rules) immediately ends this Fighting Style. May not take the Manipulate Action.'
+  },
+  'flexible-fighter': {
+    id: 'flexible-fighter',
+    name: 'Flexible Fighter',
+    icon: 'fa-solid fa-hand-fist',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons, shieldEquipped) => {
+      // Single One-Handed weapon, other hand empty (no second weapon, no shield)
+      const oneHanded = weapons.filter(w => w.category && w.category.startsWith('One-Handed'));
+      return oneHanded.length === 1 && weapons.length === 1 && !shieldEquipped;
+    },
+    skillReq: ['combat-flow', 'martial-training'],
+    short: '+1 Dmg · -1 Phys Def',
+    bonus: 'The Character inflicts +1 Damage. The Manipulate Action becomes a Free Action.',
+    hindrance: '-1 Physical Defense.'
+  },
+  'great-weapon-fighter': {
+    id: 'great-weapon-fighter',
+    name: 'Great-Weapon Fighter',
+    icon: 'fa-solid fa-hammer',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons) => {
+      // Any Two-Handed Heavy weapon
+      return weapons.some(w => w.category === 'Two-Handed Heavy');
+    },
+    skillReq: ['brutal-strength', 'martial-training'],
+    short: '+1D4 Dmg on Focused Atk',
+    bonus: 'When the Character makes a Focused Attack they inflict +1D4 Damage.',
+    hindrance: 'The Character may only take the Move Action as their first Action each Round. May not take the Manipulate Action.'
+  },
+  'deadeye-shooter': {
+    id: 'deadeye-shooter',
+    name: 'Deadeye Shooter',
+    icon: 'fa-solid fa-bullseye',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons) => {
+      // Any Ranged weapon (bow, crossbow, thrown excluded — thrown handled separately if needed)
+      return weapons.some(w => w.type === 'ranged');
+    },
+    skillReq: ['veteran-deadeye', 'martial-training'],
+    short: '+1D4 Dmg on Focused Atk',
+    bonus: 'When the Character makes a Focused Attack they inflict +1D4 Damage.',
+    hindrance: 'Taking the Move Action (even through Stamina spends or other rules) immediately ends this Fighting Style. May not take the Manipulate Action.'
+  },
+  'phalanx-fighter': {
+    id: 'phalanx-fighter',
+    name: 'Phalanx Fighter',
+    icon: 'fa-solid fa-people-group',
+    costSP: 1,
+    costActions: 2,
+    weaponReq: (weapons) => {
+      // Spear or Halberd (Two-Handed weapon with Close Range Attack)
+      return weapons.some(w => /spear|halberd/i.test(w.name || ''));
+    },
+    skillReq: ['lone-soldier', 'martial-training'],
+    short: '+1 atk/dmg on Move · +1 PD if no Move',
+    bonus: 'The Character gains +1 to Attacks and Damage rolls in any Round that they take the Move Action, and +1 Physical Defense in any Round that they do not take the Move Action.',
+    hindrance: 'The bonus for this stance may only be applied if there is at least one other Player Character within Close Range also using this Fighting Style. May not take the Manipulate Action.'
+  }
+};
+
 // Origin-specific beast form data — keyed by origin ID
 // Images are read from GM Tools custom images (enemyCustomImages setting)
 // Key format: originBeast.<groupKey>.<id>
@@ -1053,16 +1164,32 @@ export default class ConanActorSheet2 extends ActorSheet {
     context.hasWhaleboneAndGristle = hasWhaleboneAndGristle || hasWhaleboneAndGristleII;
     context.hasWhaleboneAndGristleII = hasWhaleboneAndGristleII;
 
-    // Calculate effective stat values (base + skill bonus)
+    // Custom armor + custom shield bonuses (apply only when each is currently active)
+    const customArmorWorn = this.actor.getFlag('conan', 'customArmor');
+    const wearingCustomArmor = context.system.armorEquipped?.type === 'custom' && customArmorWorn;
+    const customShieldWorn = this.actor.getFlag('conan', 'customShield');
+    const usingCustomShield = !!context.system.useCustomShield && customShieldWorn;
+    const getCustomArmorBonus = (target) => {
+      let sum = 0;
+      if (wearingCustomArmor && Array.isArray(customArmorWorn.bonuses)) {
+        for (const b of customArmorWorn.bonuses) if (b.target === target) sum += Number(b.value) || 0;
+      }
+      if (usingCustomShield && Array.isArray(customShieldWorn.bonuses)) {
+        for (const b of customShieldWorn.bonuses) if (b.target === target) sum += Number(b.value) || 0;
+      }
+      return sum;
+    };
+
+    // Calculate effective stat values (base + skill bonus + custom-armor bonus)
     const baseEdge = context.system.attributes?.edge?.value || 0;
     const baseMight = context.system.attributes?.might?.value || 0;
     const baseWits = context.system.attributes?.wits?.value || 0;
     const baseGrit = context.system.attributes?.grit?.value || 0;
 
-    context.effectiveEdge = baseEdge + edgeSkillBonus;
-    context.effectiveMight = baseMight + mightSkillBonus;
-    context.effectiveWits = baseWits + witsSkillBonus;
-    context.effectiveGrit = baseGrit + gritSkillBonus;
+    context.effectiveEdge = baseEdge + edgeSkillBonus + getCustomArmorBonus('edge');
+    context.effectiveMight = baseMight + mightSkillBonus + getCustomArmorBonus('might');
+    context.effectiveWits = baseWits + witsSkillBonus + getCustomArmorBonus('wits');
+    context.effectiveGrit = baseGrit + gritSkillBonus + getCustomArmorBonus('grit');
 
     // ----------------------------------------
     // STAT DIE UPGRADES
@@ -1122,6 +1249,47 @@ export default class ConanActorSheet2 extends ActorSheet {
     context.hasFierceMind = hasFierceMind;
 
     // ----------------------------------------
+    // FIGHTING STYLES — detect which styles the character qualifies for.
+    // A style is "qualifying" when both (a) its weapon req is satisfied by
+    // the current armed loadout and (b) the character has at least one of
+    // its required Advanced Skills. The currently-active style is always
+    // included (even if loadout shifted) so the player can drop it.
+    // ----------------------------------------
+    const fsArmedWeapons = Object.values(this.actor.system.armedWeapons || {});
+    const fsShieldEquipped = !!(this.actor.system.armorEquipped?.shield);
+    const fsOriginBonuses = this._getActiveOriginBonuses();
+    const fsHasSkill = (skillId) => {
+      if ((fsOriginBonuses.grantedSkills || []).includes(skillId)) return true;
+      return Object.values(this.actor.system.skills || {}).some(s => {
+        const sid = s.defId || s.id;
+        const sname = (s.name || '').toLowerCase().replace(/\s+/g, '-');
+        return sid === skillId || sname === skillId;
+      });
+    };
+    // State lives in actor flags (not system data) so no template.json changes are needed.
+    const fsActiveId = this.actor.getFlag('conan', 'fightingStyle')?.id || null;
+    const fsIsSpent = !!this.actor.getFlag('conan', 'fightingStyleSpent');
+    context.qualifyingFightingStyles = [];
+    for (const cfg of Object.values(FIGHTING_STYLE_CONFIGS)) {
+      const isActive = cfg.id === fsActiveId;
+      const weaponOK = cfg.weaponReq(fsArmedWeapons, fsShieldEquipped, fsHasSkill);
+      const skillOK = cfg.skillReq.some(s => fsHasSkill(s));
+      if (!isActive && (!weaponOK || !skillOK)) continue;
+      context.qualifyingFightingStyles.push({
+        id: cfg.id,
+        name: cfg.name,
+        icon: cfg.icon,
+        short: cfg.short,
+        costSP: cfg.costSP,
+        costActions: cfg.costActions,
+        bonus: cfg.bonus,
+        hindrance: cfg.hindrance,
+        isActive,
+        isSpent: fsIsSpent
+      });
+    }
+
+    // ----------------------------------------
     // COMBAT SKILLS (Arms Column)
     // ----------------------------------------
     context.hasImpalingThrow = hasImpalingThrow;
@@ -1139,8 +1307,37 @@ export default class ConanActorSheet2 extends ActorSheet {
     const currentSP = context.system.stamina || 0;
     const currentArmorType = context.system.armorEquipped?.type || 'unarmored';
 
-    // Heavy Armor Recovery Penalty: only 1 Recovery per Rest unless has Soldier's Endurance
-    context.hasHeavyArmorRecoveryPenalty = currentArmorType === 'heavy' && !hasSoldiersEndurance;
+    // Recovery Penalty: only 1 Recovery per Rest
+    // Triggers: built-in Heavy Armor OR custom armor with recoveryPenalty flag
+    // Soldier's Endurance bypasses both
+    const customArmorRecPen = this.actor.getFlag('conan', 'customArmor');
+    const wearingCustomWithRecPen = currentArmorType === 'custom'
+      && customArmorRecPen
+      && customArmorRecPen.recoveryPenalty === true;
+    context.hasHeavyArmorRecoveryPenalty = (currentArmorType === 'heavy' || wearingCustomWithRecPen) && !hasSoldiersEndurance;
+    console.log('[RecoveryPenalty] armorType:', currentArmorType, '| customRecPen:', wearingCustomWithRecPen, '| soldiersEndurance:', hasSoldiersEndurance, '| gated:', context.hasHeavyArmorRecoveryPenalty);
+
+    // ----------------------------------------
+    // TODO — ARMOR INFO SUB-PANEL DATA (planned, not yet wired)
+    // When we build the click-to-expand armor info panel (analogous to
+    // .sheet2-weaponEditPanel), populate context.armorInfo with these fields:
+    //   name             — armor display name (custom name if wearing custom)
+    //   isCustom         — true when wearing custom armor
+    //   ar               — AR value (from custom.ar or armorTable[type].ar)
+    //   minMight         — encumbrance requirement
+    //   description      — pre-formatted description string (penalties, move limits)
+    //   hasShield        — boolean
+    //   shieldName       — 'Shield' or custom shield name
+    //   shieldIsCustom   — boolean
+    //   shieldPhysDefBonus  — number (1 for base shield, customShield.physDefBonus for custom)
+    //   shieldSorcDefBonus  — number (0 for base, customShield.sorcDefBonus for custom)
+    //   shieldMinMight   — encumbrance for shield
+    //   hasSoldiersEndurance — flag for the skill that changes Heavy penalties
+    // Source variables available here: currentArmorType, customArmorRecPen, hasSoldiersEndurance,
+    // this._getArmorData(), context.system.armorEquipped, context.system.useCustomShield,
+    // this.actor.getFlag('conan', 'customShield').
+    // ----------------------------------------
+
     const impalingThrowActive = context.system.impalingThrowActive || false;
 
     // Impaling Throw: needs 1 SP AND not already active
@@ -1464,12 +1661,20 @@ export default class ConanActorSheet2 extends ActorSheet {
     const shieldEquipped = context.system.armorEquipped?.shield || false;
     const effectiveEdgeForDef = context.effectiveEdge; // Uses skill-boosted Edge
 
+    // Custom shield resolution (used by phys + sorc def)
+    const customShieldDef = this.actor.getFlag('conan', 'customShield');
+    const useCustomShieldDef = !!context.system.useCustomShield && customShieldDef;
+    const shieldEdgeGate = useCustomShieldDef ? (Number(customShieldDef.edgeGate) || 3) : 3;
+    const shieldPhysDefBonus = useCustomShieldDef ? (Number(customShieldDef.physDefBonus) || 0) : 1;
+    const shieldSorcDefBonus = useCustomShieldDef ? (Number(customShieldDef.sorcDefBonus) || 0) : 0;
+    const shieldMeetsEdge = shieldEquipped && effectiveEdgeForDef >= shieldEdgeGate;
+
     if (!physicalLocked && physicalOverride !== null && physicalOverride !== undefined && physicalOverride !== "") {
       context.system.defense.physical = parseInt(physicalOverride);
     } else {
       const baseDefense = Math.max(5, effectiveEdgeForDef + 2);
-      // Shield only adds +1 if effective Edge >= 3
-      const shieldBonus = (shieldEquipped && effectiveEdgeForDef >= 3) ? 1 : 0;
+      // Shield: stock +1 OR custom shield's physDefBonus when active; gated by per-shield Edge requirement
+      const shieldBonus = shieldMeetsEdge ? shieldPhysDefBonus : 0;
       // Tough-Souled adds +1 to Physical Defense
       const toughSouledBonus = hasToughSouled ? 1 : 0;
       // Blocker adds +1 when stance is active (requires shield)
@@ -1480,7 +1685,9 @@ export default class ConanActorSheet2 extends ActorSheet {
       // Defensive Fighting: +2 when active
       const defensiveFightingActive = this.actor.getFlag('conan', 'defensiveFighting') || false;
       const defensiveFightingBonus = defensiveFightingActive ? 2 : 0;
-      context.system.defense.physical = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus + defensiveFightingBonus;
+      const customArmorPhysBonus = getCustomArmorBonus('physicalDefense');
+      context.system.defense.physical = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus + defensiveFightingBonus + customArmorPhysBonus;
+      context.customArmorPhysBonus = customArmorPhysBonus;
       context.protectBonus = protectBonus;
       context.physicalToughSouledBonus = toughSouledBonus;
       context.physicalBlockerBonus = blockerBonus;
@@ -1520,7 +1727,12 @@ export default class ConanActorSheet2 extends ActorSheet {
       // Tough-Souled adds +1 to Sorcery Defense
       const toughSouledBonus = hasToughSouled ? 1 : 0;
 
-      sorceryDef += sorcerySkillBonus + toughSouledBonus;
+      const customArmorSorcBonus = getCustomArmorBonus('sorceryDefense');
+      // Custom shield Sorc Def bonus — only when active AND meets shield's Edge gate
+      const shieldSorcContribution = (useCustomShieldDef && shieldMeetsEdge) ? shieldSorcDefBonus : 0;
+      sorceryDef += sorcerySkillBonus + toughSouledBonus + customArmorSorcBonus + shieldSorcContribution;
+      context.customArmorSorcBonus = customArmorSorcBonus;
+      context.customShieldSorcBonus = shieldSorcContribution;
       context.sorcerySkillBonus = sorcerySkillBonus; // For display (context only, not system)
       context.sorceryToughSouledBonus = toughSouledBonus;
       context.hasUncannyWarding = hasUncannyWarding || hasUncannyWardingII || sorcerySkillBonus > 0;
@@ -1610,7 +1822,21 @@ export default class ConanActorSheet2 extends ActorSheet {
       context.system.lifePoints.purchasedSkillBonus = purchasedSkillLPBonus;
       context.system.lifePoints.purchasedSkillSources = purchasedSkillLPSources.join(", ");
 
-      context.system.lifePoints.max = originBaseLP + context.system.lpGritBonus + originSkillLPBonus + purchasedSkillLPBonus;
+      // Custom armor direct LP bonus (Grit contribution already flows through effectiveGrit → lpGritBonus)
+      const customArmorForLP = this.actor.getFlag('conan', 'customArmor');
+      const wearingCustomForLP = context.system.armorEquipped?.type === 'custom' && customArmorForLP;
+      let customArmorLPBonus = 0;
+      let customArmorLPSources = '';
+      if (wearingCustomForLP && Array.isArray(customArmorForLP.bonuses)) {
+        for (const b of customArmorForLP.bonuses) {
+          if (b.target === 'lifePoints') customArmorLPBonus += Number(b.value) || 0;
+        }
+        if (customArmorLPBonus > 0) customArmorLPSources = `${customArmorForLP.name} +${customArmorLPBonus}`;
+      }
+      context.system.lifePoints.customArmorBonus = customArmorLPBonus;
+      context.system.lifePoints.customArmorSources = customArmorLPSources;
+
+      context.system.lifePoints.max = originBaseLP + context.system.lpGritBonus + originSkillLPBonus + purchasedSkillLPBonus + customArmorLPBonus;
     } else {
       context.system.lifePoints.max = parseInt(lpMaxOverride);
     }
@@ -1967,8 +2193,40 @@ export default class ConanActorSheet2 extends ActorSheet {
       }
     }
 
+    // Armor / shield Min-Might encumbrance — uses BASE Might (armor's own bonus doesn't count toward its own threshold)
+    const baseMightForEnc = context.system.attributes?.might?.value || 0;
+    const armorType = context.system.armorEquipped?.type || 'unarmored';
+    const armorTable = this._getArmorData();
+    const customArmorEnc = this.actor.getFlag('conan', 'customArmor');
+
+    // Standard armor (light/medium/heavy): check minMight from the armor table
+    let armorMinMight = 0;
+    if (armorType === 'custom' && customArmorEnc) {
+      armorMinMight = customArmorEnc.minMight || 0;
+    } else if (armorTable[armorType]) {
+      armorMinMight = armorTable[armorType].minMight || 0;
+    }
+    // Soldier's Endurance exempts ARMOR encumbrance only — shields, weapons, items keep their checks
+    const isArmorEncumbered = !hasSoldiersEndurance && armorMinMight > 0 && baseMightForEnc < armorMinMight;
+
+    // Shield (independent check): if equipped and below shield's minMight — NOT bypassed by Soldier's Endurance
+    // When custom shield is active, use its minMight instead of stock 3
+    const shieldEquippedForEnc = !!context.system.armorEquipped?.shield;
+    const useCustomShieldForEnc = !!context.system.useCustomShield;
+    const customShieldForEnc = useCustomShieldForEnc ? this.actor.getFlag('conan', 'customShield') : null;
+    const shieldMinMight = !shieldEquippedForEnc
+      ? 0
+      : (customShieldForEnc ? (Number(customShieldForEnc.minMight) || 0) : (armorTable.shield?.minMight || 0));
+    const isShieldEncumbered = shieldMinMight > 0 && baseMightForEnc < shieldMinMight;
+
+    context.system.isArmorEncumbered = isArmorEncumbered;
+    context.system.isShieldEncumbered = isShieldEncumbered;
+    context.system.armorMinMight = armorMinMight;
+    context.system.shieldMinMight = shieldMinMight;
+    console.log('[Encumbrance] baseMight:', baseMightForEnc, '| armorType:', armorType, '| armorMinMight:', armorMinMight, '| isArmorEnc:', isArmorEncumbered, '| shield:', shieldEquippedForEnc, '| shieldMinMight:', shieldMinMight, '| isShieldEnc:', isShieldEncumbered, '| soldiersEndurance:', hasSoldiersEndurance);
+
     // Combined encumbrance check
-    context.system.isEncumbered = isWeaponEncumbered || isInventoryEncumbered;
+    context.system.isEncumbered = isWeaponEncumbered || isInventoryEncumbered || isArmorEncumbered || isShieldEncumbered;
     context.system.isWeaponEncumbered = isWeaponEncumbered;
     context.system.isInventoryEncumbered = isInventoryEncumbered;
 
@@ -2105,9 +2363,17 @@ export default class ConanActorSheet2 extends ActorSheet {
     // if (context.hasDemonicWard) arBuffBonus += X;
     context.arBuffBonus = arBuffBonus;
 
-    // Calculate effective AR (base AR + buff bonus)
+    // AR debuffs from active fighting styles
+    let arDebuff = 0;
+    const fsDebuffCheck = this.actor.getFlag('conan', 'fightingStyle');
+    if (fsDebuffCheck?.id === 'dual-wielder') arDebuff += 1;
+    // Future styles that debuff AR can stack here
+    context.arDebuff = arDebuff;
+    context.hasARDebuff = arDebuff > 0;
+
+    // Calculate effective AR (base + buffs - debuffs, floor at 0)
     const baseAR = context.system.defense?.ar || 0;
-    context.effectiveAR = baseAR + arBuffBonus;
+    context.effectiveAR = Math.max(0, baseAR + arBuffBonus - arDebuff);
     context.hasARBuff = arBuffBonus > 0;
 
     // Check if any AR-affecting buffs are active (for icon container)
@@ -3712,8 +3978,25 @@ export default class ConanActorSheet2 extends ActorSheet {
       if (skillName === 'whalebone and gristle') gritSkillBonus += 1;
       if (skillName === 'whalebone and gristle ii') gritSkillBonus += 1;
     }
-    const effectiveGrit = baseGrit + gritSkillBonus;
+
+    // Custom armor stat & LP bonuses (only when 'custom' is worn)
+    const customArmor = this.actor.getFlag('conan', 'customArmor');
+    const wearingCustom = this.actor.system.armorEquipped?.type === 'custom' && customArmor;
+    console.log('[MaxLP] customArmor flag:', customArmor, '| armorEquipped.type:', this.actor.system.armorEquipped?.type, '| wearingCustom:', wearingCustom, '| bonuses:', customArmor?.bonuses);
+    let customArmorGritBonus = 0;
+    let customArmorLPBonus = 0;
+    if (wearingCustom && Array.isArray(customArmor.bonuses)) {
+      for (const b of customArmor.bonuses) {
+        const v = Number(b.value) || 0;
+        console.log('[MaxLP] bonus row → target:', b.target, '| value:', b.value, '| numeric:', v);
+        if (b.target === 'grit') customArmorGritBonus += v;
+        if (b.target === 'lifePoints') customArmorLPBonus += v;
+      }
+    }
+
+    const effectiveGrit = baseGrit + gritSkillBonus + customArmorGritBonus;
     const gritLPBonus = effectiveGrit * 2;
+    console.log('[MaxLP] baseGrit:', baseGrit, '| skills:', gritSkillBonus, '| customArmorGrit:', customArmorGritBonus, '| effective:', effectiveGrit, '| gritLPBonus:', gritLPBonus, '| customArmorLP:', customArmorLPBonus);
 
     // Get origin bonuses
     const originBonuses = this._getActiveOriginBonuses();
@@ -3749,7 +4032,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       }
     }
 
-    return originBaseLP + gritLPBonus + originSkillLPBonus + purchasedSkillLPBonus;
+    return originBaseLP + gritLPBonus + originSkillLPBonus + purchasedSkillLPBonus + customArmorLPBonus;
   }
 
   /**
@@ -3822,18 +4105,53 @@ export default class ConanActorSheet2 extends ActorSheet {
       effectiveDie = 'd8';
     }
 
-    // Calculate effective value
-    const effectiveValue = baseValue + valueBonus;
+    // Custom armor + custom shield stat bonuses
+    const customArmor = this.actor.getFlag('conan', 'customArmor');
+    const customShield = this.actor.getFlag('conan', 'customShield');
+    const armorType = this.actor.system.armorEquipped?.type;
+    const useCustomShieldStat = !!this.actor.system.useCustomShield;
+    let customArmorBonusValue = 0;
+    const bonusSources = [];
+    if (armorType === 'custom' && customArmor && Array.isArray(customArmor.bonuses)) {
+      const armorPart = customArmor.bonuses
+        .filter(b => b.target === attribute)
+        .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+      if (armorPart > 0) {
+        customArmorBonusValue += armorPart;
+        bonusSources.push(`+${armorPart} ${customArmor.name}`);
+      }
+    }
+    if (useCustomShieldStat && customShield && Array.isArray(customShield.bonuses)) {
+      const shieldPart = customShield.bonuses
+        .filter(b => b.target === attribute)
+        .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+      if (shieldPart > 0) {
+        customArmorBonusValue += shieldPart;
+        bonusSources.push(`+${shieldPart} ${customShield.name}`);
+      }
+    }
+    const customArmorValueBonus = bonusSources.length > 0 ? bonusSources.join(', ') : null;
+
+    // Calculate effective value (base + skills + custom armor)
+    const effectiveValue = baseValue + valueBonus + customArmorBonusValue;
 
     // Build display strings for chat
     const skillDieUpgrade = (effectiveDie !== baseDie) ? dieUpgradeName : null;
     const skillValueBonus = (valueBonus > 0) ? `+${valueBonus} ${valueUpgradeName}` : null;
 
+    console.log('[StatRoll]', attribute,
+      '| base:', baseValue,
+      '| skills:', valueBonus, valueUpgradeName,
+      '| customArmor:', customArmorBonusValue, customArmor?.name,
+      '| effective:', effectiveValue,
+      '| die:', effectiveDie);
+
     return {
       die: effectiveDie,
       value: effectiveValue,
       skillDieUpgrade,
-      skillValueBonus
+      skillValueBonus,
+      customArmorValueBonus
     };
   }
 
@@ -4307,6 +4625,13 @@ export default class ConanActorSheet2 extends ActorSheet {
     // ===== WEAPON SYSTEM =====
     html.find('.open-add-weapon').click(this._onOpenAddWeapon.bind(this));
     html.find('.close-add-weapon').click(this._onCloseAddWeapon.bind(this));
+    html.find('.open-armor-menu').click(this._onOpenArmorMenu.bind(this));
+    html.find('.close-armor-menu').click(this._onCloseArmorMenu.bind(this));
+    html.find('.sheet2-armorMenuCard[data-armor-type]').click(this._onArmorTypeSelect.bind(this));
+    html.find('.sheet2-armorMenuCard[data-shield-type]').click(this._onShieldSelect.bind(this));
+    html.find('.armor-toggle').click(this._onArmorEditToggle.bind(this));
+    html.find('.activate-fighting-style').click(this._onFightingStyleActivate.bind(this));
+    html.find('.show-fighting-style-details').click(this._onFightingStyleDetails.bind(this));
     html.find('.sheet2-weaponCategoryTab').click(this._onWeaponCategoryTab.bind(this));
     html.find('.sheet2-weaponSubTab').click(this._onWeaponSubCategoryTab.bind(this));
     html.find('.sheet2-weaponPickerGrid').on('click', '.sheet2-weaponCard', this._onWeaponCardClick.bind(this));
@@ -4470,7 +4795,8 @@ export default class ConanActorSheet2 extends ActorSheet {
     html.find('.item-delete').click(this._onDeleteItem.bind(this));
 
     // ===== ARMOR BUTTONS (in Arms tab) =====
-    html.find('.sheet2-armsArmorBtn').click(this._onArmorTypeSelect.bind(this));
+    html.find('.sheet2-armorMenuCustomSlot[data-armor-type="custom"]').on('contextmenu', this._onCustomArmorClear.bind(this));
+    html.find('.sheet2-armorMenuCustomSlot[data-shield-type="custom"]').on('contextmenu', this._onCustomShieldClear.bind(this));
 
     // ===== COMBAT SKILL ICONS (Active abilities in Arms tab) =====
     html.find('.impaling-throw-trigger.usable').click(this._onImpalingThrow.bind(this));
@@ -4969,6 +5295,13 @@ export default class ConanActorSheet2 extends ActorSheet {
         html.find('.sheet2-weaponEdit').removeClass('active');
         html.find('.weapon-toggle').removeClass('open');
         this._openWeaponPanelId = null;
+      }
+
+      // Armor edit panel — close on outside click (anything not inside the panel or the label).
+      const isInsideArmorPanel = $target.closest('.sheet2-armorEdit').length > 0;
+      const isArmorToggle = $target.closest('.armor-toggle').length > 0;
+      if (!isInsideArmorPanel && !isArmorToggle) {
+        html.find('.sheet2-armorEdit.active').removeClass('active');
       }
     });
 
@@ -5692,7 +6025,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollAttribute(event, options = {}) {
     event?.preventDefault?.();
-    const { isReroll = false, forceAttribute = null, eyesOfTheRaven = false, howardCheckInstance = null } = options;
+    const { isReroll = false, forceAttribute = null, eyesOfTheRaven = false } = options;
 
     const element = event?.currentTarget;
     const attribute = forceAttribute || element?.dataset?.attribute;
@@ -5707,7 +6040,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     }
 
     // Get effective die and value (includes skill bonuses)
-    const { die, value, skillDieUpgrade, skillValueBonus } = this._getEffectiveStatValues(attribute);
+    const { die, value, skillDieUpgrade, skillValueBonus, customArmorValueBonus } = this._getEffectiveStatValues(attribute);
 
     // Get origin bonuses for stat checks
     const originBonuses = this._getActiveOriginBonuses();
@@ -5795,6 +6128,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (skillValueBonus) {
       formulaDisplay += ` <span style="color: #90EE90;">(${skillValueBonus})</span>`;
     }
+    if (customArmorValueBonus) {
+      formulaDisplay += ` <span style="color: #87CEEB;">(${customArmorValueBonus})</span>`;
+    }
     if (statBonus > 0) {
       formulaDisplay += ` <span style="color: #90EE90;">(+${statBonus} Origin)</span>`;
     }
@@ -5835,6 +6171,9 @@ export default class ConanActorSheet2 extends ActorSheet {
       if (skillValueBonus) {
         html += `<div class="breakdown-line skill-bonus"><span class="breakdown-label">Skill Bonus</span><span class="breakdown-value">${skillValueBonus}</span></div>`;
       }
+      if (customArmorValueBonus) {
+        html += `<div class="breakdown-line skill-bonus"><span class="breakdown-label">Custom Armor</span><span class="breakdown-value">${customArmorValueBonus}</span></div>`;
+      }
       if (statBonus > 0) {
         html += `<div class="breakdown-line skill-bonus"><span class="breakdown-label">Origin</span><span class="breakdown-value">+${statBonus}</span></div>`;
       }
@@ -5870,8 +6209,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     // If flex triggered, show flex choice card
     if (flexData.triggered) {
       // Build normal content for stamina choice fallback (no flex die shown)
-      const hciAttr = howardCheckInstance ? ` data-howard-check="${howardCheckInstance}"` : '';
-      let normalContent = `<div class="conan-roll" style="border-color: ${ownerColor};"${hciAttr}>`;
+      let normalContent = `<div class="conan-roll" style="border-color: ${ownerColor};">`;
       normalContent += `<div class="roll-header">`;
       normalContent += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
       normalContent += `<div class="roll-title">${attrData.label} Roll</div>`;
@@ -5922,8 +6260,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       });
     } else {
       // No flex - show normal skill roll card with flex die in breakdown
-      const hciAttr2 = howardCheckInstance ? ` data-howard-check="${howardCheckInstance}"` : '';
-      let content = `<div class="conan-roll" style="border-color: ${ownerColor};"${hciAttr2}>`;
+      let content = `<div class="conan-roll" style="border-color: ${ownerColor};">`;
       content += `<div class="roll-header">`;
       content += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
       content += `<div class="roll-title">${attrData.label} Roll</div>`;
@@ -5999,6 +6336,17 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollInitiative(event) {
     event.preventDefault();
+
+    // Hard-reset Fighting Style state on initiative roll. Clears any active stance and
+    // the once-per-combat spent lock so the stance row refreshes to "inactive ready",
+    // even if the deleteCombat auto-reset never fired (e.g., combat tracker not used,
+    // or stuck state from a misclick). Treated as a new combat from the player's POV.
+    if (this.actor.getFlag('conan', 'fightingStyle')) {
+      await this.actor.unsetFlag('conan', 'fightingStyle');
+    }
+    if (this.actor.getFlag('conan', 'fightingStyleSpent')) {
+      await this.actor.unsetFlag('conan', 'fightingStyleSpent');
+    }
 
     // Check if there's a manual initiative override
     const initiativeOverride = this.actor.system.initiative?.value;
@@ -6170,6 +6518,155 @@ export default class ConanActorSheet2 extends ActorSheet {
     this._clearAllTooltips();
     const menu = this.element.find('.sheet2-addWeaponMenu');
     menu.removeClass('active');
+  }
+
+  _onOpenArmorMenu(event) {
+    event.preventDefault();
+    this.element.find('.sheet2-armorMenu').addClass('active');
+  }
+
+  _onCloseArmorMenu(event) {
+    event.preventDefault();
+    this.element.find('.sheet2-armorMenu').removeClass('active');
+  }
+
+  _onArmorEditToggle(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const panel = this.element.find('.sheet2-armorEdit[data-for="armor"]');
+    panel.toggleClass('active');
+  }
+
+  /**
+   * Phase 3g — Toggle the details panel for a Fighting Style.
+   * Mirrors _onWeaponToggle: closes any other open stance panels, toggles the
+   * matching .sheet2-stanceEdit[data-for] panel by its data-style-id.
+   */
+  _onFightingStyleDetails(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const styleId = event.currentTarget.dataset.styleId;
+    if (!styleId) return;
+    const panel = this.element.find(`.sheet2-stanceEdit[data-for="${styleId}"]`);
+    const allPanels = this.element.find('.sheet2-stanceEdit');
+    // Close all other stance panels first
+    allPanels.not(panel).removeClass('active');
+    panel.toggleClass('active');
+  }
+
+  /**
+   * Phase 3d — Adopt a Fighting Style.
+   * Pops a cost-choice dialog: "1 SP" (resource cost, common path) or "2 Actions"
+   * (narrative cost — system doesn't track turn actions, GM/player tracks manually).
+   * Martial Training (Phase 5) will skip this dialog and adopt for free.
+   * Clicking an already-active style = drop (Phase 3e — currently no-op).
+   * Clicking when another style is active or when the spent flag is set = warn + return.
+   */
+  async _onFightingStyleActivate(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const styleId = event.currentTarget.dataset.styleId;
+    if (!styleId) return;
+    const currentStyle = this.actor.getFlag('conan', 'fightingStyle');
+    const isSpent = !!this.actor.getFlag('conan', 'fightingStyleSpent');
+    if (isSpent) {
+      ui.notifications.warn('You already used your Fighting Style this combat.');
+      return;
+    }
+    if (currentStyle?.id === styleId) {
+      // Phase 3e — drop the active stance. Once dropped the character is locked out of
+      // all Fighting Styles for the rest of the combat (book rule). Confirm first.
+      const dropStyleName = FIGHTING_STYLE_CONFIGS[styleId]?.name || styleId;
+      const confirmed = await Dialog.confirm({
+        title: `Drop ${dropStyleName}?`,
+        content: `<p>Drop <strong>${dropStyleName}</strong>?</p><p style="font-size: 12px; color: #c1272d;">You will be <strong>locked out of all Fighting Styles</strong> for the rest of this combat.</p>`,
+        defaultYes: false
+      });
+      if (!confirmed) return;
+      await this.actor.setFlag('conan', 'fightingStyleSpent', true);
+      await this.actor.unsetFlag('conan', 'fightingStyle');
+      return;
+    }
+    if (currentStyle) {
+      ui.notifications.warn('You may only adopt one Fighting Style per combat.');
+      return;
+    }
+    const styleConfig = FIGHTING_STYLE_CONFIGS[styleId];
+    const styleName = styleConfig?.name || styleId;
+    const currentSP = this.actor.system.stamina || 0;
+    const actor = this.actor;
+
+    const adopt = async (costSP) => {
+      if (costSP > 0) {
+        await actor.update({ 'system.stamina': currentSP - costSP });
+      }
+      await actor.setFlag('conan', 'fightingStyle', {
+        id: styleId,
+        adoptedAt: game.combat?.round ?? null
+      });
+    };
+
+    new Dialog({
+      title: `Adopt ${styleName}`,
+      content: `
+        <div style="padding: 4px 0 8px; text-align: center;">
+          <p style="margin: 0 0 6px;">Adopt <strong>${styleName}</strong> — choose adoption cost:</p>
+          <p style="margin: 0; font-size: 12px; color: #8a7a5a;">Current Stamina: <strong>${currentSP} SP</strong></p>
+        </div>`,
+      buttons: {
+        sp: {
+          icon: '<i class="fas fa-bolt"></i>',
+          label: '1 SP',
+          callback: () => {
+            if (currentSP < 1) {
+              ui.notifications.warn('Not enough Stamina — use the 2 Actions option instead.');
+              return;
+            }
+            return adopt(1);
+          }
+        },
+        actions: {
+          icon: '<i class="fas fa-hourglass-half"></i>',
+          label: '2 Actions',
+          callback: () => adopt(0)
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: 'Cancel'
+        }
+      },
+      default: 'sp'
+    }).render(true);
+  }
+
+  async _onShieldSelect(event) {
+    event.preventDefault();
+    this._saveScrollPosition();
+    const shieldType = event.currentTarget.dataset.shieldType;
+    const currentArmor = this.actor.system.armorEquipped || { type: 'unarmored', shield: false };
+    const wasBlockerActive = this.actor.system.blockerActive;
+    let updates = {};
+    if (shieldType === 'none') {
+      updates['system.armorEquipped.shield'] = false;
+      updates['system.useCustomShield'] = false;
+      if (wasBlockerActive) {
+        updates['system.blockerActive'] = false;
+        ui.notifications.info('Blocker stance ended - shield removed.');
+      }
+    } else if (shieldType === 'shield') {
+      updates['system.armorEquipped.shield'] = true;
+      updates['system.useCustomShield'] = false;
+    } else if (shieldType === 'custom') {
+      const customShield = this.actor.getFlag('conan', 'customShield');
+      if (!customShield) {
+        ui.notifications.warn('No custom shield equipped. Drop a forged shield on the custom shield slot first.');
+        return;
+      }
+      updates['system.armorEquipped.shield'] = true;
+      updates['system.useCustomShield'] = true;
+    }
+    updates['system.armorEquipped.description'] = this._getArmorDescription(currentArmor.type, updates['system.armorEquipped.shield']);
+    await this.actor.update(updates);
   }
 
   /**
@@ -6349,6 +6846,206 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     // Close the menu
     this._onCloseAddWeapon(event);
+  }
+
+  /** @override
+   * Intercept drops on the character sheet — handle ConanWeapon (Workshop weapons)
+   * before falling through to Foundry's default drop handling.
+   */
+  async _onDrop(event) {
+    console.log('[Drop] _onDrop fired. raw text/plain:', event.dataTransfer?.getData('text/plain'));
+    let data;
+    try {
+      data = JSON.parse(event.dataTransfer?.getData('text/plain') || '{}');
+    } catch (e) {
+      console.log('[Drop] JSON parse failed, falling through to super');
+      return super._onDrop(event);
+    }
+    console.log('[Drop] parsed data:', data);
+
+    if (data?.type === 'ConanWeapon' && data.weapon) {
+      event.preventDefault();
+      return this._onDropWorkshopWeapon(data.weapon);
+    }
+
+    if (data?.type === 'ConanArmor' && data.armor) {
+      event.preventDefault();
+      return this._onDropWorkshopArmor(data.armor);
+    }
+
+    if (data?.type === 'ConanShield' && data.shield) {
+      console.log('[Drop] ConanShield matched, dispatching _onDropWorkshopShield');
+      event.preventDefault();
+      return this._onDropWorkshopShield(data.shield);
+    }
+
+    console.log('[Drop] no type matched, falling through to super');
+    return super._onDrop(event);
+  }
+
+  /** Store a Workshop-forged shield on the character's custom shield slot.
+   * If a custom shield already exists, ask to confirm replacement (old is deleted). */
+  async _onDropWorkshopShield(shield) {
+    if (!shield?.name) {
+      ui.notifications.warn('Invalid shield data — dropped item has no name.');
+      return false;
+    }
+
+    const existing = this.actor.getFlag('conan', 'customShield');
+    if (existing) {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: 'Replace Custom Shield' },
+        content: `<p>Replace <strong>${existing.name}</strong> with <strong>${shield.name}</strong>?</p><p style="font-size:11px;color:#aaa;">The current shield will be deleted from the slot.</p>`,
+        rejectClose: false,
+        modal: true
+      });
+      if (!confirmed) return false;
+    }
+
+    await this.actor.setFlag('conan', 'customShield', shield);
+    ui.notifications.info(`${this.actor.name} equipped ${shield.name}.`);
+    return true;
+  }
+
+  /** Right-click custom shield slot to DELETE the equipped custom shield entirely. */
+  async _onCustomShieldClear(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const customShield = this.actor.getFlag('conan', 'customShield');
+    if (!customShield) return;
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: 'Delete Custom Shield' },
+      content: `<p>Delete <strong>${customShield.name}</strong> from the slot?</p><p style="font-size:11px;color:#aaa;">The slot will be emptied. This cannot be undone.</p>`,
+      rejectClose: false,
+      modal: true
+    });
+    if (!confirmed) return;
+
+    // If currently using custom shield, clear that flag and turn off the shield
+    const updates = {};
+    if (this.actor.system.useCustomShield) {
+      updates['system.useCustomShield'] = false;
+      updates['system.armorEquipped.shield'] = false;
+    }
+    if (Object.keys(updates).length) await this.actor.update(updates);
+    await this.actor.unsetFlag('conan', 'customShield');
+    ui.notifications.info(`Deleted ${customShield.name}.`);
+  }
+
+  /** Store a Workshop-forged armor on the character's custom armor slot.
+   * If a custom armor is already in the slot, ask the user to confirm replacement
+   * (the old armor is deleted from the slot). */
+  async _onDropWorkshopArmor(armor) {
+    if (!armor?.name) {
+      ui.notifications.warn('Invalid armor data — dropped item has no name.');
+      return false;
+    }
+
+    const existing = this.actor.getFlag('conan', 'customArmor');
+    if (existing) {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: 'Replace Custom Armor' },
+        content: `<p>Replace <strong>${existing.name}</strong> with <strong>${armor.name}</strong>?</p><p style="font-size:11px;color:#aaa;">The current armor will be deleted from the slot.</p>`,
+        rejectClose: false,
+        modal: true
+      });
+      if (!confirmed) return false;
+    }
+
+    const updates = {
+      'flags.conan.customArmor': armor
+    };
+
+    // If currently wearing the old custom armor, swap AR in place
+    const currentArmor = this.actor.system.armorEquipped || {};
+    if (existing && currentArmor.type === 'custom') {
+      const currentAR = this.actor.system.defense.ar || 0;
+      const arDiff = (armor.ar || 0) - (existing.ar || 0);
+      updates['system.defense.ar'] = Math.max(0, currentAR + arDiff);
+      const effRecBonusDrop = this._getCustomArmorRecoveryBonus(armor);
+      updates['system.armorEquipped.description'] =
+        `${armor.name.toUpperCase()} (CUSTOM) | AR: ${armor.ar || 0}${armor.minMight ? ` | Min Might: ${armor.minMight}` : ''}${armor.recoveryPenalty ? ` | Recovery Penalty (1/Rest)` : ''}${effRecBonusDrop > 0 ? ` | Recovery Bonus +${effRecBonusDrop} LP` : ''}${armor.encumbranceText ? `\n${armor.encumbranceText}` : ''}${armor.penaltyText ? `\n${armor.penaltyText}` : ''}${armor.moveText ? `\n${armor.moveText}` : ''}`
+        + (currentArmor.shield ? this._getArmorData().shield.description : '');
+    }
+
+    await this.actor.update(updates);
+    ui.notifications.info(`${this.actor.name} equipped ${armor.name}.`);
+    return true;
+  }
+
+  /** Read effective Recovery Bonus from a custom armor — direct field OR legacy bonuses-array entry. */
+  _getCustomArmorRecoveryBonus(armor) {
+    if (!armor) return 0;
+    let total = Number(armor.recoveryBonus) || 0;
+    if (Array.isArray(armor.bonuses)) {
+      for (const b of armor.bonuses) {
+        if (b.target === 'recoveryBonus') total += Number(b.value) || 0;
+      }
+    }
+    return total;
+  }
+
+  /** Right-click custom armor slot to DELETE the equipped custom armor entirely. */
+  async _onCustomArmorClear(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const customArmor = this.actor.getFlag('conan', 'customArmor');
+    if (!customArmor) return;
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: 'Delete Custom Armor' },
+      content: `<p>Delete <strong>${customArmor.name}</strong> from the slot?</p><p style="font-size:11px;color:#aaa;">The slot will be emptied. This cannot be undone.</p>`,
+      rejectClose: false,
+      modal: true
+    });
+    if (!confirmed) return;
+
+    // If currently wearing the custom armor, fall back to unarmored and subtract its AR
+    const currentArmor = this.actor.system.armorEquipped || {};
+    if (currentArmor.type === 'custom') {
+      const currentAR = this.actor.system.defense.ar || 0;
+      await this.actor.update({
+        'system.armorEquipped.type': 'unarmored',
+        'system.defense.ar': Math.max(0, currentAR - (customArmor.ar || 0)),
+        'system.armorEquipped.description': this._getArmorDescription('unarmored', currentArmor.shield)
+      });
+    }
+    await this.actor.unsetFlag('conan', 'customArmor');
+    ui.notifications.info(`Deleted ${customArmor.name}.`);
+  }
+
+  /** Translate a Workshop weapon snapshot to the armedWeapons shape and arm it on this character.
+   * Mirrors the mapping used by _onArmWeapon (catalog → armedWeapons). */
+  async _onDropWorkshopWeapon(weapon) {
+    if (!weapon?.name) {
+      ui.notifications.warn('Invalid weapon data — dropped item has no name.');
+      return false;
+    }
+
+    const newId = `weapon${Date.now()}`;
+    const newWeapon = {
+      name: weapon.name,
+      type: weapon.weaponType || 'melee',         // melee / thrown / ranged
+      category: weapon.category || '',            // weight class
+      damage: weapon.damage || '',
+      range: weapon.range || '',
+      rules: weapon.rules || null,
+      useSpecificImage: !!weapon.image,
+      specificImage: weapon.image || null
+    };
+
+    // Carry ammo if present (thrown / ranged)
+    if (weapon.ammo && typeof weapon.ammo.current === 'number' && typeof weapon.ammo.max === 'number') {
+      newWeapon.ammo = { ...weapon.ammo };
+    }
+
+    await this.actor.update({
+      [`system.armedWeapons.${newId}`]: newWeapon
+    });
+
+    ui.notifications.info(`${this.actor.name} armed with ${newWeapon.name}.`);
+    return true;
   }
 
   _onWeaponToggle(event) {
@@ -8172,7 +8869,10 @@ export default class ConanActorSheet2 extends ActorSheet {
                             weapon.type === 'melee' &&
                             (weapon.category === 'One-Handed Light' || weapon.category === 'One-Handed Medium' || isUpgradedUnarmed);
 
-    // Determine stats based on weapon type (Assassin overrides melee attack stat)
+    // Determine stats based on weapon type. Assassin overrides ATTACK stat only (Edge for
+    // 1H Light/Medium melee). Per current rules, damage stat stays Might for melee — but
+    // we pass it through damageData so a future skill that changes damage stat per-weapon
+    // can be picked up by the dual-wielder "use highest stat" comparison in conan.js.
     const attackStat = assassinApplies ? 'edge' : (weapon.type === 'melee' ? 'might' : 'edge');
     const damageStat = weapon.type === 'ranged' ? null : 'might';
 
@@ -8217,7 +8917,8 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     // Build base attack formula (without mounted modifier)
     // Use effective die AND value that accounts for skill upgrades (Mighty/Sharpness, Legendary, etc.)
-    const { die: effectiveAttackDie, value: effectiveAttackValue } = this._getEffectiveStatValues(attackStat);
+    const { die: effectiveAttackDie, value: effectiveAttackValue, skillValueBonus: attackSkillBonusStr, customArmorValueBonus: attackCustomArmorBonusStr } = this._getEffectiveStatValues(attackStat);
+    console.log('[Attack]', attackStat, 'rawBase:', attackAttr.value, 'effective:', effectiveAttackValue, 'skill:', attackSkillBonusStr, 'customArmor:', attackCustomArmorBonusStr);
     // Fierce Strokes (melee) / Fierce Shots (ranged/thrown): roll 2, take best
     const hasFierceAttack = weapon.type === 'melee' ? this._hasFierceStrokes() : this._hasFierceShots();
     const fierceLabel = weapon.type === 'melee' ? 'Fierce Strokes' : 'Fierce Shots';
@@ -8273,16 +8974,44 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Store damage info for button (damage rolled separately)
     const damageBonus = originBonuses.damage?.[weapon.type] || 0;
 
+    // Dual Wielder Fighting Style — detect off-hand here so we can use it for the chat
+    // title AND reuse later when damageData is built. When active, the attack title shows
+    // both weapon names and a "⚔ DUAL WIELDER" badge appears under the header.
+    let dualOffhandName = null;
+    let dualOffhandDamage = null;
+    let dualOffhandDamageStat = null;
+    const fsActiveCheck = this.actor.getFlag('conan', 'fightingStyle');
+    if (fsActiveCheck?.id === 'dual-wielder' && weapon.type === 'melee') {
+      const armed = this.actor.system.armedWeapons || {};
+      for (const [otherId, otherWeapon] of Object.entries(armed)) {
+        if (otherId === weaponId) continue;
+        if (otherWeapon.type !== 'melee') continue;
+        if (otherWeapon.category && otherWeapon.category.startsWith('One-Handed')) {
+          dualOffhandName = otherWeapon.name;
+          dualOffhandDamage = otherWeapon.damage;
+          dualOffhandDamageStat = 'might'; // current melee rule; future swaps modify here
+          break;
+        }
+      }
+    }
+
     // Build chat message
     const typeLabel = weapon.type.charAt(0).toUpperCase() + weapon.type.slice(1);
     const tokenImg = this.actor.prototypeToken?.texture?.src || this.actor.img || 'icons/svg/mystery-man.svg';
     const ownerColor = this._getOwnerColor();
+    const attackTitle = dualOffhandName
+      ? `${weapon.name} + ${dualOffhandName} Attack`
+      : `${weapon.name} Attack`;
 
     let content = `<div class="conan-roll" style="border-color: ${ownerColor};">`;
     content += `<div class="roll-header">`;
     content += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
-    content += `<div class="roll-title">${weapon.name} Attack</div>`;
+    content += `<div class="roll-title">${attackTitle}</div>`;
     content += `</div>`;
+    // Dual Wielder badge under the header
+    if (dualOffhandName) {
+      content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ Dual Wielder</div>`;
+    }
 
     if (cruelFate) {
       content += `<div class="cruel-fate-indicator">Cruel Fate</div>`;
@@ -8336,7 +9065,9 @@ export default class ConanActorSheet2 extends ActorSheet {
       const attackDieRoll = attackRoll.terms[0]?.total || 0;
       attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Die`, value: effectiveAttackDie, roll: attackDieRoll });
     }
-    attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Value`, value: `+${attackAttr.value}` });
+    attackBreakdownLines.push({ label: `${attackStat.charAt(0).toUpperCase() + attackStat.slice(1)} Value`, value: `+${effectiveAttackValue}` });
+    if (attackSkillBonusStr) attackBreakdownLines.push({ label: 'Skill Bonus', value: attackSkillBonusStr, isSkill: true });
+    if (attackCustomArmorBonusStr) attackBreakdownLines.push({ label: 'Custom Armor', value: attackCustomArmorBonusStr, isSkill: true });
     if (assassinApplies) attackBreakdownLines.push({ label: 'Assassin', value: 'Edge Attack', isSkill: true });
     if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
     if (unseenStrikeBonus.attack > 0) attackBreakdownLines.push({ label: 'Unseen Strike', value: `+${unseenStrikeBonus.attack}`, isSkill: true });
@@ -8442,6 +9173,12 @@ export default class ConanActorSheet2 extends ActorSheet {
       // Check for Uncanny Reach on melee weapons (+1 damage)
       const uncannyReachActive = weapon.type === 'melee' && this.actor.system.uncannyReachActive;
 
+      // Dual Wielder Fighting Style: reuse the off-hand detection performed earlier
+      // (so the chat title and the damage card stay in sync about which weapon is off-hand).
+      const dualWielderSecondaryDamage = dualOffhandDamage;
+      const dualWielderSecondaryName = dualOffhandName;
+      const dualWielderSecondaryDamageStat = dualOffhandDamageStat;
+
       damageData = {
         actorId: this.actor.id,
         damage: effectiveDamage,
@@ -8455,7 +9192,10 @@ export default class ConanActorSheet2 extends ActorSheet {
         bloodyTalons: bloodyTalonsActive,
         uncannyReach: uncannyReachActive,
         isPoisoned: weapon.isPoisoned || false,
-        unseenStrikeDamageBonus: unseenStrikeBonus.damage || 0
+        unseenStrikeDamageBonus: unseenStrikeBonus.damage || 0,
+        dualWielderSecondaryDamage,
+        dualWielderSecondaryName,
+        dualWielderSecondaryDamageStat
       };
     }
 
@@ -10939,7 +11679,7 @@ export default class ConanActorSheet2 extends ActorSheet {
    * @returns {Object} Object containing starting and legendary skill arrays
    */
   _getAllSkillDefinitions() {
-    return {
+    const defs = {
       starting: [
         { id: "born-in-saddle", name: "Born in the Saddle", xpCost: 1, effect: "Ignore the penalty for Ranged Attacks while Mounted. +1 to Attacks when Mounted and targeting an un-Mounted foe." },
         { id: "charge", name: "Charge", xpCost: 1, effect: "Spend 1 Stamina Point: Make two Move Actions followed by a Melee Attack Action. This only counts as 1 Action.", spCost: 1 },
@@ -10969,8 +11709,9 @@ export default class ConanActorSheet2 extends ActorSheet {
         { id: "murderous-frenzy", name: "Murderous Frenzy", xpCost: 2, effect: "When you kill a Minion with a Two-Handed Heavy weapon, automatically kill a second Minion of the same type within Touch Range." },
         { id: "poisoner", name: "Poisoner", xpCost: 2, effect: "When dealing 3+ Damage with a Melee Attack, may apply a Poison effect. Requires poisonous substances." },
         { id: "protector", name: "Protector", xpCost: 2, effect: "Spend 1 Stamina Point: Give 1 Stamina Point to an ally within Touch Range. May only be used once per Round.", spCost: 1 },
-        { id: "soldiers-endurance", name: "Soldier's Endurance", xpCost: 2, effect: "Ignore armor encumbrance penalties. When wearing Heavy Armor, use Medium Armor stipulations instead." },
+        { id: "soldiers-endurance", name: "Soldier's Endurance", xpCost: 2, effect: "Ignore the Encumbrance Value of Armor. In addition, when wearing Heavy Armor, the Character may treat the armor's Stipulations as though it were Medium Armor." },
         { id: "sorcerous-vigor", name: "Sorcerous Vigor", xpCost: 2, effect: "Reduce the Life Point cost of Sorcery by 2 (minimum 1)." },
+        { id: "ambidextrous", name: "Ambidextrous", xpCost: 2, prerequisite: "6+ skills", effect: "When using the Dual Wielder Fighting Style, the Character may wield a One-Handed Heavy weapon and a One-Handed Light or Medium weapon, rather than having to wield two One-Handed Light or Medium weapons." },
         { id: "combat-readiness-ii", name: "Combat Readiness II", xpCost: 2, prerequisite: "combat-readiness", effect: "Increase Initiative by an additional 1 (stacks with Combat Readiness)." },
         { id: "eagle-eyed-ii", name: "Eagle-Eyed II", xpCost: 2, prerequisite: "eagle-eyed", effect: "Increase Ranged Attack Damage by an additional 1 (stacks with Eagle-Eyed)." },
         { id: "iron-hide-ii", name: "Iron Hide II", xpCost: 2, prerequisite: "iron-hide", effect: "Increase maximum Life Points by your Grit value.", lpBonusStat: "grit" },
@@ -11004,6 +11745,15 @@ export default class ConanActorSheet2 extends ActorSheet {
         { id: "wise-ii", name: "Wise II", xpCost: 6, prerequisite: "wise", effect: "Upgrade Wits die from D8 to D10." }
       ]
     };
+    // Push Advanced Skills (book convention: "6+ skills" prerequisite) to the bottom of
+    // the legendary tier so they always appear after standard Legendary entries in any
+    // sorted display, regardless of where they were inserted in source order.
+    defs.legendary.sort((a, b) => {
+      const aAdv = a.prerequisite === '6+ skills' ? 1 : 0;
+      const bAdv = b.prerequisite === '6+ skills' ? 1 : 0;
+      return aAdv - bAdv;
+    });
+    return defs;
   }
 
   /**
@@ -12495,11 +13245,11 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   _getArmorData() {
     return {
-      unarmored: { name: "Unarmored", ar: 0, description: "No armor equipped. | AR: 0 | No penalties." },
-      light: { name: "Light Armor", ar: 3, description: "LIGHT ARMOR | AR: 3 | Encumbrance: 1 Might\nPenalties: -1 Sorcery, -1 Stealth" },
-      medium: { name: "Medium Armor", ar: 5, description: "MEDIUM ARMOR | AR: 5 | Encumbrance: 3 Might\nPenalties: -2 Sorcery, -2 Stealth | Max 2 Move Actions" },
-      heavy: { name: "Heavy Armor", ar: 8, description: "HEAVY ARMOR | AR: 8 | Encumbrance: 5 Might\nPenalties: -3 Sorcery, -3 Stealth | Max 1 Move Action | 1 Recovery per session" },
-      shield: { name: "Shield", ar: 0, description: "\n+ SHIELD | +1 Physical Defense | Encumbrance: 3 Might | Requires one free hand" }
+      unarmored: { name: "Unarmored", ar: 0, minMight: 0, description: "No armor equipped. | AR: 0 | No penalties." },
+      light: { name: "Light Armor", ar: 3, minMight: 1, description: "LIGHT ARMOR | AR: 3 | Encumbrance: 1 Might\nPenalties: -1 Sorcery, -1 Stealth" },
+      medium: { name: "Medium Armor", ar: 5, minMight: 3, description: "MEDIUM ARMOR | AR: 5 | Encumbrance: 3 Might\nPenalties: -2 Sorcery, -2 Stealth | Max 2 Move Actions" },
+      heavy: { name: "Heavy Armor", ar: 8, minMight: 5, description: "HEAVY ARMOR | AR: 8 | Encumbrance: 5 Might\nPenalties: -3 Sorcery, -3 Stealth | Max 1 Move Action | 1 Recovery per session" },
+      shield: { name: "Shield", ar: 0, minMight: 3, description: "\n+ SHIELD | +1 Physical Defense | Encumbrance: 3 Might | Requires one free hand" }
     };
   }
 
@@ -12513,7 +13263,21 @@ export default class ConanActorSheet2 extends ActorSheet {
       description = "HEAVY ARMOR | AR: 8 | Soldier's Endurance\nPenalties: -2 Sorcery, -2 Stealth | Max 2 Move Actions";
     }
 
-    if (hasShield) description += armorData.shield.description;
+    if (hasShield) {
+      // If custom shield is active, use its description instead of the stock shield text
+      const customShield = this.actor.getFlag('conan', 'customShield');
+      const useCustomShield = !!this.actor.system.useCustomShield && customShield;
+      if (useCustomShield) {
+        const parts = [];
+        if (customShield.physDefBonus > 0) parts.push(`+${customShield.physDefBonus} Phys Def`);
+        if (customShield.sorcDefBonus > 0) parts.push(`+${customShield.sorcDefBonus} Sorc Def`);
+        if (customShield.edgeGate > 0) parts.push(`Min Edge ${customShield.edgeGate}`);
+        if (customShield.minMight > 0) parts.push(`Encumbrance: ${customShield.minMight} Might`);
+        description += `\n+ ${customShield.name.toUpperCase()}${parts.length ? ' | ' + parts.join(' | ') : ''} | Requires one free hand`;
+      } else {
+        description += armorData.shield.description;
+      }
+    }
     return description;
   }
 
@@ -12541,8 +13305,38 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     let updates = {};
 
-    if (selectedType === "shield") {
-      const newShieldState = !currentArmor.shield;
+    if (selectedType === "customShield") {
+      const customShield = this.actor.getFlag('conan', 'customShield');
+      if (!customShield) {
+        ui.notifications.warn('No custom shield equipped. Drop a forged shield on the custom shield slot first.');
+        return;
+      }
+      const wasActive = !!this.actor.system.useCustomShield;
+      if (wasActive) {
+        // Toggle off: clear custom flag AND shield boolean (and end Blocker if active)
+        updates['system.useCustomShield'] = false;
+        updates['system.armorEquipped.shield'] = false;
+        if (this.actor.system.blockerActive) {
+          updates['system.blockerActive'] = false;
+          ui.notifications.info("Blocker stance ended - shield removed.");
+        }
+      } else {
+        // Activate custom shield, deactivate standard shield in the same flag-shape
+        updates['system.useCustomShield'] = true;
+        updates['system.armorEquipped.shield'] = true;
+      }
+      updates['system.armorEquipped.description'] = this._getArmorDescription(currentArmor.type, updates['system.armorEquipped.shield']);
+    } else if (selectedType === "shield") {
+      // If custom shield is currently active, clicking standard means SWITCH (not toggle).
+      // Otherwise, toggle the shield boolean as normal.
+      const wasUsingCustomShield = !!this.actor.system.useCustomShield;
+      let newShieldState;
+      if (wasUsingCustomShield) {
+        newShieldState = true; // keep shield equipped, just swap to standard
+        updates['system.useCustomShield'] = false;
+      } else {
+        newShieldState = !currentArmor.shield;
+      }
       updates['system.armorEquipped.shield'] = newShieldState;
       updates['system.armorEquipped.description'] = this._getArmorDescription(currentArmor.type, newShieldState);
 
@@ -12553,14 +13347,33 @@ export default class ConanActorSheet2 extends ActorSheet {
       }
     } else {
       const oldArmorType = currentArmor.type || "unarmored";
-      const oldArmorData = armorData[oldArmorType] || armorData.unarmored;
-      const newArmorData = armorData[selectedType];
+      const customArmor = this.actor.getFlag('conan', 'customArmor');
+
+      // Block selecting custom slot if nothing has been dropped on it
+      if (selectedType === 'custom' && !customArmor) {
+        ui.notifications.warn('No custom armor equipped. Drop a forged armor on the custom slot first.');
+        return;
+      }
+
+      // Old AR: use customArmor.ar if currently wearing custom; else table lookup
+      const oldAr = oldArmorType === 'custom' && customArmor
+        ? (customArmor.ar || 0)
+        : (armorData[oldArmorType] || armorData.unarmored).ar;
+
+      // New AR: use customArmor.ar if switching to custom; else table lookup
+      const newAr = selectedType === 'custom' && customArmor
+        ? (customArmor.ar || 0)
+        : armorData[selectedType].ar;
+
       const currentAR = this.actor.system.defense.ar || 0;
-      const arDiff = newArmorData.ar - oldArmorData.ar;
+      const arDiff = newAr - oldAr;
 
       updates['system.armorEquipped.type'] = selectedType;
       updates['system.defense.ar'] = currentAR + arDiff;
-      updates['system.armorEquipped.description'] = this._getArmorDescription(selectedType, currentArmor.shield);
+      const effRecBonus = selectedType === 'custom' ? this._getCustomArmorRecoveryBonus(customArmor) : 0;
+      updates['system.armorEquipped.description'] = selectedType === 'custom' && customArmor
+        ? `${customArmor.name.toUpperCase()} (CUSTOM) | AR: ${customArmor.ar || 0}${customArmor.minMight ? ` | Min Might: ${customArmor.minMight}` : ''}${customArmor.recoveryPenalty ? ` | Recovery Penalty (1/Rest)` : ''}${effRecBonus > 0 ? ` | Recovery Bonus +${effRecBonus} LP` : ''}${customArmor.encumbranceText ? `\n${customArmor.encumbranceText}` : ''}${customArmor.penaltyText ? `\n${customArmor.penaltyText}` : ''}${customArmor.moveText ? `\n${customArmor.moveText}` : ''}` + (currentArmor.shield ? armorData.shield.description : '')
+        : this._getArmorDescription(selectedType, currentArmor.shield);
     }
 
     await this.actor.update(updates);
@@ -14434,7 +15247,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       if (!t.actor || t.actor.id === this.actor.id) continue;
       if (seenActorIds.has(t.actor.id)) continue;
 
-      // Any character2 on scene (tools/howard are different actor types, already excluded)
+      // Any character2 on scene (tools is a different actor type, already excluded)
       if (t.actor.type === 'character2') {
         targets.push(t.actor);
         seenActorIds.add(t.actor.id);
@@ -15478,9 +16291,15 @@ export default class ConanActorSheet2 extends ActorSheet {
     const resilientLPBonus = hasResilient ? 3 : 0;
     const resilientSPBonus = hasResilient ? 1 : 0;
 
+    // Custom armor Recovery Bonus (dedicated field + legacy bonuses-array entry)
+    const customArmorRec = this.actor.getFlag('conan', 'customArmor');
+    const wearingCustomRec = this.actor.system.armorEquipped?.type === 'custom' && customArmorRec;
+    const customArmorRecoveryBonus = wearingCustomRec ? this._getCustomArmorRecoveryBonus(customArmorRec) : 0;
+
     const baseRecoveryAmount = Math.floor(maxLP / 2);
-    const totalRecoveryAmount = baseRecoveryAmount + lpRecoveryBonus + hardyLPBonus + resilientLPBonus;
+    const totalRecoveryAmount = baseRecoveryAmount + lpRecoveryBonus + hardyLPBonus + resilientLPBonus + customArmorRecoveryBonus;
     const newLP = Math.min(maxLP, currentLP + totalRecoveryAmount);
+    console.log('[Recovery] base:', baseRecoveryAmount, '| origin:', lpRecoveryBonus, '| hardy:', hardyLPBonus, '| resilient:', resilientLPBonus, '| customArmor:', customArmorRecoveryBonus, '| total:', totalRecoveryAmount, '| newLP (capped at', maxLP, '):', newLP);
     const baseSPRecovery = 1; // Base: +1 SP per recovery
     const newSP = currentSP + baseSPRecovery + resilientSPBonus;
 
@@ -15530,6 +16349,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (lpRecoveryBonus > 0) bonusTexts.push(`+${lpRecoveryBonus} Origin`);
     if (hardyLPBonus > 0) bonusTexts.push(`+${hardyLPBonus} Hardy`);
     if (resilientLPBonus > 0) bonusTexts.push(`+${resilientLPBonus} Resilient`);
+    if (customArmorRecoveryBonus > 0) bonusTexts.push(`+${customArmorRecoveryBonus} <span style="color: #1a4d1a; font-weight: 600;">${customArmorRec.name}</span>`);
     let bonusText = bonusTexts.length > 0 ? ` <span style="color: #90EE90;">(${bonusTexts.join(', ')})</span>` : '';
     const ownerColor = this._getOwnerColor();
 

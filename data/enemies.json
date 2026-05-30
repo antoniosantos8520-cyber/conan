@@ -16,6 +16,7 @@
               "id": "guard",
               "name": "Guard",
               "type": "Minion",
+              "portraitImg": "systems/conan/images/enemies/guard1_portrait.png",
               "stats": {
                 "might": { "value": 2, "die": "D8" },
                 "edge": { "value": 2, "die": "D6" },
@@ -42,6 +43,8 @@
               "id": "veteran-guard",
               "name": "Sergeant",
               "type": "Minion",
+              "portraitImg": "systems/conan/images/enemies/guard_sergeant_portrait.png",
+              "tokenImg": "systems/conan/images/enemies/guard_sergeant_token.png",
               "stats": {
                 "might": { "value": 3, "die": "D8" },
                 "edge": { "value": 3, "die": "D8" },
@@ -68,6 +71,8 @@
               "id": "guard-captain",
               "name": "Guard Captain",
               "type": "Antagonist",
+              "portraitImg": "systems/conan/images/enemies/guard_captain_portrait.png",
+              "tokenImg": "systems/conan/images/enemies/guard_captain_token.png",
               "stats": {
                 "might": { "value": 4, "die": "D10" },
                 "edge": { "value": 4, "die": "D8" },

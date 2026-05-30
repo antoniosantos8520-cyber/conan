@@ -49,6 +49,9 @@
                   {{/if}}
                 </div>
                 {{/if}}
+                {{#if hasARDebuff}}
+                <div class="sheet2-arDebuffStamp" title="Fighting Style hindrance (-{{arDebuff}} AR)">-{{arDebuff}}</div>
+                {{/if}}
                 <span class="sheet2-vitalNumber">{{effectiveAR}}</span>
               </div>
 
@@ -209,6 +212,12 @@
                 <div class="sheet2-lpFormulaRow sheet2-lpPurchasedSkill">
                   <span class="sheet2-lpFormulaLabel">{{system.lifePoints.purchasedSkillSources}}:</span>
                   <span class="sheet2-lpFormulaValue" style="color: #87CEEB;">+{{system.lifePoints.purchasedSkillBonus}}</span>
+                </div>
+                {{/if}}
+                {{#if system.lifePoints.customArmorBonus}}
+                <div class="sheet2-lpFormulaRow sheet2-lpCustomArmor">
+                  <span class="sheet2-lpFormulaLabel">{{system.lifePoints.customArmorSources}}:</span>
+                  <span class="sheet2-lpFormulaValue" style="color: #87CEEB;">+{{system.lifePoints.customArmorBonus}}</span>
                 </div>
                 {{/if}}
                 <div class="sheet2-lpFormulaTotal">
