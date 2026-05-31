@@ -5088,6 +5088,60 @@ select.sheet2-btsInput option {
   color: var(--s2-text);
 }
 
+/* Dual Wielder pick mode — applied to .sheet2-weaponItem tiles in the Arms grid after
+   adopting the Dual Wielder stance. Three states: eligible (pulsing green), ineligible
+   (dim + red border, e.g. Heavy without Ambidextrous), selected (solid green border). */
+
+.sheet2-weaponItem.dual-pick-eligible .sheet2-weaponRollIcon {
+  border-color: #4caf50;
+  animation: dual-pick-pulse 1.5s ease-in-out infinite;
+}
+
+.sheet2-weaponItem.dual-pick-ineligible {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sheet2-weaponItem.dual-pick-ineligible .sheet2-weaponRollIcon {
+  border-color: #8b0000;
+  filter: grayscale(60%);
+  animation: none;
+  box-shadow:
+    0 3px 8px rgba(0,0,0,0.6),
+    0 1px 3px rgba(0,0,0,0.4),
+    inset 2px 2px 4px rgba(255,255,255,0.05),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+}
+
+.sheet2-weaponItem.dual-pick-selected .sheet2-weaponRollIcon {
+  /* Matches .sheet2-stanceIconWrapper.active so the stance icon + its paired weapons
+     share one "Dual Wielder is engaged" identity. */
+  border-color: #4a9eff;
+  box-shadow:
+    0 0 14px rgba(74, 158, 255, 0.8),
+    0 3px 8px rgba(0,0,0,0.6),
+    inset 2px 2px 4px rgba(255,255,255,0.1),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+  animation: none;
+}
+
+@keyframes dual-pick-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 6px rgba(76, 175, 80, 0.5),
+      0 3px 8px rgba(0,0,0,0.6),
+      inset 2px 2px 4px rgba(255,255,255,0.1),
+      inset -2px -2px 4px rgba(0,0,0,0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(76, 175, 80, 0.95),
+      0 3px 8px rgba(0,0,0,0.6),
+      inset 2px 2px 4px rgba(255,255,255,0.1),
+      inset -2px -2px 4px rgba(0,0,0,0.4);
+  }
+}
+
 /* ===== ARMS TAB - ARMOR SECTION ===== */
 .sheet2-armsArmorSection {
   margin-top: 12px;

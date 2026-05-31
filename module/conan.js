@@ -5801,6 +5801,9 @@ Hooks.on('deleteCombat', async (combat, options, userId) => {
     if (actor.getFlag('conan', 'fightingStyleSpent')) {
       await actor.unsetFlag('conan', 'fightingStyleSpent');
     }
+    if (actor.getFlag('conan', 'dualWielderPair')) {
+      await actor.unsetFlag('conan', 'dualWielderPair');
+    }
   }
 
   // Clear Bound debuffs (Garrote) from all tokens

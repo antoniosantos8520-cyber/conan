@@ -4638,6 +4638,8 @@ export default class ConanActorSheet2 extends ActorSheet {
     html.find('.armor-toggle').click(this._onArmorEditToggle.bind(this));
     html.find('.activate-fighting-style').click(this._onFightingStyleActivate.bind(this));
     html.find('.show-fighting-style-details').click(this._onFightingStyleDetails.bind(this));
+    // Re-apply the green outline on the two designated Dual Wielder weapons after every render
+    this._applyDualPairSelected();
     html.find('.sheet2-weaponCategoryTab').click(this._onWeaponCategoryTab.bind(this));
     html.find('.sheet2-weaponSubTab').click(this._onWeaponSubCategoryTab.bind(this));
     html.find('.sheet2-weaponPickerGrid').on('click', '.sheet2-weaponCard', this._onWeaponCardClick.bind(this));
@@ -6353,6 +6355,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (this.actor.getFlag('conan', 'fightingStyleSpent')) {
       await this.actor.unsetFlag('conan', 'fightingStyleSpent');
     }
+    if (this.actor.getFlag('conan', 'dualWielderPair')) {
+      await this.actor.unsetFlag('conan', 'dualWielderPair');
+    }
 
     // Check if there's a manual initiative override
     const initiativeOverride = this.actor.system.initiative?.value;
@@ -6571,6 +6576,11 @@ export default class ConanActorSheet2 extends ActorSheet {
   async _onFightingStyleActivate(event) {
     event.preventDefault();
     event.stopPropagation();
+    // If we're mid pick-mode and the player clicks the stance icon again, cancel + refund.
+    if (this._dualWielderPickMode) {
+      await this._cancelDualWielderPickMode();
+      return;
+    }
     const styleId = event.currentTarget.dataset.styleId;
     if (!styleId) return;
     const currentStyle = this.actor.getFlag('conan', 'fightingStyle');
@@ -6591,6 +6601,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       if (!confirmed) return;
       await this.actor.setFlag('conan', 'fightingStyleSpent', true);
       await this.actor.unsetFlag('conan', 'fightingStyle');
+      await this.actor.unsetFlag('conan', 'dualWielderPair');
       return;
     }
     if (currentStyle) {
@@ -6610,7 +6621,25 @@ export default class ConanActorSheet2 extends ActorSheet {
         id: styleId,
         adoptedAt: game.combat?.round ?? null
       });
+      // Dual Wielder requires the player to designate WHICH two armed weapons are
+      // their fighting pair. After adoption, enter pick mode and let the player
+      // click two weapons from the Arms tab (sub-steps 3-5 wire the UI + validation).
+      if (styleId === 'dual-wielder') {
+        this._enterDualWielderPickMode(costSP);
+      }
     };
+
+    // Position the cost dialog right above the clicked stance icon (not center-screen).
+    // Derive top/left from the click target's bounding rect; clamp so it never goes
+    // off-screen if the icon sits very high or far left.
+    const iconRect = event.currentTarget.getBoundingClientRect();
+    const dialogWidth = 320;
+    const dialogHeightEstimate = 180;
+    const dialogTop = Math.max(iconRect.top - dialogHeightEstimate - 8, 20);
+    const dialogLeft = Math.max(
+      Math.min(iconRect.left + (iconRect.width / 2) - (dialogWidth / 2), window.innerWidth - dialogWidth - 20),
+      20
+    );
 
     new Dialog({
       title: `Adopt ${styleName}`,
@@ -6642,7 +6671,186 @@ export default class ConanActorSheet2 extends ActorSheet {
         }
       },
       default: 'sp'
+    }, {
+      top: dialogTop,
+      left: dialogLeft,
+      width: dialogWidth
     }).render(true);
+  }
+
+  /**
+   * Phase 4 follow-up — Dual Wielder weapon pick mode.
+   * Entered immediately after the stance is adopted. Sets sheet-level state for the
+   * click-hijack handler (added in sub-step 4), tracks which pick the player is on
+   * (1 of 2 or 2 of 2), and remembers the SP cost in case the player cancels mid-pick
+   * (refund + abandon path).
+   *
+   * Visual treatment of weapon tiles + the actual click hijack come in sub-steps 3-5.
+   * This is just the state + the entry notification.
+   */
+  _enterDualWielderPickMode(spPaid) {
+    this._dualWielderPickMode = true;
+    this._dualWielderPicks = [];
+    this._dualWielderRefundSP = spPaid || 0;
+    ui.notifications.info('Dual Wielder: click your first weapon in the Arms tab (Esc to cancel).');
+    this._applyDualPickClasses();
+    // Bind Escape to cancel — captured on document so it works regardless of focus
+    this._dualWielderEscHandler = (e) => {
+      if (e.key === 'Escape' && this._dualWielderPickMode) {
+        this._cancelDualWielderPickMode();
+      }
+    };
+    document.addEventListener('keydown', this._dualWielderEscHandler);
+  }
+
+  /**
+   * Cancel pick mode mid-flow: refund SP, clear fightingStyle flag (stance never
+   * fully adopted), strip visual classes, unbind Escape listener.
+   * Triggered by: clicking the stance icon again during pick mode, OR pressing Escape.
+   */
+  async _cancelDualWielderPickMode() {
+    if (!this._dualWielderPickMode) return;
+    const refund = this._dualWielderRefundSP || 0;
+    this._dualWielderPickMode = false;
+    this._dualWielderPicks = [];
+    this._dualWielderRefundSP = 0;
+    this.element.find('.sheet2-weaponItem').removeClass('dual-pick-eligible dual-pick-ineligible dual-pick-selected');
+    if (this._dualWielderEscHandler) {
+      document.removeEventListener('keydown', this._dualWielderEscHandler);
+      this._dualWielderEscHandler = null;
+    }
+    await this.actor.unsetFlag('conan', 'fightingStyle');
+    if (refund > 0) {
+      const currentSP = this.actor.system.stamina || 0;
+      await this.actor.update({ 'system.stamina': currentSP + refund });
+    }
+    ui.notifications.info(`Dual Wielder cancelled${refund ? ` — ${refund} SP refunded` : ''}.`);
+  }
+
+  /** Detect Ambidextrous via owned/origin-granted skills (mirrors _hasFierceMind pattern). */
+  _hasAmbidextrous() {
+    const originBonuses = this._getActiveOriginBonuses();
+    if ((originBonuses.grantedSkills || []).includes('ambidextrous')) return true;
+    const skills = this.actor.system.skills || {};
+    for (const skill of Object.values(skills)) {
+      const sid = skill.defId || skill.id;
+      const sname = (skill.name || '').toLowerCase().replace(/\s+/g, '-');
+      if (sid === 'ambidextrous' || sname === 'ambidextrous') return true;
+    }
+    return false;
+  }
+
+  /** Apply pick-mode CSS classes to weapon tiles based on current pick state + Ambidextrous. */
+  _applyDualPickClasses() {
+    if (!this._dualWielderPickMode) return;
+    const hasAmbi = this._hasAmbidextrous();
+    const picks = this._dualWielderPicks || [];
+    const firstPickIsHeavy = picks[0]?.category === 'One-Handed Heavy';
+    const armed = this.actor.system.armedWeapons || {};
+    this.element.find('.sheet2-weaponItem').each((i, el) => {
+      const $el = $(el);
+      const wId = $el.attr('data-weapon-id');
+      const w = armed[wId];
+      $el.removeClass('dual-pick-eligible dual-pick-ineligible dual-pick-selected');
+      if (!w) return;
+      // Already picked → mark selected
+      if (picks.some(p => p.id === wId)) {
+        $el.addClass('dual-pick-selected');
+        return;
+      }
+      // Must be melee + one-handed
+      const isMelee = w.type === 'melee';
+      const isOneHanded = w.category && w.category.startsWith('One-Handed');
+      if (!isMelee || !isOneHanded) {
+        $el.addClass('dual-pick-ineligible');
+        return;
+      }
+      // Heavy needs Ambidextrous; with Ambidextrous, only ONE Heavy allowed
+      const isHeavy = w.category === 'One-Handed Heavy';
+      if (isHeavy && (!hasAmbi || firstPickIsHeavy)) {
+        $el.addClass('dual-pick-ineligible');
+        return;
+      }
+      $el.addClass('dual-pick-eligible');
+    });
+  }
+
+  /** Handle a weapon-tile click while in Dual Wielder pick mode. */
+  _onDualWielderPickClick(weaponId, weapon) {
+    const picks = this._dualWielderPicks || [];
+    // Already-selected → ignore (don't deselect, no double-click semantics)
+    if (picks.some(p => p.id === weaponId)) return;
+    // Re-validate eligibility (paranoid — the CSS is just a hint, the rule is authoritative)
+    const hasAmbi = this._hasAmbidextrous();
+    const firstPickIsHeavy = picks[0]?.category === 'One-Handed Heavy';
+    const isMelee = weapon.type === 'melee';
+    const isOneHanded = weapon.category && weapon.category.startsWith('One-Handed');
+    const isHeavy = weapon.category === 'One-Handed Heavy';
+    if (!isMelee || !isOneHanded) {
+      ui.notifications.warn('Dual Wielder requires One-Handed melee weapons.');
+      return;
+    }
+    if (isHeavy && !hasAmbi) {
+      ui.notifications.warn('Heavy weapons require the Ambidextrous skill.');
+      return;
+    }
+    if (isHeavy && firstPickIsHeavy) {
+      ui.notifications.warn('Ambidextrous allows only one Heavy weapon in the pair.');
+      return;
+    }
+    // Accept the pick
+    picks.push({ id: weaponId, name: weapon.name, category: weapon.category });
+    this._dualWielderPicks = picks;
+    if (picks.length === 1) {
+      ui.notifications.info(`Dual Wielder: ${weapon.name} picked. Click your second weapon.`);
+      this._applyDualPickClasses();
+    } else if (picks.length >= 2) {
+      this._finalizeDualWielderPair();
+    }
+  }
+
+  /**
+   * Persist the picked pair on the actor flag, clear pick-mode state,
+   * remove the pick-mode CSS classes from weapon tiles, post confirmation.
+   * Sub-step 7 will teach _executeWeaponAttack to consult this flag.
+   */
+  async _finalizeDualWielderPair() {
+    const picks = this._dualWielderPicks || [];
+    if (picks.length < 2) return;
+    const pairIds = [picks[0].id, picks[1].id];
+    await this.actor.setFlag('conan', 'dualWielderPair', pairIds);
+    const pairLabel = `${picks[0].name} + ${picks[1].name}`;
+    this._dualWielderPickMode = false;
+    this._dualWielderPicks = [];
+    this._dualWielderRefundSP = 0;
+    // Strip eligible/ineligible classes but KEEP .dual-pick-selected on the two paired
+    // weapons so the green outline persists as a visual reminder of the active pair.
+    this.element.find('.sheet2-weaponItem').removeClass('dual-pick-eligible dual-pick-ineligible');
+    // Unbind the Escape-to-cancel listener
+    if (this._dualWielderEscHandler) {
+      document.removeEventListener('keydown', this._dualWielderEscHandler);
+      this._dualWielderEscHandler = null;
+    }
+    ui.notifications.info(`Dual Wielder armed: ${pairLabel}`);
+  }
+
+  /**
+   * Re-apply the .dual-pick-selected class to the two paired weapons on every render.
+   * The HBS template doesn't carry pick state, so without this helper the green outline
+   * would disappear after any sheet re-render (armor change, SP update, etc.).
+   * Cleared automatically when the dualWielderPair flag is unset (drop / combat-end /
+   * initiative reset all unset the flag, triggering a re-render that lands here with
+   * an empty pair → no classes applied).
+   */
+  _applyDualPairSelected() {
+    this.element.find('.sheet2-weaponItem').removeClass('dual-pick-selected');
+    const pair = this.actor.getFlag('conan', 'dualWielderPair');
+    if (!Array.isArray(pair) || pair.length !== 2) return;
+    const fs = this.actor.getFlag('conan', 'fightingStyle');
+    if (fs?.id !== 'dual-wielder') return;
+    for (const wId of pair) {
+      this.element.find(`.sheet2-weaponItem[data-weapon-id="${wId}"]`).addClass('dual-pick-selected');
+    }
   }
 
   async _onShieldSelect(event) {
@@ -8822,6 +9030,12 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     if (!weapon) return;
 
+    // Dual Wielder pick mode — divert the click into the pair-picker instead of rolling
+    if (this._dualWielderPickMode) {
+      this._onDualWielderPickClick(weaponId, weapon);
+      return;
+    }
+
     // Check ammo for thrown/ranged
     if (weapon.ammo) {
       if (weapon.ammo.current <= 0) {
@@ -8980,24 +9194,26 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Store damage info for button (damage rolled separately)
     const damageBonus = originBonuses.damage?.[weapon.type] || 0;
 
-    // Dual Wielder Fighting Style — detect off-hand here so we can use it for the chat
-    // title AND reuse later when damageData is built. When active, the attack title shows
-    // both weapon names and a "⚔ DUAL WIELDER" badge appears under the header.
+    // Dual Wielder Fighting Style — off-hand is the OTHER weapon from the player's
+    // designated pair (set during pick mode after stance adoption). Attacking with a
+    // weapon NOT in the pair = single attack, no dual-wield bonus (silent — the player
+    // chose those two weapons explicitly, anything else is a separate action).
     let dualOffhandName = null;
     let dualOffhandDamage = null;
     let dualOffhandDamageStat = null;
     const fsActiveCheck = this.actor.getFlag('conan', 'fightingStyle');
-    if (fsActiveCheck?.id === 'dual-wielder' && weapon.type === 'melee') {
-      const armed = this.actor.system.armedWeapons || {};
-      for (const [otherId, otherWeapon] of Object.entries(armed)) {
-        if (otherId === weaponId) continue;
-        if (otherWeapon.type !== 'melee') continue;
-        if (otherWeapon.category && otherWeapon.category.startsWith('One-Handed')) {
-          dualOffhandName = otherWeapon.name;
-          dualOffhandDamage = otherWeapon.damage;
-          dualOffhandDamageStat = 'might'; // current melee rule; future swaps modify here
-          break;
-        }
+    const dualPair = this.actor.getFlag('conan', 'dualWielderPair');
+    if (fsActiveCheck?.id === 'dual-wielder'
+        && weapon.type === 'melee'
+        && Array.isArray(dualPair)
+        && dualPair.length === 2
+        && dualPair.includes(weaponId)) {
+      const offhandId = dualPair.find(id => id !== weaponId);
+      const offhandWeapon = this.actor.system.armedWeapons?.[offhandId];
+      if (offhandWeapon && offhandWeapon.type === 'melee') {
+        dualOffhandName = offhandWeapon.name;
+        dualOffhandDamage = offhandWeapon.damage;
+        dualOffhandDamageStat = 'might'; // current melee rule; future skill swaps modify here
       }
     }
 
