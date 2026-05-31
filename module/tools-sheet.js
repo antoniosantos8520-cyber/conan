@@ -9511,8 +9511,8 @@ function showEnemyRollDialog(enemyData, token = null) {
       ${themeStyles}
       <div class="enemy-ccg-card enemy-roll-dialog" data-category="${categoryKey}">
         <div class="card-bg" style="${bgStyle}"></div>
+        <img class="card-art" src="${portraitSrc}">
         <div class="enemy-portrait-container">
-          <img class="portrait-img" src="${portraitSrc}">
           <span class="type-badge ${enemyData.type === 'Minion' ? 'minion' : 'antagonist'}">${enemyData.type.toUpperCase()}</span>
           ${newAbilityHtml ? `<div class="enemy-ability-buttons">${newAbilityHtml}</div>` : ''}
           ${allEffectsHtml ? `<div class="enemy-active-effects">${allEffectsHtml}</div>` : ''}
