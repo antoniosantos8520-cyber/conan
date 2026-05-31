@@ -48,8 +48,10 @@ const FIGHTING_STYLE_CONFIGS = {
     costSP: 1,
     costActions: 2,
     weaponReq: (weapons, shieldEquipped, hasSkill) => {
-      // Default: two One-Handed Light or Medium melee weapons.
+      // Per book: two One-Handed Light or Medium melee weapons, AND no shield equipped.
       // With Ambidextrous: one 1H Heavy + one 1H L/M also qualifies (but not two Heavies).
+      // The shield exclusion is implicit in the rule (one weapon per hand, no third hand).
+      if (shieldEquipped) return false;
       const meleeOH = weapons.filter(w => w.type === 'melee' && w.category && w.category.startsWith('One-Handed'));
       if (meleeOH.length < 2) return false;
       const lmCount = meleeOH.filter(w => w.category === 'One-Handed Light' || w.category === 'One-Handed Medium').length;
@@ -60,7 +62,10 @@ const FIGHTING_STYLE_CONFIGS = {
       }
       return false;
     },
-    skillReq: ['ambidextrous', 'martial-training'],
+    // Per book, no Advanced Skill is required to USE Dual Wielder — only the weapon loadout
+    // gates qualification. Ambidextrous is a modifier (changes which loadouts qualify), not
+    // a prerequisite. Empty skillReq → detection loop treats this as "no skill needed".
+    skillReq: [],
     short: '+ both wpn dmg · -1 AR',
     bonus: 'When making an Attack, the Character adds both weapons\' Damage rolls to their Might.',
     hindrance: '-1 AR (down to a minimum of 0). May not take the Manipulate Action.'
@@ -1273,7 +1278,8 @@ export default class ConanActorSheet2 extends ActorSheet {
     for (const cfg of Object.values(FIGHTING_STYLE_CONFIGS)) {
       const isActive = cfg.id === fsActiveId;
       const weaponOK = cfg.weaponReq(fsArmedWeapons, fsShieldEquipped, fsHasSkill);
-      const skillOK = cfg.skillReq.some(s => fsHasSkill(s));
+      // Empty skillReq means "no Advanced Skill required" — style qualifies purely on weapon loadout.
+      const skillOK = !cfg.skillReq?.length || cfg.skillReq.some(s => fsHasSkill(s));
       if (!isActive && (!weaponOK || !skillOK)) continue;
       context.qualifyingFightingStyles.push({
         id: cfg.id,
