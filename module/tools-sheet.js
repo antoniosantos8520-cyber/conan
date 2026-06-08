@@ -316,6 +316,10 @@ const THREAT_TRAITS_BLACKSOULS = [
   { id: 'chosen',       name: 'Chosen',       description: 'On death: explodes in a black blood cloud, dealing 1d6+3 damage to their killer.' },
 ];
 
+const THREAT_TRAITS_RISENDAWN = [
+  { id: 'failingskin', name: 'Failing Skin', description: 'When Wounded but not killed, the skin tears and the thing beneath shows — +2 AR and +1d4 to all damage until it dies.' },
+];
+
 const THREAT_TRAITS_WITCH = [
   { id: 'glamour',    name: 'Glamour',     description: 'Sorcery (1 LP): Blinds a player until end of their turn. Attacks auto-miss unless Flex triggers. 1 SP to overcome.' },
   { id: 'beastmaster', name: 'Beastmaster', description: 'Call Beast summons 2 beasts instead of 1.' },
@@ -355,10 +359,14 @@ const THREAT_POOLS = {
   'bs-watcher':         THREAT_TRAITS_BLACKSOULS,
   'bs-strong-arm':      THREAT_TRAITS_BLACKSOULS,
   'bs-speaker':         THREAT_TRAITS_BLACKSOULS,
+  'rd-acolyte':         THREAT_TRAITS_RISENDAWN,
+  'rd-keeper':          THREAT_TRAITS_RISENDAWN,
+  'rd-sun-brother':     THREAT_TRAITS_RISENDAWN,
+  'rd-hierophant':      THREAT_TRAITS_RISENDAWN,
 };
 
 // Flat union for trait badge lookups (resolves any trait ID regardless of pool)
-const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS, ...THREAT_TRAITS_BLACKSOULS];
+const ALL_THREAT_TRAITS = [...THREAT_TRAITS_GUARDS, ...THREAT_TRAITS_BANDITS, ...THREAT_TRAITS_PICTS, ...THREAT_TRAITS_CULTISTS, ...THREAT_TRAITS_PIRATES, ...THREAT_TRAITS_BARBARIANS, ...THREAT_TRAITS_STEPPE, ...THREAT_TRAITS_WITCH, ...THREAT_TRAITS_NECRO, ...THREAT_TRAITS_SUMMONER, THREAT_TRAIT_ERUPTION, ...THREAT_TRAITS_SILKVIPERS, ...THREAT_TRAITS_BLACKSOULS, ...THREAT_TRAITS_RISENDAWN];
 
 // ============================================
 // ENEMY TOKEN MARKERS
@@ -558,6 +566,10 @@ const THREAT_NAME_MAP = {
   'bs-watcher':         { 0: 'The Watcher',         1: 'Tainted Watcher',    2: 'Corrupt Watcher',    3: 'Vile Watcher' },
   'bs-strong-arm':      { 0: 'The Strong Arm',      1: 'Tainted Arm',        2: 'Corrupt Arm',        3: 'Vile Arm' },
   'bs-speaker':         { 0: 'The Speaker',         1: 'Tainted Speaker',    2: 'Corrupt Speaker',    3: 'Vile Speaker' },
+  'rd-acolyte':         { 0: 'Acolyte of the Risen Dawn', 1: 'Kindled Acolyte',    2: 'Radiant Acolyte',     3: 'Blazing Acolyte' },
+  'rd-keeper':          { 0: 'Dawn Keeper',         1: 'Kindled Keeper',     2: 'Radiant Keeper',      3: 'Blazing Keeper' },
+  'rd-sun-brother':     { 0: 'Sun Brother',         1: 'Kindled Brother',    2: 'Radiant Brother',     3: 'Blazing Brother' },
+  'rd-hierophant':      { 0: 'High Hierophant',     1: 'Kindled Hierophant', 2: 'Radiant Hierophant',  3: 'Blazing Hierophant' },
 };
 
 function rollThreatTier() {
@@ -729,6 +741,44 @@ const FORCED_MARCH_MESSAGES = [
   "{{name}} drops to a knee. The road demands more than they can give."
 ];
 
+/**
+ * Library document viewer — an ApplicationV2 window hosting an iframe.
+ * HTML is shown via srcdoc (renders regardless of the server's MIME type);
+ * the window's built-in Detach control pops it out into its own browser window.
+ */
+class BnSLibraryViewer extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    id: 'bns-library-viewer-{id}',
+    classes: ['bns-library-viewer'],
+    window: { title: 'Library', icon: 'fa-solid fa-book-open', resizable: true },
+    position: { width: 960, height: 720 }
+  };
+
+  constructor(doc, options = {}) {
+    super(options);
+    this.doc = doc;
+  }
+
+  get title() {
+    return this.doc?.name ?? 'Library';
+  }
+
+  async _renderHTML(_context, _options) {
+    const iframe = document.createElement('iframe');
+    iframe.className = 'bns-library-frame';
+    if (this.doc?.kind === 'html') {
+      iframe.srcdoc = this.doc.html || '<p style="font:14px sans-serif;padding:1.5em;">Could not load this file.</p>';
+    } else {
+      iframe.src = this.doc?.url || 'about:blank';
+    }
+    return iframe;
+  }
+
+  _replaceHTML(result, content, _options) {
+    content.replaceChildren(result);
+  }
+}
+
 export default class ConanToolsSheet extends ActorSheet {
 
   // ========== SHEET CONFIG ==========
@@ -745,6 +795,10 @@ export default class ConanToolsSheet extends ActorSheet {
   }
 
   // ========== STATE PRESERVATION ==========
+  // Shared library folder (Foundry-relative path — same on every install)
+  static LIBRARY_DIR = 'systems/library';
+  _libraryFiles = undefined; // populated on first scan of LIBRARY_DIR
+
   _scrollTop = 0;
   _activeTab = 'enemies';
   _activeWorkshopSubTab = 'weapons';
@@ -833,6 +887,10 @@ export default class ConanToolsSheet extends ActorSheet {
 
     // Pass active tab to template so it renders correctly from the start
     context.activeTab = this._activeTab;
+
+    // Library: files found in the shared library folder (scanned on demand)
+    context.libraryDir = this.constructor.LIBRARY_DIR;
+    context.libraryFiles = this._libraryFiles || null;
 
     // Pass collapsed sections state to template
     context.isCollapsed = {
@@ -1403,6 +1461,14 @@ export default class ConanToolsSheet extends ActorSheet {
     // Tab navigation
     html.find('.tools-tab').click(this._onTabClick.bind(this));
 
+    // Library: scan folder + open files
+    html.find('.lib-refresh-btn').click(this._onLibraryRefresh.bind(this));
+    html.find('.lib-open-btn').click(this._onLibraryOpen.bind(this));
+    // Auto-scan once when the Library tab is the active view
+    if (this._activeTab === 'library' && this._libraryFiles === undefined) {
+      this._loadLibraryFiles();
+    }
+
     // Toggle switches
     html.find('.tools-toggle').click(this._onToggleClick.bind(this));
 
@@ -1605,6 +1671,8 @@ export default class ConanToolsSheet extends ActorSheet {
     const tabId = event.currentTarget.dataset.tab;
     this._activeTab = tabId;  // Update state immediately so it persists through re-renders
     this._activateTab(this.element, tabId);
+    // Scan the library folder the first time this tab is opened
+    if (tabId === 'library' && this._libraryFiles === undefined) this._loadLibraryFiles();
   }
 
   _activateTab(html, tabId) {
@@ -1612,6 +1680,68 @@ export default class ConanToolsSheet extends ActorSheet {
     html.find(`.tools-tab[data-tab="${tabId}"]`).addClass('active');
     html.find('.tools-panel').removeClass('active');
     html.find(`.tools-panel[data-panel="${tabId}"]`).addClass('active');
+  }
+
+  // ========== LIBRARY ==========
+  // Scans the shared library folder and lists every file in it. Creates the
+  // folder if missing so it works on any install. Uses Foundry-relative paths.
+  async _loadLibraryFiles() {
+    const FP = foundry.applications?.apps?.FilePicker?.implementation || FilePicker;
+    const dir = this.constructor.LIBRARY_DIR;
+    try { await FP.createDirectory('data', dir); } catch (e) { /* already exists — fine */ }
+    let result;
+    try {
+      result = await FP.browse('data', dir);
+    } catch (e) {
+      console.warn('Blood & Steel | Library scan failed:', e);
+      this._libraryFiles = [];
+      this.render(false);
+      return;
+    }
+    const files = (result.files || []).filter(f => /\.(pdf|html?)$/i.test(f));
+    this._libraryFiles = await Promise.all(files.map(async (f) => {
+      const name = decodeURIComponent(f.split('/').pop());
+      const url = foundry.utils.getRoute(f);
+      if (/\.html?$/i.test(f)) {
+        // Foundry serves data-folder .html as plain text; fetch the source now so we
+        // can render it via an iframe srcdoc (MIME-independent). A <base> tag keeps
+        // the page's relative images/styles resolving against its served folder.
+        let html = '';
+        try {
+          html = await (await fetch(url)).text();
+          const base = url.slice(0, url.lastIndexOf('/') + 1);
+          if (!/<base\s/i.test(html)) {
+            html = /<head[^>]*>/i.test(html)
+              ? html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`)
+              : `<base href="${base}">` + html;
+          }
+        } catch (e) {
+          console.warn('Blood & Steel | Could not load', f, e);
+        }
+        return { path: f, name, kind: 'html', html, url };
+      }
+      return { path: f, name, kind: 'pdf', url };
+    }));
+    this.render(false);
+  }
+
+  _onLibraryRefresh(event) {
+    event?.preventDefault();
+    this._libraryFiles = undefined; // force a fresh scan
+    this._loadLibraryFiles();
+  }
+
+  _onLibraryOpen(event) {
+    event.preventDefault();
+    const doc = this._libraryFiles?.[Number(event.currentTarget.dataset.index)];
+    if (!doc) return;
+    if (doc.kind === 'html') {
+      // Render inside a Foundry window (iframe srcdoc). The window's built-in
+      // Detach control (⤢) pops it out into its own browser window.
+      new BnSLibraryViewer(doc).render(true);
+    } else {
+      window.open(doc.url, '_blank'); // PDFs open directly (already works here)
+    }
   }
 
   // ========== WINDS OF FATE ==========
@@ -2083,6 +2213,10 @@ export default class ConanToolsSheet extends ActorSheet {
     const physDef = enemyData.defenses.physical ? this._randomInRange(enemyData.defenses.physical.min, enemyData.defenses.physical.max) : null;
     const sorcDef = enemyData.defenses.sorcery ? this._randomInRange(enemyData.defenses.sorcery.min, enemyData.defenses.sorcery.max) : null;
     const ar = enemyData.ar ? this._randomInRange(enemyData.ar.min, enemyData.ar.max) : null;
+    // Threshold may be a fixed number or a {min,max} range (rolled per token like defenses)
+    const threshold = (enemyData.threshold && typeof enemyData.threshold === 'object')
+      ? this._randomInRange(enemyData.threshold.min, enemyData.threshold.max)
+      : (enemyData.threshold ?? null);
 
     // Get the group background image from settings
     const groupBackgrounds = game.settings.get('conan', 'enemyGroupBackgrounds') || {};
@@ -2100,7 +2234,8 @@ export default class ConanToolsSheet extends ActorSheet {
         // Randomized values
         physicalDefense: physDef,
         sorceryDefense: sorcDef,
-        armorRating: ar
+        armorRating: ar,
+        threshold: threshold
       }
     };
 
@@ -2484,7 +2619,7 @@ export default class ConanToolsSheet extends ActorSheet {
             ${enemy.threshold ? `
               <div class="enemy-detail-defense threshold">
                 <span class="label">Threshold</span>
-                <span class="value">${enemy.threshold}</span>
+                <span class="value">${typeof enemy.threshold === 'object' ? `${enemy.threshold.min}-${enemy.threshold.max}` : enemy.threshold}</span>
               </div>
             ` : ''}
             ${enemy.lifePoints ? `
@@ -8396,7 +8531,8 @@ Hooks.on('dropCanvasData', async (canvas, data) => {
         groupBackground: summonBackground,
         physicalDefense: enemyBase.defenses.physical ? randomInRange(enemyBase.defenses.physical.min, enemyBase.defenses.physical.max) : null,
         sorceryDefense: enemyBase.defenses.sorcery ? randomInRange(enemyBase.defenses.sorcery.min, enemyBase.defenses.sorcery.max) : null,
-        armorRating: enemyBase.ar ? randomInRange(enemyBase.ar.min, enemyBase.ar.max) : null
+        armorRating: enemyBase.ar ? randomInRange(enemyBase.ar.min, enemyBase.ar.max) : null,
+        threshold: (enemyBase.threshold && typeof enemyBase.threshold === 'object') ? randomInRange(enemyBase.threshold.min, enemyBase.threshold.max) : (enemyBase.threshold ?? null)
       };
       isSummon = true;
 
@@ -9431,7 +9567,7 @@ function showEnemyRollDialog(enemyData, token = null) {
           stateClass = 'summoner-btn';
           extraAttrs = ' title="Demonic Ward, Hellfire, or Summon Fiend — dark sorcery"';
         }
-        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : r.name === 'Glamour' ? '👁' : r.name === 'Hex' ? '🔮' : r.name === 'White Magic' ? '🌿' : r.name === 'Master of the Dead' ? '💀' : r.name === 'Demonic Darkness' ? '🔥' : r.name === 'Lust' ? '💋' : r.name === 'Tender Mercy' ? '💗' : '⚔';
+        const icon = r.name === 'Inspire' ? '✦' : r.name === 'War Cry' ? '🗣' : r.name === 'Blood Sacrifice' ? '🩸' : r.name === 'Summon Fiend' ? '👹' : r.name === 'Bellow for Blood' ? '🪓' : r.name === 'Glamour' ? '👁' : r.name === 'Hex' ? '🔮' : r.name === 'White Magic' ? '🌿' : r.name === 'Master of the Dead' ? '💀' : r.name === 'Demonic Darkness' ? '🔥' : r.name === 'Lust' ? '💋' : r.name === 'Tender Mercy' ? '💗' : r.name === 'Sunburst' ? '☀' : '⚔';
         return `<button type="button" class="ability-btn ${stateClass}" data-rule-index="${i}" data-rule-name="${r.name}"${extraAttrs}>${icon} ${r.name}<div class="ability-tooltip"><strong>${r.name}:</strong> ${r.description}</div></button>`;
       }).join('');
     }
@@ -10755,6 +10891,15 @@ function showEnemyRollDialog(enemyData, token = null) {
           zealotDamage = zealotRoll.total;
         }
 
+        // Roll Failing Skin bonus damage (Risen Dawn — while the skin is torn)
+        const hasFailingSkin = isPlaced && enemyData.threatTraits?.includes('failingskin') && token?.getFlag('conan', 'failingSkinActive');
+        let failingSkinRoll = null;
+        let failingSkinDamage = 0;
+        if (hasFailingSkin) {
+          failingSkinRoll = await new Roll('1d4').evaluate();
+          failingSkinDamage = failingSkinRoll.total;
+        }
+
         // Check for Berserker buff — stacking +1 damage per dead barbarian
         const berserkerBuff = isPlaced && token?.actor?.getFlag('conan', 'berserkerBuff');
         const berserkerDamageBonus = berserkerBuff?.stacks || 0;
@@ -10767,7 +10912,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         const madwomanBuff = isPlaced && token?.actor?.getFlag('conan', 'madwomanBuff');
         const madwomanDamageBonus = (madwomanBuff?.stacks || 0) * 2;
 
-        const totalDamage = damageRoll.total + baneDamage + aggressiveDamageBonus + bloodthirstyDamage + zealotDamage + cutthroatDamage + bloodyAxeDamage + warChantDamageBonus + martyrDamageBonus + berserkerDamageBonus + bellowDamageBonus + madwomanDamageBonus + trampleDamage + eagleEyeDamage;
+        const totalDamage = damageRoll.total + baneDamage + aggressiveDamageBonus + bloodthirstyDamage + zealotDamage + failingSkinDamage + cutthroatDamage + bloodyAxeDamage + warChantDamageBonus + martyrDamageBonus + berserkerDamageBonus + bellowDamageBonus + madwomanDamageBonus + trampleDamage + eagleEyeDamage;
         const statLabel = stat.charAt(0).toUpperCase() + stat.slice(1);
 
         // Build modifier lines (white text on black — no inline colors)
@@ -10788,6 +10933,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         if (hasAggressive) atkModifiers += `<div class="msg-modifier">${eShort} attacks aggressively!</div>`;
         if (hasBloodthirsty) atkModifiers += `<div class="msg-modifier">${eShort} strikes with bloodthirsty fury!</div>`;
         if (hasZealot) atkModifiers += `<div class="msg-modifier">${eShort} channels dark fury!</div>`;
+        if (hasFailingSkin) atkModifiers += `<div class="msg-modifier">${eShort}'s torn skin splits — the thing beneath strikes!</div>`;
         if (hasCutthroat) atkModifiers += `<div class="msg-modifier">${eShort} strikes at a vital spot!</div>`;
         if (hasBloodyAxe) atkModifiers += `<div class="msg-modifier">${eShort} hews with savage force!</div>`;
         if (berserkerDamageBonus) atkModifiers += `<div class="msg-modifier">Berserker Fury: +${berserkerDamageBonus} damage</div>`;
@@ -10821,6 +10967,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         if (aggressiveDamageBonus) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${aggressiveDamageBonus}</span>`;
         if (bloodthirstyDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${bloodthirstyDamage}</span>`;
         if (zealotDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${zealotDamage}</span>`;
+        if (failingSkinDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${failingSkinDamage}</span>`;
         if (cutthroatDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${cutthroatDamage}</span>`;
         if (bloodyAxeDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${bloodyAxeDamage}</span>`;
         if (baneDamage) dmgBonuses += `<span class="roll-plus">+</span><span class="roll-value">${baneDamage}</span>`;
@@ -10854,6 +11001,7 @@ function showEnemyRollDialog(enemyData, token = null) {
         if (baneRoll) allRolls.push(baneRoll);
         if (bloodthirstyRoll) allRolls.push(bloodthirstyRoll);
         if (zealotRoll) allRolls.push(zealotRoll);
+        if (failingSkinRoll) allRolls.push(failingSkinRoll);
 
         // Store enemy attack metadata for poison system + doublestrike
         const hasDoublestrike = enemyData.threatTraits?.includes('doublestrike');
@@ -11116,6 +11264,72 @@ function showEnemyRollDialog(enemyData, token = null) {
               activeEscHandler = null;
               btn.classList.remove('ability-targeting');
               document.removeEventListener('keydown', activeEscHandler);
+              hideCardBubble();
+            }
+          };
+          document.addEventListener('keydown', activeEscHandler);
+          return;
+        }
+
+        // === SUNBURST ABILITY (Sun Brother — area stun, Grit check Difficulty 9–12) ===
+        if (rule.name === 'Sunburst' && isPlaced && token) {
+          // TOGGLE OFF: if already targeting, cancel
+          if (btn.classList.contains('ability-targeting')) {
+            if (activeTargetingHookId) Hooks.off('controlToken', activeTargetingHookId);
+            if (activeEscHandler) document.removeEventListener('keydown', activeEscHandler);
+            activeTargetingHookId = null;
+            activeEscHandler = null;
+            btn.classList.remove('ability-targeting');
+            hideCardBubble();
+            return;
+          }
+
+          // Roll the burst Difficulty once for this activation (9–12)
+          const burstDC = Math.floor(Math.random() * 4) + 9;
+          ChatMessage.create({
+            speaker: { alias: enemyData.name },
+            content: msgCard('sun', 'Sunburst!', `
+              <div class="enemy-msg-flavor">${eShort} throws wide ${eShort ? 'their' : 'its'} arms and the air detonates in a blinding flare of false light!</div>
+              <div class="enemy-msg-mechanic"><span class="mech-tag debuff"><i class="fas fa-dice-d20"></i> Grit Difficulty ${burstDC}</span></div>
+              <div style="color:#FFD700;text-align:center;margin-top:4px;">Click each player caught in the burst to test them.</div>
+            `)
+          });
+
+          const applyBurstTo = async (targetToken) => {
+            const tActor = targetToken?.actor;
+            if (!tActor || tActor.type !== 'character2') return; // players only
+            const grit = tActor.system?.attributes?.grit || {};
+            const gritDieNum = String(grit.die || 'D6').toLowerCase().replace('d', '');
+            const gritRoll = await new Roll(`1d${gritDieNum}`).evaluate();
+            const total = gritRoll.total + (grit.value || 0);
+            const line = `Grit ${gritRoll.total} + ${grit.value || 0} = <strong>${total}</strong> vs Difficulty ${burstDC}`;
+            if (total >= burstDC) {
+              ChatMessage.create({ speaker: { alias: tActor.name }, content: msgCard('sun', 'Resisted!', `<div class="enemy-msg-flavor">${tActor.name} shields their eyes in time — ${line}.</div>`) });
+            } else {
+              // Apply the existing Stunned condition (auto-clears end of their next turn)
+              await targetToken.document.update({ locked: true });
+              const combatant = game.combat?.combatants?.find(c => c.tokenId === targetToken.document?.id);
+              await tActor.setFlag('conan', 'stunnedDebuff', { active: true, tokenId: targetToken.document.id, combatantId: combatant?.id || null, source: 'sun-brother' });
+              await tActor.update({ 'system.conditions.stunned': true });
+              ChatMessage.create({ speaker: { alias: 'GM' }, content: msgCard('sun', 'Stunned!', `<div class="enemy-msg-flavor">The light takes ${tActor.name} — ${line}. Stunned until the end of their next turn.</div>`) });
+            }
+          };
+
+          // "Load the mouse": click each caught player to test them
+          canvas.tokens?.releaseAll();
+          if (isNewCardLayout) showCardBubble('Click each player caught in the burst.');
+          btn.classList.add('ability-targeting');
+          activeTargetingHookId = Hooks.on('controlToken', async (controlledToken, isControlled) => {
+            if (!isControlled) return;
+            await applyBurstTo(controlledToken);
+          });
+          activeEscHandler = (e) => {
+            if (e.key === 'Escape') {
+              if (activeTargetingHookId) Hooks.off('controlToken', activeTargetingHookId);
+              activeTargetingHookId = null;
+              btn.classList.remove('ability-targeting');
+              document.removeEventListener('keydown', activeEscHandler);
+              activeEscHandler = null;
               hideCardBubble();
             }
           };

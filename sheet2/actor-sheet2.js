@@ -30,7 +30,10 @@ const VENOM_SPELL_MESSAGES = [
   "The venom interferes with your concentration. The spell dissipates.",
   "You feel the sorcery rise within you — then the poison scatters it like ash.",
   "The incantation forms on your lips, but the venom unravels the words before they take hold.",
-  "Your mind reaches for the spell — the poison pulls you back into your suffering body."
+  "Your mind reaches for the spell — the poison pulls you back into your suffering body.",
+  "The spell fades as your vision swims and the poison burns in your veins.",
+  "You taste copper. The words slip. The sorcery dies before it is born.",
+  "The working slides from your grasp — your hands shake, your skull pounds, the venom wins."
 ];
 
 // ============================================
@@ -77,11 +80,11 @@ const FIGHTING_STYLE_CONFIGS = {
     costSP: 1,
     costActions: 2,
     weaponReq: (weapons, shieldEquipped) => {
-      // Any One-Handed weapon + Shield equipped
+      // Any One-Handed weapon + Shield equipped. No skill required.
       const has1H = weapons.some(w => w.category && w.category.startsWith('One-Handed'));
       return has1H && shieldEquipped;
     },
-    skillReq: ['shield-master', 'martial-training'],
+    skillReq: [],
     short: '+1 AR · +2 if no Move',
     bonus: 'The Character gains +1 AR. The Character gains an additional +1 AR during any Round in which they do not take the Move Action.',
     hindrance: 'Taking the Move Action more than once in a Round (even through Stamina spends or other rules) immediately ends this Fighting Style. May not take the Manipulate Action.'
@@ -146,6 +149,32 @@ const FIGHTING_STYLE_CONFIGS = {
     short: '+1 atk/dmg on Move · +1 PD if no Move',
     bonus: 'The Character gains +1 to Attacks and Damage rolls in any Round that they take the Move Action, and +1 Physical Defense in any Round that they do not take the Move Action.',
     hindrance: 'The bonus for this stance may only be applied if there is at least one other Player Character within Close Range also using this Fighting Style. May not take the Manipulate Action.'
+  },
+  // ----- Invented stance (not in book) — Strangler -----
+  // A savage hand-to-hand killer who relies on muscle, dirty fighting, and sheer
+  // brutality. Free to adopt and drop (no SP / no Action), can be cycled on/off freely
+  // during combat without triggering the once-per-combat lock. Punishing defensive
+  // hindrance (-1 AR AND -1 PD, PD can drop below the usual floor of 5) balances the
+  // free entry + double-damage burst.
+  'strangler': {
+    id: 'strangler',
+    name: 'Strangler',
+    icon: 'fa-solid fa-hand-fist',
+    costSP: 0,
+    costActions: 0,
+    weaponReq: (weapons, shieldEquipped, hasSkill, armorType) => {
+      // No shield, must be unarmored, exactly 2 unarmed weapons armed and nothing else.
+      if (shieldEquipped) return false;
+      if (armorType && armorType !== 'unarmored') return false;
+      if (!Array.isArray(weapons) || weapons.length !== 2) return false;
+      const unarmedCount = weapons.filter(w => w && (w.name === 'Unarmed' || w.category === 'Unarmed')).length;
+      return unarmedCount === 2;
+    },
+    skillReq: [],
+    short: 'Both fists · -1 AR · -1 PD · SLAM on flex',
+    bonus: 'When making an Attack, the Character adds both fists\' Damage rolls to their Might. On a Flex Die result during damage, the enemy is Slammed — they lose their next turn.',
+    hindrance: '-1 AR and -1 Physical Defense. Physical Defense may fall below the usual minimum of 5.',
+    recommendedSkill: { id: 'waterfront-fists', name: 'Waterfront Fists', note: 'Upgrades unarmed from a flat 2 damage to 1d4 Light One-Handed.' }
   }
 };
 
@@ -1262,6 +1291,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     // ----------------------------------------
     const fsArmedWeapons = Object.values(this.actor.system.armedWeapons || {});
     const fsShieldEquipped = !!(this.actor.system.armorEquipped?.shield);
+    const fsArmorType = this.actor.system.armorEquipped?.type || 'unarmored';
     const fsOriginBonuses = this._getActiveOriginBonuses();
     const fsHasSkill = (skillId) => {
       if ((fsOriginBonuses.grantedSkills || []).includes(skillId)) return true;
@@ -1272,12 +1302,31 @@ export default class ConanActorSheet2 extends ActorSheet {
       });
     };
     // State lives in actor flags (not system data) so no template.json changes are needed.
-    const fsActiveId = this.actor.getFlag('conan', 'fightingStyle')?.id || null;
+    let fsActiveId = this.actor.getFlag('conan', 'fightingStyle')?.id || null;
     const fsIsSpent = !!this.actor.getFlag('conan', 'fightingStyleSpent');
+
+    // Auto-deactivate: if the active stance no longer qualifies (armor changed, weapon swapped,
+    // shield equipped), strip the stance + dual pair and notify in chat. Fires once because the
+    // next render sees fsActiveId = null and skips this block. fightingStyleSpent is preserved —
+    // the player already paid the cost this combat.
+    if (fsActiveId) {
+      const activeCfg = Object.values(FIGHTING_STYLE_CONFIGS).find(c => c.id === fsActiveId);
+      if (activeCfg && !activeCfg.weaponReq(fsArmedWeapons, fsShieldEquipped, fsHasSkill, fsArmorType)) {
+        this.actor.unsetFlag('conan', 'fightingStyle');
+        this.actor.unsetFlag('conan', 'dualWielderPair');
+        this.actor.unsetFlag('conan', 'defensiveFighterMoves');
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title" style="color: #cd853f;">${activeCfg.name} Drops</div></div><div style="padding: 8px 12px; color: #aaa; font-style: italic;">The stance can no longer be maintained — equipment changed.</div></div>`
+        });
+        fsActiveId = null;
+      }
+    }
+
     context.qualifyingFightingStyles = [];
     for (const cfg of Object.values(FIGHTING_STYLE_CONFIGS)) {
       const isActive = cfg.id === fsActiveId;
-      const weaponOK = cfg.weaponReq(fsArmedWeapons, fsShieldEquipped, fsHasSkill);
+      const weaponOK = cfg.weaponReq(fsArmedWeapons, fsShieldEquipped, fsHasSkill, fsArmorType);
       // Empty skillReq means "no Advanced Skill required" — style qualifies purely on weapon loadout.
       const skillOK = !cfg.skillReq?.length || cfg.skillReq.some(s => fsHasSkill(s));
       if (!isActive && (!weaponOK || !skillOK)) continue;
@@ -1290,8 +1339,11 @@ export default class ConanActorSheet2 extends ActorSheet {
         costActions: cfg.costActions,
         bonus: cfg.bonus,
         hindrance: cfg.hindrance,
+        recommendedSkill: cfg.recommendedSkill || null,
         isActive,
-        isSpent: fsIsSpent
+        // Strangler is exempt from the once-per-combat spent lock — it can be
+        // adopted and dropped freely without ever entering the "spent" state.
+        isSpent: cfg.id === 'strangler' ? false : fsIsSpent
       });
     }
 
@@ -1678,7 +1730,11 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (!physicalLocked && physicalOverride !== null && physicalOverride !== undefined && physicalOverride !== "") {
       context.system.defense.physical = parseInt(physicalOverride);
     } else {
-      const baseDefense = Math.max(5, effectiveEdgeForDef + 2);
+      // Strangler stance: -1 PD hindrance AND lowers the final PD floor from 5 to 4.
+      const stranglerActive = this.actor.getFlag('conan', 'fightingStyle')?.id === 'strangler';
+      const pdDebuff = stranglerActive ? 1 : 0;
+      const pdFloor = stranglerActive ? 4 : 5;
+      const baseDefense = effectiveEdgeForDef + 2;
       // Shield: stock +1 OR custom shield's physDefBonus when active; gated by per-shield Edge requirement
       const shieldBonus = shieldMeetsEdge ? shieldPhysDefBonus : 0;
       // Tough-Souled adds +1 to Physical Defense
@@ -1692,7 +1748,14 @@ export default class ConanActorSheet2 extends ActorSheet {
       const defensiveFightingActive = this.actor.getFlag('conan', 'defensiveFighting') || false;
       const defensiveFightingBonus = defensiveFightingActive ? 2 : 0;
       const customArmorPhysBonus = getCustomArmorBonus('physicalDefense');
-      context.system.defense.physical = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus + defensiveFightingBonus + customArmorPhysBonus;
+      const totalPD = baseDefense + shieldBonus + toughSouledBonus + blockerBonus + protectBonus + defensiveFightingBonus + customArmorPhysBonus - pdDebuff;
+      context.system.defense.physical = Math.max(pdFloor, totalPD);
+      // Bound shield-override: PD as if a STANDARD shield contributed nothing (custom shields
+      // out of scope — see status-effect.md). Persisted as physicalBound for sheet + GM tooltip.
+      const boundRemovableShield = useCustomShieldDef ? 0 : shieldBonus;
+      context._pdWhenBound = Math.max(pdFloor, totalPD - boundRemovableShield);
+      context.pdDebuff = pdDebuff;
+      context.hasPDDebuff = pdDebuff > 0;
       context.customArmorPhysBonus = customArmorPhysBonus;
       context.protectBonus = protectBonus;
       context.physicalToughSouledBonus = toughSouledBonus;
@@ -1857,13 +1920,25 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Persist computed defense values so GM hover tooltip reads correct values
     const storedPhysDef = this.actor._source?.system?.defense?.physical;
     const storedSorcDef = this.actor._source?.system?.defense?.sorcery;
+    const storedPhysBound = this.actor._source?.system?.defense?.physicalBound;
     const computedPhys = context.system.defense.physical;
     const computedSorc = context.system.defense.sorcery;
-    if (computedPhys !== storedPhysDef || computedSorc !== storedSorcDef) {
+    const computedPhysBound = context._pdWhenBound ?? computedPhys;
+    if (computedPhys !== storedPhysDef || computedSorc !== storedSorcDef || computedPhysBound !== storedPhysBound) {
       this.actor.update({
         'system.defense.physical': computedPhys,
-        'system.defense.sorcery': computedSorc
+        'system.defense.sorcery': computedSorc,
+        'system.defense.physicalBound': computedPhysBound
       }, {render: false});
+    }
+
+    // Cosmetic condition overrides on the DISPLAYED defense (persisted value & calcs untouched).
+    // Unconscious: 0/0. Bound: shield's physical-defense contribution ignored (standard shield).
+    if (context.system.conditions?.unconscious) {
+      context.system.defense.physical = 0;
+      context.system.defense.sorcery = 0;
+    } else if (context.system.conditions?.bound) {
+      context.system.defense.physical = context._pdWhenBound ?? context.system.defense.physical;
     }
 
     // Initialize origin notes if missing
@@ -2372,14 +2447,24 @@ export default class ConanActorSheet2 extends ActorSheet {
     // AR debuffs from active fighting styles
     let arDebuff = 0;
     const fsDebuffCheck = this.actor.getFlag('conan', 'fightingStyle');
-    if (fsDebuffCheck?.id === 'dual-wielder') arDebuff += 1;
+    if (fsDebuffCheck?.id === 'dual-wielder' || fsDebuffCheck?.id === 'strangler') arDebuff += 1;
     // Future styles that debuff AR can stack here
     context.arDebuff = arDebuff;
     context.hasARDebuff = arDebuff > 0;
 
-    // Calculate effective AR (base + buffs - debuffs, floor at 0)
+    // Defensive Fighter: +1 AR while active; +2 AR if no Move has been taken this round
+    // (moveCount tracked via area-change hook from the Albert area system).
+    let arStanceBonus = 0;
+    if (fsDebuffCheck?.id === 'defensive-fighter') {
+      const dfMoves = this.actor.getFlag('conan', 'defensiveFighterMoves');
+      arStanceBonus = (dfMoves?.moveCount === 0) ? 2 : 1;
+    }
+    context.arStanceBonus = arStanceBonus;
+    context.hasARStanceBonus = arStanceBonus > 0;
+
+    // Calculate effective AR (base + buffs + stance bonus - debuffs, floor at 0)
     const baseAR = context.system.defense?.ar || 0;
-    context.effectiveAR = Math.max(0, baseAR + arBuffBonus - arDebuff);
+    context.effectiveAR = Math.max(0, baseAR + arBuffBonus + arStanceBonus - arDebuff);
     context.hasARBuff = arBuffBonus > 0;
 
     // Check if any AR-affecting buffs are active (for icon container)
@@ -5443,13 +5528,13 @@ export default class ConanActorSheet2 extends ActorSheet {
     const name = this.actor.name;
     if (!newState) {
       ChatMessage.create({
-        content: `<div class="conan-roll"><div class="roll-header">${name}</div><div class="roll-section ability-desc">${name} is no longer fighting defensively.</div></div>`,
+        content: `<div class="conan-roll"><div class="roll-header">${name}</div><div class="roll-section ability-desc">${name} is no longer cowering.</div></div>`,
         speaker: ChatMessage.getSpeaker({ actor: this.actor })
       });
     } else {
       const msg = this._getDefensiveFightingMessage();
       ChatMessage.create({
-        content: `<div class="conan-roll"><div class="roll-header" style="color: #4A90D9;">Defensive Fighting</div><div class="roll-section ability-desc">${msg}</div></div>`,
+        content: `<div class="conan-roll"><div class="roll-header" style="color: #4A90D9;">Cowering</div><div class="roll-section ability-desc">${msg}</div></div>`,
         speaker: ChatMessage.getSpeaker({ actor: this.actor })
       });
     }
@@ -6109,11 +6194,10 @@ export default class ConanActorSheet2 extends ActorSheet {
       rollFormula += ` + ${soulBonus}`;
     }
 
-    // Poison: checksDown — silent -1 penalty to all checks
-    const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
-    const poisonPenalty = (poisonEffects?.active && poisonEffects.effects?.checksDown) ? -1 : 0;
-    if (poisonPenalty !== 0) {
-      rollFormula += ` - 1`;
+    // Poison: checksDown — silent random 1-3 penalty to every roll
+    const poisonPenalty = this._rollPoisonChecksDownPenalty();
+    if (poisonPenalty > 0) {
+      rollFormula += ` - ${poisonPenalty}`;
     }
 
     const roll = new Roll(rollFormula, this.actor.getRollData());
@@ -6158,7 +6242,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       formulaDisplay += ` <span style="color: #DC143C;">(+${soulBonus} Soul)</span>`;
     }
     if (poisonPenalty !== 0) {
-      formulaDisplay += ` <span style="color: #32CD32;">(-1 Venom)</span>`;
+      formulaDisplay += ` <span style="color: #32CD32;">(-${poisonPenalty} Venom)</span>`;
     }
     if (windsOfFate !== 0) {
       formulaDisplay += ` <span style="color: #c9a668;">(${windsOfFate > 0 ? '+' : ''}${windsOfFate} Fate)</span>`;
@@ -6201,7 +6285,7 @@ export default class ConanActorSheet2 extends ActorSheet {
         html += `<div class="breakdown-line skill-bonus" style="color: #DC143C;"><span class="breakdown-label">Captured Soul</span><span class="breakdown-value">+${soulBonus}</span></div>`;
       }
       if (poisonPenalty !== 0) {
-        html += `<div class="breakdown-line breakdown-poison"><span class="breakdown-label">Venom</span><span class="breakdown-value">-1</span></div>`;
+        html += `<div class="breakdown-line breakdown-poison"><span class="breakdown-label">Venom</span><span class="breakdown-value">-${poisonPenalty}</span></div>`;
       }
       if (windsOfFate !== 0) {
         html += `<div class="breakdown-line skill-bonus" style="color: #c9a668;"><span class="breakdown-label">Winds of Fate</span><span class="breakdown-value">${windsOfFate > 0 ? '+' : ''}${windsOfFate}</span></div>`;
@@ -6583,6 +6667,16 @@ export default class ConanActorSheet2 extends ActorSheet {
     }
     const styleId = event.currentTarget.dataset.styleId;
     if (!styleId) return;
+
+    // ----- Strangler: invented stance, special activation path -----
+    // Free to adopt + drop, never locks out, skips cost dialog + pick mode entirely.
+    // Click while inactive → simple OK/Cancel confirm (positioned above the icon).
+    // Click while active → instant drop (no confirm — drop is also free).
+    if (styleId === 'strangler') {
+      await this._onStranglerActivate(event);
+      return;
+    }
+
     const currentStyle = this.actor.getFlag('conan', 'fightingStyle');
     const isSpent = !!this.actor.getFlag('conan', 'fightingStyleSpent');
     if (isSpent) {
@@ -6602,6 +6696,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       await this.actor.setFlag('conan', 'fightingStyleSpent', true);
       await this.actor.unsetFlag('conan', 'fightingStyle');
       await this.actor.unsetFlag('conan', 'dualWielderPair');
+      await this.actor.unsetFlag('conan', 'defensiveFighterMoves');
       return;
     }
     if (currentStyle) {
@@ -6626,6 +6721,15 @@ export default class ConanActorSheet2 extends ActorSheet {
       // click two weapons from the Arms tab (sub-steps 3-5 wire the UI + validation).
       if (styleId === 'dual-wielder') {
         this._enterDualWielderPickMode(costSP);
+      }
+      // Defensive Fighter snapshots the starting area so the movement hook can detect
+      // the first/second move this round. Null if no area data is set up — the hook
+      // just won't fire and the +2 bonus stays passive.
+      if (styleId === 'defensive-fighter') {
+        await actor.setFlag('conan', 'defensiveFighterMoves', {
+          roundStartArea: this._getCurrentTokenArea(),
+          moveCount: 0
+        });
       }
     };
 
@@ -6688,6 +6792,85 @@ export default class ConanActorSheet2 extends ActorSheet {
    * Visual treatment of weapon tiles + the actual click hijack come in sub-steps 3-5.
    * This is just the state + the entry notification.
    */
+  /**
+   * Strangler activation handler — free adopt + drop, never locks out.
+   * Click while inactive → OK/Cancel confirm dialog (positioned above the stance icon).
+   *   On OK: set fightingStyle flag, auto-pair the two unarmed weapons (no pick mode).
+   * Click while currently active → instant drop (no confirm), pair flag cleared,
+   *   spent flag is NEVER set so re-adoption stays free.
+   */
+  async _onStranglerActivate(event) {
+    const actor = this.actor;
+    const currentStyle = actor.getFlag('conan', 'fightingStyle');
+
+    // Drop path — click while Strangler is active → instant drop, no confirm.
+    if (currentStyle?.id === 'strangler') {
+      await actor.unsetFlag('conan', 'fightingStyle');
+      await actor.unsetFlag('conan', 'dualWielderPair');
+      ui.notifications.info('Strangler stance dropped — fists lowered.');
+      return;
+    }
+
+    // Don't allow adopting while another stance is active (drop the other first).
+    if (currentStyle) {
+      ui.notifications.warn('Drop your current Fighting Style first before adopting Strangler.');
+      return;
+    }
+
+    // Position the confirm dialog directly above the clicked icon (mirrors the
+    // Dual Wielder cost dialog positioning logic).
+    const iconRect = event.currentTarget.getBoundingClientRect();
+    const dialogWidth = 380;
+    const dialogHeightEstimate = 240;
+    const dialogTop = Math.max(iconRect.top - dialogHeightEstimate - 8, 20);
+    const dialogLeft = Math.max(
+      Math.min(iconRect.left + (iconRect.width / 2) - (dialogWidth / 2), window.innerWidth - dialogWidth - 20),
+      20
+    );
+
+    // Find the two unarmed weapons for auto-pairing on OK.
+    const armed = actor.system.armedWeapons || {};
+    const unarmedIds = Object.entries(armed)
+      .filter(([, w]) => w && (w.name === 'Unarmed' || w.category === 'Unarmed'))
+      .map(([id]) => id);
+
+    new Dialog({
+      title: 'Adopt Strangler',
+      content: `
+        <div style="padding: 4px 0 8px;">
+          <p style="margin: 0 0 8px; text-align: center;">Adopt the <strong>Strangler</strong> stance?</p>
+          <p style="margin: 0 0 6px; font-size: 12px;"><strong>Bonus:</strong> Both fists' Damage rolls + Might. On a Flex Die result during damage, the enemy is Slammed — they lose their next turn.</p>
+          <p style="margin: 0 0 6px; font-size: 12px;"><strong>Hindrance:</strong> -1 AR and -1 Physical Defense. PD may fall below the usual minimum of 5.</p>
+          <p style="margin: 0; font-size: 11px; color: #8a7a5a; text-align: center;"><em>Free to adopt and drop. Never locks out.</em></p>
+        </div>`,
+      buttons: {
+        ok: {
+          icon: '<i class="fas fa-hand-fist"></i>',
+          label: 'Raise Fists',
+          callback: async () => {
+            await actor.setFlag('conan', 'fightingStyle', {
+              id: 'strangler',
+              adoptedAt: game.combat?.round ?? null
+            });
+            if (unarmedIds.length >= 2) {
+              await actor.setFlag('conan', 'dualWielderPair', [unarmedIds[0], unarmedIds[1]]);
+            }
+            ui.notifications.info('Strangler stance adopted — fists raised.');
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: 'Cancel'
+        }
+      },
+      default: 'ok'
+    }, {
+      top: dialogTop,
+      left: dialogLeft,
+      width: dialogWidth
+    }).render(true);
+  }
+
   _enterDualWielderPickMode(spPaid) {
     this._dualWielderPickMode = true;
     this._dualWielderPicks = [];
@@ -6725,6 +6908,78 @@ export default class ConanActorSheet2 extends ActorSheet {
       await this.actor.update({ 'system.stamina': currentSP + refund });
     }
     ui.notifications.info(`Dual Wielder cancelled${refund ? ` — ${refund} SP refunded` : ''}.`);
+  }
+
+  /**
+   * Find this actor's token in the active scene and return its current area label (A-Z).
+   * Returns null if no scene area data is set up or no token can be located. Mirrors the
+   * bbox-overlap logic of `_getTokenOverlapArea` in conan.js — keeping it inline here so
+   * the sheet doesn't depend on a private helper from another file.
+   */
+  _getCurrentTokenArea() {
+    const areaData = canvas?.scene?.getFlag?.('conan', 'areaData');
+    if (!areaData?.areas) return null;
+    const token = canvas.tokens?.placeables?.find(t => t.document?.actorLink && t.actor?.id === this.actor.id);
+    if (!token) return null;
+    const gridSize = canvas.grid.size;
+    const tokL = token.x, tokT = token.y;
+    const tokR = token.x + (token.w || gridSize);
+    const tokB = token.y + (token.h || gridSize);
+    for (const [label, areaInfo] of Object.entries(areaData.areas)) {
+      const markerDoc = canvas.scene.tokens.get(areaInfo.tokenId);
+      if (!markerDoc) continue;
+      const aw = (areaInfo.gridW || 3) * gridSize;
+      const ah = (areaInfo.gridH || 3) * gridSize;
+      const cx = markerDoc.x + ((markerDoc.width || 1) * gridSize) / 2;
+      const cy = markerDoc.y + ((markerDoc.height || 1) * gridSize) / 2;
+      if (tokR > cx - aw / 2 && tokL < cx + aw / 2 && tokB > cy - ah / 2 && tokT < cy + ah / 2) return label;
+    }
+    return null;
+  }
+
+  /**
+   * Silent per-roll penalty from the poison `checksDown` effect. Rolls fresh 1-3 each call;
+   * value is embedded into roll formulas as a flat integer so the chat breakdown never reveals
+   * a `1d3` (preserving the "player doesn't know severity" design). Returns 0 if not poisoned
+   * with checksDown.
+   */
+  /**
+   * Poison `noStamina` fizzle check for SP-cost spells. Caller deducts SP first, then calls this.
+   * If the actor has the noStamina poison effect active, posts a "spell fizzles" chat card
+   * (using a random VENOM_SPELL_MESSAGES line + the wasted SP cost) and returns true. The caller
+   * should immediately `return` to abort the spell — SP is already gone, effect never lands.
+   * Returns false if poison isn't active and the caller should proceed with the spell.
+   */
+  _fizzleSpellOnPoison(spellName, spellIcon, spCost) {
+    if (!spCost || spCost <= 0) return false;
+    const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
+    if (!poisonEffects?.active || !poisonEffects.effects?.noStamina) return false;
+    const ownerColor = this._getOwnerColor();
+    const tokenImg = this.actor.prototypeToken?.texture?.src || this.actor.img || 'icons/svg/mystery-man.svg';
+    const badge = spellIcon ? `<img src="${spellIcon}" class="spell-chat-badge" alt="${spellName}"/>` : '';
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="conan-roll spell-chat-card" style="border-color: ${ownerColor};">
+        <div class="spell-chat-header">
+          <div class="spell-chat-portrait-wrap">
+            <img src="${tokenImg}" class="spell-chat-portrait"/>
+            ${badge}
+          </div>
+          <div class="spell-chat-title"><strong>${this.actor.name}</strong> attempts <strong>${spellName}</strong></div>
+        </div>
+        <div class="spell-chat-body">
+          <div class="spell-chat-effect" style="color: #32CD32;">${VENOM_SPELL_MESSAGES[Math.floor(Math.random() * VENOM_SPELL_MESSAGES.length)]}</div>
+          <div class="spell-chat-meta"><strong>Cost:</strong> ${spCost} SP (wasted)</div>
+        </div>
+      </div>`
+    });
+    return true;
+  }
+
+  _rollPoisonChecksDownPenalty() {
+    const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
+    if (!poisonEffects?.active || !poisonEffects.effects?.checksDown) return 0;
+    return Math.ceil(Math.random() * 3);
   }
 
   /** Detect Ambidextrous via owned/origin-granted skills (mirrors _hasFierceMind pattern). */
@@ -6847,7 +7102,8 @@ export default class ConanActorSheet2 extends ActorSheet {
     const pair = this.actor.getFlag('conan', 'dualWielderPair');
     if (!Array.isArray(pair) || pair.length !== 2) return;
     const fs = this.actor.getFlag('conan', 'fightingStyle');
-    if (fs?.id !== 'dual-wielder') return;
+    // Both Dual Wielder and Strangler use the dualWielderPair flag for their two-weapon pair.
+    if (fs?.id !== 'dual-wielder' && fs?.id !== 'strangler') return;
     for (const wId of pair) {
       this.element.find(`.sheet2-weaponItem[data-weapon-id="${wId}"]`).addClass('dual-pick-selected');
     }
@@ -9012,8 +9268,49 @@ export default class ConanActorSheet2 extends ActorSheet {
     });
   }
 
+  /**
+   * Blocks an attack/skill/spell action when the character is unconscious.
+   * Posts a chat notice and returns true so the caller can bail.
+   */
+  _blockIfUnconscious() {
+    if (!this.actor.system.conditions?.unconscious) return false;
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="conan-roll condition-msg condition-on condition-unconscious"><h3>Unconscious</h3><div class="condition-section"><strong>${this.actor.name}</strong> is unconscious and cannot act!</div></div>`
+    });
+    return true;
+  }
+
+  /**
+   * Blocks a stunned-restricted action (magic, stamina spend). Posts a chat
+   * notice and returns true so the caller can bail. Attacks/skills are allowed.
+   */
+  _blockIfStunned() {
+    if (!this.actor.system.conditions?.stunned) return false;
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="conan-roll condition-msg condition-on condition-stunned"><h3>Stunned</h3><div class="condition-section"><strong>${this.actor.name}</strong> is stunned — cannot cast magic or spend Stamina!</div></div>`
+    });
+    return true;
+  }
+
+  /**
+   * Bound: hands are tied — only Unarmed attacks are allowed. Posts a chat notice and
+   * returns true (caller bails) when bound and the weapon/attack is not Unarmed.
+   */
+  _blockIfBound(weapon) {
+    if (!this.actor.system.conditions?.bound) return false;
+    if (weapon?.name === 'Unarmed' || weapon?.category === 'Unarmed') return false;
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="conan-roll condition-msg condition-on condition-bound"><h3>Bound</h3><div class="condition-section"><strong>${this.actor.name}</strong> is bound — unarmed attacks only!</div></div>`
+    });
+    return true;
+  }
+
   async _onRollWeaponAttack(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
 
     // Remove title attribute to prevent browser native tooltip from orphaning
     const clickedEl = event.currentTarget;
@@ -9035,6 +9332,9 @@ export default class ConanActorSheet2 extends ActorSheet {
       this._onDualWielderPickClick(weaponId, weapon);
       return;
     }
+
+    // Bound: hands tied — only Unarmed attacks allowed
+    if (this._blockIfBound(weapon)) return;
 
     // Check ammo for thrown/ranged
     if (weapon.ammo) {
@@ -9155,10 +9455,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     // Add Captured Soul attack bonus (+2)
     if (attackSoulBonus > 0) baseAttackFormula += ` + ${attackSoulBonus}`;
 
-    // Poison: checksDown — silent -1 penalty to attacks
-    const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
-    const poisonPenalty = (poisonEffects?.active && poisonEffects.effects?.checksDown) ? -1 : 0;
-    if (poisonPenalty !== 0) baseAttackFormula += ` - 1`;
+    // Poison: checksDown — silent random 1-3 penalty to attacks
+    const poisonPenalty = this._rollPoisonChecksDownPenalty();
+    if (poisonPenalty > 0) baseAttackFormula += ` - ${poisonPenalty}`;
 
     // Hex: -1 per stack to attacks (from witch Hex trait)
     const hexDebuff = this.actor.getFlag('conan', 'hexDebuff');
@@ -9186,10 +9485,15 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     const attackFlexType = weapon.type === 'melee' ? 'melee_hit' : 'ranged_hit';
     const attackFlexData = await this._rollFlexDie(attackFlexType, true); // Suppress auto-celebration
-    const cruelFate = this._checkCruelFate(attackRoll);
+    let cruelFate = this._checkCruelFate(attackRoll);
 
-    // Glamour blind check — attacks auto-miss unless flex saves them
-    const glamourBlind = this.actor.system.conditions?.blinded && this.actor.getFlag('conan', 'glamourDebuff')?.active;
+    // Blinded: attacks auto-miss unless flex saves them. On a no-flex attack we first roll
+    // friendly fire (25%); if it hits, the normal attack card renders for the GM to resolve.
+    const isBlind = !!this.actor.system.conditions?.blinded;
+    let friendlyFire = false;
+    // Blind takes precedence over Cruel Fate — suppress the Cruel Fate badge/defy so the blind
+    // outcome (miss / friendly fire / flex-save) runs as normal without the roll-of-1 messaging.
+    if (isBlind) cruelFate = false;
 
     // Store damage info for button (damage rolled separately)
     const damageBonus = originBonuses.damage?.[weapon.type] || 0;
@@ -9203,7 +9507,9 @@ export default class ConanActorSheet2 extends ActorSheet {
     let dualOffhandDamageStat = null;
     const fsActiveCheck = this.actor.getFlag('conan', 'fightingStyle');
     const dualPair = this.actor.getFlag('conan', 'dualWielderPair');
-    if (fsActiveCheck?.id === 'dual-wielder'
+    // Both Dual Wielder and Strangler use the dualWielderPair flag and the same off-hand
+    // damage pipeline. Strangler's pair is always two unarmed weapons (auto-paired on adopt).
+    if ((fsActiveCheck?.id === 'dual-wielder' || fsActiveCheck?.id === 'strangler')
         && weapon.type === 'melee'
         && Array.isArray(dualPair)
         && dualPair.length === 2
@@ -9230,9 +9536,10 @@ export default class ConanActorSheet2 extends ActorSheet {
     content += `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">`;
     content += `<div class="roll-title">${attackTitle}</div>`;
     content += `</div>`;
-    // Dual Wielder badge under the header
+    // Dual Wielder / Strangler badge under the header — label matches the active stance.
     if (dualOffhandName) {
-      content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ Dual Wielder</div>`;
+      const badgeLabel = fsActiveCheck?.id === 'strangler' ? 'Strangler' : 'Dual Wielder';
+      content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ ${badgeLabel}</div>`;
     }
 
     if (cruelFate) {
@@ -9295,7 +9602,7 @@ export default class ConanActorSheet2 extends ActorSheet {
     if (unseenStrikeBonus.attack > 0) attackBreakdownLines.push({ label: 'Unseen Strike', value: `+${unseenStrikeBonus.attack}`, isSkill: true });
     if (leaderOfMenBonus > 0) attackBreakdownLines.push({ label: 'Leader of Men', value: `+${leaderOfMenBonus}`, isSkill: true });
     if (attackSoulBonus > 0) attackBreakdownLines.push({ label: 'Captured Soul', value: `+${attackSoulBonus}`, isSkill: true });
-    if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-1`, isPoison: true });
+    if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-${poisonPenalty}`, isPoison: true });
     if (hexPenalty > 0) attackBreakdownLines.push({ label: `Hex (×${hexPenalty})`, value: `-${hexPenalty}`, isPoison: true });
     if (lotusDustPenalty > 0) attackBreakdownLines.push({ label: `Lotus Dust (×${lotusDustPenalty})`, value: `-${lotusDustPenalty}`, isPoison: true });
     if (windsOfFate !== 0) attackBreakdownLines.push({ label: 'Winds of Fate', value: windsOfFate > 0 ? `+${windsOfFate}` : `${windsOfFate}`, isFate: true });
@@ -9422,34 +9729,39 @@ export default class ConanActorSheet2 extends ActorSheet {
     }
 
     // === GLAMOUR BLIND: auto-miss unless flex triggers ===
-    if (glamourBlind && !attackFlexData.triggered) {
-      const BLIND_MISS = [
-        `${this.actor.name} swings wildly into the darkness — steel finds only air!`,
-        `Blinded and desperate, ${this.actor.name} lashes out at shadows!`,
-        `${this.actor.name} strikes blind — the blade cuts nothing but empty space!`,
-        `Darkness swallows ${this.actor.name}'s senses — the attack goes wide!`,
-        `${this.actor.name} fights by sound alone — and misses!`,
-      ];
-      const blindContent = `<div class="conan-roll" style="border-color: ${ownerColor};">` +
-        `<div class="roll-header">` +
-        `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">` +
-        `<div class="roll-title">${weapon.name} Attack — BLINDED!</div>` +
-        `</div>` +
-        `<div style="text-align: center; margin: 8px 0;">` +
-        `<img src="systems/conan/images/icons/blinded_icon.png" alt="Blinded" style="width: 36px; height: 36px; filter: drop-shadow(0 0 4px rgba(112,128,144,0.6)); vertical-align: middle;"/>` +
-        `</div>` +
-        `<div style="color: #708090; text-align: center; font-style: italic; padding: 4px 8px;">${BLIND_MISS[Math.floor(Math.random() * BLIND_MISS.length)]}</div>` +
-        `<div class="flex-result"><strong>Flex Die (${attackFlexData.die}):</strong> ${attackFlexData.result}</div>` +
-        `<div style="color: #ff6666; text-align: center; font-weight: bold; padding: 4px;">MISS — Glamour blinds the attack!</div>` +
-        `</div>`;
+    if (isBlind && !attackFlexData.triggered) {
+      // Friendly fire is checked first; if it misses (75%) the blind attack just whiffs.
+      friendlyFire = Math.random() < 0.25;
+      if (!friendlyFire) {
+        const BLIND_MISS = [
+          `${this.actor.name} swings wildly into the darkness — steel finds only air!`,
+          `Blinded and desperate, ${this.actor.name} lashes out at shadows!`,
+          `${this.actor.name} strikes blind — the blade cuts nothing but empty space!`,
+          `Darkness swallows ${this.actor.name}'s senses — the attack goes wide!`,
+          `${this.actor.name} fights by sound alone — and misses!`,
+        ];
+        const blindContent = `<div class="conan-roll" style="border-color: ${ownerColor};">` +
+          `<div class="roll-header">` +
+          `<img src="${tokenImg}" class="token-img" alt="${this.actor.name}">` +
+          `<div class="roll-title">${weapon.name} Attack — BLINDED!</div>` +
+          `</div>` +
+          `<div style="text-align: center; margin: 8px 0;">` +
+          `<img src="systems/conan/images/icons/blinded_icon.png" alt="Blinded" style="width: 36px; height: 36px; filter: drop-shadow(0 0 4px rgba(112,128,144,0.6)); vertical-align: middle;"/>` +
+          `</div>` +
+          `<div style="color: #708090; text-align: center; font-style: italic; padding: 4px 8px;">${BLIND_MISS[Math.floor(Math.random() * BLIND_MISS.length)]}</div>` +
+          `<div class="flex-result"><strong>Flex Die (${attackFlexData.die}):</strong> ${attackFlexData.result}</div>` +
+          `<div style="color: #ff6666; text-align: center; font-weight: bold; padding: 4px;">MISS — blinded!</div>` +
+          `</div>`;
 
-      ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        content: blindContent,
-        rolls: [attackRoll, attackFlexData.roll],
-        rollMode: game.settings.get('core', 'rollMode')
-      });
-      return;
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          content: blindContent,
+          rolls: [attackRoll, attackFlexData.roll],
+          rollMode: game.settings.get('core', 'rollMode')
+        });
+        return;
+      }
+      // friendly fire (25%): fall through to the normal attack card, flagged with a banner below
     }
 
     // If flex triggered, show flex choice card
@@ -9536,6 +9848,9 @@ export default class ConanActorSheet2 extends ActorSheet {
       });
     } else {
       // No flex - show normal attack card
+      if (friendlyFire) {
+        content += `<div style="text-align: center; font-weight: bold; color: #ff6666; padding: 5px; margin-bottom: 6px; background: rgba(139,0,0,0.25); border: 1px solid #8b0000; border-radius: 4px;">⚠ FRIENDLY FIRE! — Blinded. GM: pick a friendly in the same area &amp; check defense.</div>`;
+      }
       content += `<div class="flex-result">`;
       content += `<strong>Flex Die (${attackFlexData.die}):</strong> ${attackFlexData.result}`;
       content += `</div>`;
@@ -9574,10 +9889,12 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollMeleeAttack(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
     const attackId = event.currentTarget.dataset.attackId;
     const attack = this.actor.system.meleeAttacks[attackId];
 
     if (!attack) return;
+    if (this._blockIfBound(attack)) return;
 
     // Get origin bonuses
     const originBonuses = this._getActiveOriginBonuses();
@@ -9737,10 +10054,12 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollThrownAttack(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
     const attackId = event.currentTarget.dataset.attackId;
     const attack = this.actor.system.thrownAttacks[attackId];
 
     if (!attack) return;
+    if (this._blockIfBound(attack)) return;
 
     // Check ammo
     const currentAmmo = attack.ammo?.current ?? 0;
@@ -9926,10 +10245,12 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollRangedAttack(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
     const attackId = event.currentTarget.dataset.attackId;
     const attack = this.actor.system.rangedAttacks[attackId];
 
     if (!attack) return;
+    if (this._blockIfBound(attack)) return;
 
     // Check ammo
     const currentAmmo = attack.ammo?.current ?? 0;
@@ -10146,6 +10467,8 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollSpell(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
+    if (this._blockIfStunned()) return;
     const spellId = event.currentTarget.dataset.spellId;
     const spell = this._findSpellById(spellId);
 
@@ -10264,10 +10587,11 @@ export default class ConanActorSheet2 extends ActorSheet {
         ui.notifications.warn('Not enough Stamina Points (1 SP required).');
         return;
       }
-      await this.actor.update({
-        'system.stamina': currentSP - 1,
-        'system.buffsDebuffs.armorUp': true
-      });
+      // Deduct SP first so the fizzle check sees the cost paid.
+      await this.actor.update({ 'system.stamina': currentSP - 1 });
+      if (this._fizzleSpellOnPoison('Body of Living Iron', 'systems/conan/images/icons/armor_up_icon.png', 1)) return;
+      // Now apply the buff (only if not fizzled).
+      await this.actor.update({ 'system.buffsDebuffs.armorUp': true });
       const tokenImg = this.actor.prototypeToken?.texture?.src || this.actor.img || 'icons/svg/mystery-man.svg';
       const ownerColor = this._getOwnerColor();
       const newAR = (this.actor.system.defense?.ar || 0) + 3;
@@ -10465,6 +10789,7 @@ export default class ConanActorSheet2 extends ActorSheet {
         return;
       }
       await this._deductSpellCost(0, 1, spell.name);
+      if (this._fizzleSpellOnPoison(spell.name, spellIconMap[spellId] || null, 1)) return;
       await this.actor.update({
         'system.demonicSteedActive': true,
         'system.conditions.mounted': true
@@ -10526,16 +10851,15 @@ export default class ConanActorSheet2 extends ActorSheet {
         this.actor.update({ 'system.capturedSoulState': null });
       }
 
-      // Poison: checksDown — silent -1 penalty
-      const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
-      const poisonPenalty = (poisonEffects?.active && poisonEffects.effects?.checksDown) ? -1 : 0;
+      // Poison: checksDown — silent random 1-3 penalty
+      const poisonPenalty = this._rollPoisonChecksDownPenalty();
 
       // Build roll formula
       let rollFormula = `1${die} + ${value}`;
       if (statBonus > 0) rollFormula += ` + ${statBonus}`;
       if (inspireBonus > 0) rollFormula += ` + ${inspireBonus}`;
       if (soulBonus > 0) rollFormula += ` + ${soulBonus}`;
-      if (poisonPenalty !== 0) rollFormula += ` - 1`;
+      if (poisonPenalty > 0) rollFormula += ` - ${poisonPenalty}`;
 
       const roll = new Roll(rollFormula, this.actor.getRollData());
       await roll.evaluate();
@@ -10567,7 +10891,7 @@ export default class ConanActorSheet2 extends ActorSheet {
         if (statBonus > 0) html += `<div class="breakdown-line skill-bonus"><span class="breakdown-label">Origin</span><span class="breakdown-value">+${statBonus}</span></div>`;
         if (inspireBonus > 0) html += `<div class="breakdown-line skill-bonus"><span class="breakdown-label">Inspire</span><span class="breakdown-value">+${inspireBonus}</span></div>`;
         if (soulBonus > 0) html += `<div class="breakdown-line skill-bonus" style="color: #DC143C;"><span class="breakdown-label">Captured Soul</span><span class="breakdown-value">+${soulBonus}</span></div>`;
-        if (poisonPenalty !== 0) html += `<div class="breakdown-line breakdown-poison"><span class="breakdown-label">Venom</span><span class="breakdown-value">-1</span></div>`;
+        if (poisonPenalty !== 0) html += `<div class="breakdown-line breakdown-poison"><span class="breakdown-label">Venom</span><span class="breakdown-value">-${poisonPenalty}</span></div>`;
         if (windsOfFate !== 0) html += `<div class="breakdown-line skill-bonus" style="color: #c9a668;"><span class="breakdown-label">Winds of Fate</span><span class="breakdown-value">${windsOfFate > 0 ? '+' : ''}${windsOfFate}</span></div>`;
         html += `<div class="breakdown-line breakdown-total"><span class="breakdown-label">TOTAL</span><span class="breakdown-value">${adjustedTotal}</span></div>`;
         html += `<div class="breakdown-line"><span class="breakdown-label">Difficulty</span><span class="breakdown-value">${difficulty}</span></div>`;
@@ -10917,6 +11241,7 @@ export default class ConanActorSheet2 extends ActorSheet {
       }
       // Deduct 1 SP
       await this._deductSpellCost(0, 1, spell.name);
+      if (this._fizzleSpellOnPoison(spell.name, spellIconMap[spellId] || null, 1)) return;
       // Heal WitsDie LP
       const witsAttr = this.actor.system.attributes.wits;
       const healRoll = new Roll(`1${witsAttr.die}`);
@@ -11176,10 +11501,9 @@ export default class ConanActorSheet2 extends ActorSheet {
         attackFormula += ` + ${attackBonus}`;
       }
 
-      // Poison: checksDown — silent -1 penalty to sorcery attacks
-      const poisonEffects = this.actor.getFlag('conan', 'poisonEffects');
-      const poisonPenalty = (poisonEffects?.active && poisonEffects.effects?.checksDown) ? -1 : 0;
-      if (poisonPenalty !== 0) attackFormula += ` - 1`;
+      // Poison: checksDown — silent random 1-3 penalty to sorcery attacks
+      const poisonPenalty = this._rollPoisonChecksDownPenalty();
+      if (poisonPenalty > 0) attackFormula += ` - ${poisonPenalty}`;
 
       const attackRoll = new Roll(attackFormula, this.actor.getRollData());
       await attackRoll.evaluate();
@@ -11213,7 +11537,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
       attackBreakdownLines.push({ label: 'Wits Value', value: `+${witsAttr.value}` });
       if (attackBonus > 0) attackBreakdownLines.push({ label: 'Origin Bonus', value: `+${attackBonus}` });
-      if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-1`, isPoison: true });
+      if (poisonPenalty !== 0) attackBreakdownLines.push({ label: 'Venom', value: `-${poisonPenalty}`, isPoison: true });
       if (windsOfFate !== 0) attackBreakdownLines.push({ label: 'Winds of Fate', value: windsOfFate > 0 ? `+${windsOfFate}` : `${windsOfFate}`, isFate: true });
 
       let attackBreakdownHtml = `<div class="attack-breakdown" style="display: none;">`;
@@ -11844,6 +12168,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
   async _onRollSkill(event) {
     event.preventDefault();
+    if (this._blockIfUnconscious()) return;
     const skillId = event.currentTarget.dataset.skillId;
     const skill = this.actor.system.skills[skillId];
 
@@ -14534,6 +14859,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
     // 4. Deduct SP cost
     await this._deductSpellCost(0, 2, 'Beast Form');
+    if (this._fizzleSpellOnPoison('Beast Form', 'systems/conan/images/icons/beast_form_icon.png', 2)) return;
 
     // 5. Read player stats
     const might = this.actor.system.attributes?.might?.value || 0;
@@ -15081,6 +15407,7 @@ export default class ConanActorSheet2 extends ActorSheet {
 
               // Deduct 1 SP
               await self._deductSpellCost(0, 1, 'Healing');
+              if (self._fizzleSpellOnPoison('Healing', 'systems/conan/images/icons/healing_icon.png', 1)) { resolve(); return; }
 
               // Roll WitsDie for healing amount
               const { die: witsDie } = self._getEffectiveStatValues('wits');
@@ -16086,6 +16413,10 @@ export default class ConanActorSheet2 extends ActorSheet {
   async _onStaminaSpend(event) {
     event.preventDefault();
     event.stopPropagation();
+    if (this._blockIfStunned()) {
+      $(this.element).find('.sheet2-staminaMenu').removeClass('open');
+      return;
+    }
     this._saveScrollPosition();
     const html = $(this.element);
     const menuItem = event.currentTarget;
@@ -16669,66 +17000,44 @@ export default class ConanActorSheet2 extends ActorSheet {
         const currentState = this.actor.system.conditions?.[conditionKey] || false;
         await this.actor.update({ [`system.conditions.${conditionKey}`]: !currentState });
 
-        // Stunned: dismissing costs 1 SP if from Pict Stunned trait
-        if (conditionKey === 'stunned' && currentState === true) {
-          const stunFlag = this.actor.getFlag('conan', 'stunnedDebuff');
-          if (stunFlag?.active && stunFlag.source === 'pict') {
-            const currentSP = this.actor.system.stamina || 0;
-            if (currentSP < 1) {
-              ui.notifications.warn('Not enough Stamina Points to shake off the stun! (1 SP required)');
-              await this.actor.update({ 'system.conditions.stunned': true }); // revert the toggle
-              break;
-            }
-            await this.actor.update({ 'system.stamina': currentSP - 1 });
-            await this.actor.unsetFlag('conan', 'stunnedDebuff');
-            // Unlock token
-            if (stunFlag.tokenId) {
-              const stunTokenDoc = game.scenes.active?.tokens.get(stunFlag.tokenId);
-              if (stunTokenDoc) await stunTokenDoc.update({ locked: false });
+        // ── Toggling a condition OFF: SP-cost gates, then unified teardown ──
+        if (currentState === true) {
+          // Stunned from the Pict Stunned trait costs 1 SP to shake off early
+          if (conditionKey === 'stunned') {
+            const stunFlag = this.actor.getFlag('conan', 'stunnedDebuff');
+            if (stunFlag?.active && stunFlag.source === 'pict') {
+              const currentSP = this.actor.system.stamina || 0;
+              if (currentSP < 1) {
+                ui.notifications.warn('Not enough Stamina Points to shake off the stun! (1 SP required)');
+                await this.actor.update({ 'system.conditions.stunned': true }); // revert the toggle
+                break;
+              }
+              await this.actor.update({ 'system.stamina': currentSP - 1 });
             }
           }
-        }
 
-        // Glamour Blind: dismissing costs 1 SP
-        if (conditionKey === 'blinded' && currentState === true) {
-          const glamourFlag = this.actor.getFlag('conan', 'glamourDebuff');
-          if (glamourFlag?.active) {
-            const currentSP = this.actor.system.stamina || 0;
-            if (currentSP < 1) {
-              ui.notifications.warn('Not enough Stamina Points to overcome Glamour! (1 SP required)');
-              await this.actor.update({ 'system.conditions.blinded': true }); // revert
-              break;
-            }
-            await this.actor.update({ 'system.stamina': currentSP - 1 });
-            await this.actor.unsetFlag('conan', 'glamourDebuff');
-
-            ChatMessage.create({
-              speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-              content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${this.actor.name} — Overcomes Glamour!</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">With sheer force of will, ${this.actor.name} shakes off the blinding sorcery!</div><div style="text-align: center; color: #ff8888;">Cost: 1 SP</div></div>`
-            });
-          }
-        }
-
-        // Bound (Garrote): GM can freely dismiss from condition bar
-        if (conditionKey === 'bound' && currentState === true) {
-          const boundFlag = this.actor.getFlag('conan', 'boundDebuff');
-          if (boundFlag?.active) {
-            await this.actor.unsetFlag('conan', 'boundDebuff');
-            if (boundFlag.tokenId) {
-              const boundTokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
-              if (boundTokenDoc) await boundTokenDoc.update({ locked: false });
+          // Glamour Blind costs 1 SP to overcome early
+          if (conditionKey === 'blinded') {
+            const glamourFlag = this.actor.getFlag('conan', 'glamourDebuff');
+            if (glamourFlag?.active) {
+              const currentSP = this.actor.system.stamina || 0;
+              if (currentSP < 1) {
+                ui.notifications.warn('Not enough Stamina Points to overcome Glamour! (1 SP required)');
+                await this.actor.update({ 'system.conditions.blinded': true }); // revert
+                break;
+              }
+              await this.actor.update({ 'system.stamina': currentSP - 1 });
+              ChatMessage.create({
+                speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${this.actor.name} — Overcomes Glamour!</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">With sheer force of will, ${this.actor.name} shakes off the blinding sorcery!</div><div style="text-align: center; color: #ff8888;">Cost: 1 SP</div></div>`
+              });
             }
           }
-        }
 
-        // Poison: toggling OFF clears all poison effects
-        if (conditionKey === 'poisoned' && currentState === true) {
-          await this.actor.unsetFlag('conan', 'poisonEffects');
-        }
-
-        // Burning: toggling OFF clears burningDebuff flag (free dismiss)
-        if (conditionKey === 'burning' && currentState === true) {
-          await this.actor.unsetFlag('conan', 'burningDebuff');
+          // Unified teardown — clears the backing debuff flag + unlocks the token.
+          // Same path used by turn-based auto-expiry, so manual removal can't leave
+          // a timed effect (Wave of Darkness stun, Strangler slam, etc.) lingering.
+          await game.conan.clearConditionEffects(this.actor, conditionKey);
         }
 
         // Poison: GM toggling ON triggers severity roll + secret effects (traps, environmental, narrative)

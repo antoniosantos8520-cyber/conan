@@ -282,6 +282,26 @@ Hooks.once('init', async function() {
 
   });
 
+  // Stunned: lock token movement while stunned, unlock when it clears (GM-authoritative)
+  Hooks.on('updateActor', (actor, changes) => {
+    if (!game.user.isGM) return;
+    if (changes.system?.conditions?.stunned === undefined) return;
+    const locked = changes.system.conditions.stunned === true;
+    for (const token of actor.getActiveTokens()) {
+      if (token.document.locked !== locked) token.document.update({ locked });
+    }
+  });
+
+  // Blinded: toggle the token's vision off (none) while blinded, back on (all) when it clears
+  Hooks.on('updateActor', (actor, changes) => {
+    if (!game.user.isGM) return;
+    if (changes.system?.conditions?.blinded === undefined) return;
+    const sighted = changes.system.conditions.blinded !== true; // blinded → no sight
+    for (const token of actor.getActiveTokens()) {
+      if (token.document.sight?.enabled !== sighted) token.document.update({ 'sight.enabled': sighted });
+    }
+  });
+
   /**
    * Get gradient color at a specific position (0-1)
    * 0 = Red (danger), 0.33 = Orange, 0.66 = Yellow, 1 = Green (healthy)
@@ -835,6 +855,7 @@ Hooks.once('ready', async function() {
   game.conan._hasAreaLOS = _hasAreaLOS;
   game.conan._invalidatePlayerVisCache = _invalidatePlayerVisCache;
   game.conan.dreadClock = dreadClock;
+  game.conan.clearConditionEffects = clearConditionEffects; // shared condition teardown (manual + auto-expiry)
 
   // Bound (Garrote) — chat button handlers (delegated)
   document.addEventListener('click', async (ev) => {
@@ -865,7 +886,6 @@ Hooks.once('ready', async function() {
 
       if (escaped) {
         await actor.unsetFlag('conan', 'boundDebuff');
-        await actor.update({ 'system.conditions.bound': false });
         if (boundFlag.tokenId) {
           const tokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
           if (tokenDoc) await tokenDoc.update({ locked: false });
@@ -884,7 +904,6 @@ Hooks.once('ready', async function() {
       }
       await actor.update({ 'system.stamina': currentSP - 1 });
       await actor.unsetFlag('conan', 'boundDebuff');
-      await actor.update({ 'system.conditions.bound': false });
       if (boundFlag.tokenId) {
         const tokenDoc = game.scenes.active?.tokens.get(boundFlag.tokenId);
         if (tokenDoc) await tokenDoc.update({ locked: false });
@@ -1055,6 +1074,10 @@ Hooks.once('ready', async function() {
     // Legacy: Floating damage sync via socket (kept for backward compat)
     if (data.action === "floatingDamage") {
       showFloatingDamage(data.tokenId, data.damage, data.isDead, data.isWounded, data.isHealing);
+    }
+    // Strangler SLAMMED banner — all clients render the marquee over the target token.
+    if (data.action === "slamBanner") {
+      showSlammedBanner(data.tokenId);
     }
   });
 
@@ -1277,6 +1300,11 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       game.conan.lastEnemyAttack = null;
       // Track if bane weapon was part of this damage (applies Prone on hit)
       game.conan.lastDamageHasBane = damageBox.attr('data-bane-weapon') === 'true';
+      // Track attack type (melee/ranged/thrown/sorcery) — used by Shield of Dawn (Dawn Keeper ranged reflect)
+      game.conan.lastDamageAttackType = damageBox.attr('data-attack-type') || null;
+      // Track if Strangler flex SLAMMED this hit (set on parent .dual-damage-row).
+      const slamRow = damageBox.closest('.dual-damage-row[data-strangler-slam="true"]');
+      game.conan.lastDamageStranglerSlam = slamRow.length > 0;
       // For healing spells, store caster ID so applyDamageToToken can also heal the caster
       if (isHealing) {
         const casterId = damageBox.attr('data-caster-id') || null;
@@ -1304,6 +1332,8 @@ Hooks.on('renderChatMessage', (message, html, data) => {
         game.conan.lastDamageRoll = damageValue;
         // Clear player source - enemy damage comes from lastEnemyAttack.enemyName instead
         game.conan.lastDamageActorId = null;
+        // Enemy damage isn't a player ranged attack — clear so Shield of Dawn won't misfire
+        game.conan.lastDamageAttackType = null;
         // Clear spell effect - enemy damage doesn't carry spell effects
         // BUT preserve if the effect was set programmatically (e.g. Death Scream ignoresAR, enemy Hellfire inferno)
         if (!game.conan.lastDamageEffect?.ignoresAR && !game.conan.lastDamageEffect?.inferno) {
@@ -1478,10 +1508,14 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const gritDie = gritAttr.die || 'd6';
     const gritValue = gritAttr.value || 0;
 
-    // Check for existing poison penalty (-1 to all checks)
+    // Check for existing poison penalty — silent random 1-3 if checksDown is active
     const existingPoison = actor.getFlag('conan', 'poisonEffects');
-    const poisonPenalty = (existingPoison?.active && existingPoison.effects?.checksDown) ? -1 : 0;
-    const rollFormula = poisonPenalty ? `1${gritDie} + ${gritValue} - 1` : `1${gritDie} + ${gritValue}`;
+    const poisonPenalty = (existingPoison?.active && existingPoison.effects?.checksDown)
+      ? Math.ceil(Math.random() * 3)
+      : 0;
+    const rollFormula = poisonPenalty > 0
+      ? `1${gritDie} + ${gritValue} - ${poisonPenalty}`
+      : `1${gritDie} + ${gritValue}`;
 
     const roll = new Roll(rollFormula);
     await roll.evaluate();
@@ -1942,45 +1976,56 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       content += `<div class="roll-title">${damageTitle}</div>`;
       content += `</div>`;
       if (dwActiveDmg) {
-        content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ Dual Wielder</div>`;
+        const dmgStance = actor.getFlag?.('conan', 'fightingStyle');
+        const dmgBadgeLabel = dmgStance?.id === 'strangler' ? 'Strangler' : 'Dual Wielder';
+        content += `<div class="dual-wielder-badge" style="text-align: center; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #cd853f; padding: 2px 0 4px; text-transform: uppercase;">⚔ ${dmgBadgeLabel}</div>`;
+      }
+      // Strangler SLAMMED stamp — appears on the post-flex damage card (set by flex resolver).
+      // Marquee: inner row repeats SLAMMED! four times and animates from 0 → -50%, looping seamlessly.
+      if (damageData.stranglerSlam) {
+        content += `<div class="strangler-slam-stamp"><div class="strangler-slam-scroll"><span>SLAMMED!</span><span>SLAMMED!</span><span>SLAMMED!</span><span>SLAMMED!</span></div></div>`;
       }
 
       // Show damage with skill icons
       const baneAttr = baneWeaponDie ? ' data-bane-weapon="true"' : '';
+      // Attack type (melee/ranged/thrown/sorcery) — read on apply for Shield of Dawn (ranged reflect)
+      const atkTypeAttr = damageData.weaponType ? ` data-attack-type="${damageData.weaponType}"` : '';
       if (damageData.impalingThrow) {
         content += `<div class="roll-result-wrapper">`;
         content += skillIconsHtml;
-        content += `<div class="damage-result-box impaling-damage clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+        content += `<div class="damage-result-box impaling-damage clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
         content += `</div>`;
       } else if (damageData.bloodyTalons) {
         content += `<div class="roll-result-wrapper">`;
         content += skillIconsHtml;
-        content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #C43C3C; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+        content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #C43C3C; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
         content += `</div>`;
       } else if (damageData.uncannyReach) {
         content += `<div class="roll-result-wrapper">`;
         content += skillIconsHtml;
-        content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #5c0020 0%, #3a0010 100%); border-color: #b4003c; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+        content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #5c0020 0%, #3a0010 100%); border-color: #b4003c; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
         content += `</div>`;
       } else if (damageData.snakeArrow) {
         content += `<div class="roll-result-wrapper">`;
         content += skillIconsHtml;
-        content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #4a0080 0%, #2d004d 100%); border-color: #9040ff; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+        content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #4a0080 0%, #2d004d 100%); border-color: #9040ff; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
         content += `</div>`;
       } else {
         // Dual Wielder produces two complete damage boxes side by side (one per weapon).
         // Wrapped in .dual-damage-row so the apply-pipeline can detect it and sum both.
         const isDualWielder = damageData.dualWielderSecondaryDamage && offhandDamage > 0;
         if (isDualWielder) {
-          content += `<div class="roll-result-wrapper dual-damage-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">`;
+          // When Strangler flex triggered, tag the dual damage row so the apply hook fires the SLAMMED banner.
+          const slamAttr = damageData.stranglerSlam ? ' data-strangler-slam="true"' : '';
+          content += `<div class="roll-result-wrapper dual-damage-row"${slamAttr} style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">`;
           content += skillIconsHtml;
-          content += `<div class="damage-result-box clickable-breakdown"${baneAttr} title="${damageData.weaponName}" style="cursor: pointer;">${finalDamage}</div>`;
-          content += `<div class="damage-result-box clickable-offhand-breakdown"${baneAttr} title="${damageData.dualWielderSecondaryName}" style="cursor: pointer;">${offhandDamage}</div>`;
+          content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} title="${damageData.weaponName}" style="cursor: pointer;">${finalDamage}</div>`;
+          content += `<div class="damage-result-box clickable-offhand-breakdown"${baneAttr}${atkTypeAttr} title="${damageData.dualWielderSecondaryName}" style="cursor: pointer;">${offhandDamage}</div>`;
           content += `</div>`;
         } else {
           content += `<div class="roll-result-wrapper">`;
           content += skillIconsHtml;
-          content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="cursor: pointer;">${finalDamage}</div>`;
+          content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="cursor: pointer;">${finalDamage}</div>`;
           content += `</div>`;
         }
       }
@@ -2020,6 +2065,12 @@ Hooks.on('renderChatMessage', (message, html, data) => {
 
       const flexType = damageData.weaponType === 'sorcery' ? 'spell_damage' :
                        damageData.weaponType === 'melee' ? 'melee_damage' : 'ranged_damage';
+
+      // Strangler flex result → SLAMMED. Set BEFORE buildNormalContent() so the stamp bakes into the post-flex card.
+      const stranglerStanceCheck = actor.getFlag?.('conan', 'fightingStyle');
+      if (stranglerStanceCheck?.id === 'strangler' && damageData.weaponType === 'melee') {
+        damageData.stranglerSlam = true;
+      }
 
       const flexChoiceData = {
         actorId: actor.id,
@@ -2109,7 +2160,88 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     btn.title = `SP: ${currentSP}`;
     const cost = parseInt(btn.dataset.cost);
     if (currentSP < cost) btn.disabled = true;
+    // Stunned: no stamina spend
+    if (actor.system.conditions?.stunned) { btn.disabled = true; btn.title = 'Stunned — cannot spend Stamina'; }
   });
+
+  // Re-apply a persisted SP boost on every render so the GM + all players see it
+  // (skill + attack + damage rolls). Flag is written by the click handler below.
+  const spBoostFlag = message.getFlag?.('conan', 'spBoost');
+  if (spBoostFlag?.rollType === 'skill' || spBoostFlag?.rollType === 'attack') {
+    const { rollType, boost, newTotal } = spBoostFlag;
+    if (rollType === 'skill') {
+      const resultBox = html.find('.skill-result-box')[0];
+      if (resultBox) { resultBox.textContent = newTotal; resultBox.classList.add('sp-boosted'); }
+    } else if (html.find('.attack-total').length > 0) {
+      // Mounted attack: two totals, each in its own box
+      html.find('.attack-total').each((i, span) => {
+        const oldVal = parseInt(span.textContent);
+        if (!isNaN(oldVal)) span.textContent = oldVal + boost;
+        span.closest('.attack-result-box')?.classList.add('sp-boosted');
+      });
+    } else {
+      const resultBox = html.find('.attack-result-box')[0];
+      if (resultBox) { resultBox.textContent = newTotal; resultBox.classList.add('sp-boosted'); }
+    }
+    const breakdown = html.find(rollType === 'skill' ? '.skill-breakdown' : '.attack-breakdown')[0];
+    const totalLine = breakdown?.querySelector('.breakdown-total');
+    if (totalLine && !breakdown.querySelector('.sp-boost-line')) {
+      const line = document.createElement('div');
+      line.className = 'breakdown-line skill-bonus sp-boost-line';
+      line.style.color = '#ff6b6b';
+      line.innerHTML = `<span class="breakdown-label">Stamina</span><span class="breakdown-value">+${boost}</span>`;
+      totalLine.parentNode.insertBefore(line, totalLine);
+      const tv = totalLine.querySelector('.breakdown-value');
+      if (tv) {
+        const totalText = tv.textContent;
+        tv.textContent = totalText.includes('/')
+          ? totalText.split('/').map(s => parseInt(s.trim()) + boost).join(' / ')
+          : newTotal;
+      }
+    }
+    html.find('.sp-boost-btn').each((i, b) => {
+      b.disabled = true;
+      if (parseInt(b.dataset.boost) === boost) b.classList.add('used');
+    });
+  }
+
+  // Damage SP boost — the +Nd4 is a persisted random roll (can't re-roll per client).
+  // Runs AFTER the damage-box parse above, so overriding lastDamageRoll here feeds the
+  // GM's smartmouse with the boosted total.
+  if (spBoostFlag?.rollType === 'damage') {
+    const { diceCount, formula, spBonus, dieResults } = spBoostFlag;
+    const damageBox = html.find('.damage-result-box')[0];
+    if (damageBox) {
+      const oldDamage = parseInt(damageBox.textContent.trim());
+      if (!isNaN(oldDamage)) {
+        const newDamage = oldDamage + spBonus;
+        damageBox.textContent = newDamage;
+        damageBox.classList.add('sp-boosted');
+        game.conan = game.conan || {};
+        const isHealing = damageBox.getAttribute('data-healing') === 'true';
+        game.conan.lastDamageRoll = isHealing ? -newDamage : newDamage;
+      }
+    }
+    const breakdown = html.find('.damage-breakdown')[0];
+    const totalLine = breakdown?.querySelector('.breakdown-total');
+    if (totalLine && !breakdown.querySelector('.sp-boost-line')) {
+      const line = document.createElement('div');
+      line.className = 'breakdown-line skill-bonus sp-boost-line';
+      line.style.color = '#ff6b6b';
+      line.innerHTML = `<span class="breakdown-label">Stamina (${formula})</span><span class="breakdown-value">+${spBonus}</span>`;
+      totalLine.parentNode.insertBefore(line, totalLine);
+      const tv = totalLine.querySelector('.breakdown-value');
+      if (tv) { const ot = parseInt(tv.textContent); if (!isNaN(ot)) tv.textContent = ot + spBonus; }
+    }
+    html.find('.sp-dmg-boost-btn').each((i, b) => {
+      b.disabled = true;
+      if (parseInt(b.dataset.dice) === diceCount) {
+        b.classList.add('used');
+        b.textContent = `+${spBonus}`;
+        b.title = `Rolled ${formula}: [${dieResults.join(', ')}] = ${spBonus}`;
+      }
+    });
+  }
 
   html.find('.sp-boost-btn').off('click').on('click', async (event) => {
     event.preventDefault();
@@ -2128,6 +2260,7 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const rollLabel = btn.dataset.rollLabel || 'Check';
     const actor = game.actors.get(actorId);
     if (!actor || !actor.isOwner) return;
+    if (actor.system.conditions?.stunned) { ui.notifications.warn('Stunned — cannot spend Stamina.'); return; }
 
     const currentSP = actor.system.stamina || 0;
     if (currentSP < cost) {
@@ -2147,61 +2280,11 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const messageEl = btn.closest('.conan-roll') || btn.closest('.spell-chat-card');
 
     if (rollType === 'attack') {
-      // Attack rolls: update single result box OR both mounted totals
-      const resultBox = row?.querySelector('.attack-result-box');
-      if (resultBox) {
-        resultBox.textContent = newTotal;
-      } else {
-        // Mounted attacks: update both .attack-total spans
-        const wrapper = messageEl?.querySelector('.roll-result-wrapper') || messageEl;
-        wrapper?.querySelectorAll('.attack-total').forEach(span => {
-          const oldVal = parseInt(span.textContent);
-          if (!isNaN(oldVal)) span.textContent = oldVal + boost;
-        });
-      }
-      // Update the attack breakdown
-      const breakdown = messageEl?.querySelector('.attack-breakdown');
-      if (breakdown) {
-        const totalLine = breakdown.querySelector('.breakdown-total');
-        if (totalLine) {
-          const staminaLine = document.createElement('div');
-          staminaLine.className = 'breakdown-line skill-bonus';
-          staminaLine.style.color = '#ff6b6b';
-          staminaLine.innerHTML = `<span class="breakdown-label">Stamina</span><span class="breakdown-value">+${boost}</span>`;
-          totalLine.parentNode.insertBefore(staminaLine, totalLine);
-          const totalValue = totalLine.querySelector('.breakdown-value');
-          if (totalValue) {
-            // Mounted shows "X / Y" format, non-mounted shows single number
-            const totalText = totalValue.textContent;
-            if (totalText.includes('/')) {
-              const parts = totalText.split('/').map(s => parseInt(s.trim()));
-              totalValue.textContent = parts.map(v => v + boost).join(' / ');
-            } else {
-              totalValue.textContent = newTotal;
-            }
-          }
-        }
-      }
+      // Attack rolls: persist via flag → re-applied on render for GM + all players
+      await message.setFlag('conan', 'spBoost', { rollType: 'attack', boost, newTotal });
     } else {
-      // Skill rolls: update single result box
-      const resultBox = row?.querySelector('.skill-result-box');
-      if (resultBox) {
-        resultBox.textContent = newTotal;
-      }
-      // Update the skill breakdown
-      const breakdown = messageEl?.querySelector('.skill-breakdown');
-      if (breakdown) {
-        const totalLine = breakdown.querySelector('.breakdown-total');
-        if (totalLine) {
-          const staminaLine = document.createElement('div');
-          staminaLine.className = 'breakdown-line skill-bonus';
-          staminaLine.style.color = '#ff6b6b';
-          staminaLine.innerHTML = `<span class="breakdown-label">Stamina</span><span class="breakdown-value">+${boost}</span>`;
-          totalLine.parentNode.insertBefore(staminaLine, totalLine);
-          const totalValue = totalLine.querySelector('.breakdown-value');
-          if (totalValue) totalValue.textContent = newTotal;
-        }
-      }
+      // Skill rolls: persist via flag → re-applied on render for GM + all players
+      await message.setFlag('conan', 'spBoost', { rollType: 'skill', boost, newTotal });
     }
 
     // Mark the used button (both already disabled at top of handler)
@@ -2350,6 +2433,8 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     btn.title = `SP: ${currentSP}`;
     const cost = parseInt(btn.dataset.cost);
     if (currentSP < cost) btn.disabled = true;
+    // Stunned: no stamina spend
+    if (actor.system.conditions?.stunned) { btn.disabled = true; btn.title = 'Stunned — cannot spend Stamina'; }
   });
 
   html.find('.sp-dmg-boost-btn').off('click').on('click', async (event) => {
@@ -2366,6 +2451,7 @@ Hooks.on('renderChatMessage', (message, html, data) => {
     const cost = parseInt(btn.dataset.cost);
     const actor = game.actors.get(actorId);
     if (!actor || !actor.isOwner) return;
+    if (actor.system.conditions?.stunned) { ui.notifications.warn('Stunned — cannot spend Stamina.'); return; }
 
     const currentSP = actor.system.stamina || 0;
     if (currentSP < cost) {
@@ -2391,45 +2477,12 @@ Hooks.on('renderChatMessage', (message, html, data) => {
       game.dice3d.showForRoll(spRoll, game.user, true);
     }
 
-    // Show the individual die results on the button
+    // Capture the individual die results (persisted in the flag for all clients)
     const dieResults = spRoll.terms[0]?.results?.map(r => r.result) || [spBonus];
-    btn.textContent = `+${spBonus}`;
-    btn.title = `Rolled ${formula}: [${dieResults.join(', ')}] = ${spBonus}`;
 
-    // Find and update the damage result box
-    const messageEl = btn.closest('.conan-roll') || btn.closest('.spell-chat-card');
-    const damageBox = messageEl?.querySelector('.damage-result-box');
-    if (damageBox) {
-      const oldDamage = parseInt(damageBox.textContent.trim());
-      const newDamage = oldDamage + spBonus;
-      damageBox.textContent = newDamage;
-      // Update lastDamageRoll so shift+click picks up the new total
-      game.conan.lastDamageRoll = newDamage;
-    }
-
-    // Update the damage breakdown: insert stamina line before TOTAL, update TOTAL value
-    const breakdown = messageEl?.querySelector('.damage-breakdown');
-    if (breakdown) {
-      const totalLine = breakdown.querySelector('.breakdown-total');
-      if (totalLine) {
-        const staminaLine = document.createElement('div');
-        staminaLine.className = 'breakdown-line skill-bonus';
-        staminaLine.style.color = '#ff6b6b';
-        staminaLine.innerHTML = `<span class="breakdown-label">Stamina (${formula})</span><span class="breakdown-value">+${spBonus}</span>`;
-        totalLine.parentNode.insertBefore(staminaLine, totalLine);
-        const totalValue = totalLine.querySelector('.breakdown-value');
-        if (totalValue) {
-          const oldTotal = parseInt(totalValue.textContent);
-          totalValue.textContent = oldTotal + spBonus;
-        }
-      }
-    }
-
-    // Mark used and update tooltips
+    // Persist via flag → re-applied on render for GM + all players (re-feeds smartmouse)
+    await message.setFlag('conan', 'spBoost', { rollType: 'damage', diceCount, formula, spBonus, dieResults });
     btn.classList.add('used');
-    row?.querySelectorAll('.sp-dmg-boost-btn').forEach(b => {
-      b.title = `SP: ${currentSP - cost}`;
-    });
   });
 
   // Handle clickable breakdown boxes - toggle visibility (client-side only, so each user controls their own view)
@@ -3176,6 +3229,8 @@ function _buildFlexChoiceCard(actor, type, flexData, choiceData, tokenImg, owner
  */
 function _buildNormalDamageContent(actor, damageData, damageRoll, flexData, finalDamage, tokenImg, ownerColor, breakdownHtml = '', hasBaneWeapon = false) {
   const baneAttr = hasBaneWeapon ? ' data-bane-weapon="true"' : '';
+  // Attack type (melee/ranged/thrown/sorcery) — read on apply for Shield of Dawn (ranged reflect)
+  const atkTypeAttr = damageData.weaponType ? ` data-attack-type="${damageData.weaponType}"` : '';
   let content = `<div class="conan-roll damage-roll" style="border-color: ${ownerColor};">`;
   content += `<div class="roll-header">`;
   content += `<img src="${tokenImg}" class="token-img" alt="${actor.name}">`;
@@ -3184,23 +3239,23 @@ function _buildNormalDamageContent(actor, damageData, damageRoll, flexData, fina
 
   if (damageData.impalingThrow) {
     content += `<div class="roll-result-wrapper">`;
-    content += `<div class="damage-result-box impaling-damage clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+    content += `<div class="damage-result-box impaling-damage clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #ff4444; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
     content += `</div>`;
   } else if (damageData.bloodyTalons) {
     content += `<div class="roll-result-wrapper">`;
-    content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #C43C3C; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+    content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%); border-color: #C43C3C; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
     content += `</div>`;
   } else if (damageData.uncannyReach) {
     content += `<div class="roll-result-wrapper">`;
-    content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #5c0020 0%, #3a0010 100%); border-color: #b4003c; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+    content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #5c0020 0%, #3a0010 100%); border-color: #b4003c; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
     content += `</div>`;
   } else if (damageData.snakeArrow) {
     content += `<div class="roll-result-wrapper">`;
-    content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="background: linear-gradient(180deg, #4a0080 0%, #2d004d 100%); border-color: #9040ff; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
+    content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="background: linear-gradient(180deg, #4a0080 0%, #2d004d 100%); border-color: #9040ff; font-size: 28px; cursor: pointer;">${finalDamage}</div>`;
     content += `</div>`;
   } else {
     content += `<div class="roll-result-wrapper">`;
-    content += `<div class="damage-result-box clickable-breakdown"${baneAttr} style="cursor: pointer;">${finalDamage}</div>`;
+    content += `<div class="damage-result-box clickable-breakdown"${baneAttr}${atkTypeAttr} style="cursor: pointer;">${finalDamage}</div>`;
     content += `</div>`;
   }
   // SP damage boost buttons (+1d4 / +2d4)
@@ -3338,6 +3393,14 @@ async function applyDamageToToken(token) {
     const isHealing = damage < 0;
     let healAmount = Math.abs(damage);
 
+    // Prone attacker: their own physical attack damage (melee/ranged/thrown) is halved.
+    if (!isHealing && ['melee', 'ranged', 'thrown'].includes(game.conan?.lastDamageAttackType)) {
+      const proneAttacker = game.actors.get(game.conan.lastDamageActorId || '');
+      if (proneAttacker?.system?.conditions?.prone) {
+        damage = Math.floor(damage / 2);
+      }
+    }
+
     // Permission check: GM only
     if (!game.user.isGM) {
       return; // Silently ignore for non-GMs
@@ -3376,11 +3439,13 @@ async function applyDamageToToken(token) {
         baseAR = Math.max(0, baseAR - eagleReduction);
         reductionSources.push(`Eagle Eye (-${eagleReduction} AR pierced)`);
       }
-      // Dual Wielder Fighting Style hindrance: -1 AR (min 0)
+      // Fighting Style hindrance: -1 AR (min 0). Both Dual Wielder and Strangler
+      // share this debuff — same pipeline, different stance label in the damage card.
       const fightingStyleAR = actor?.getFlag('conan', 'fightingStyle');
-      if (fightingStyleAR?.id === 'dual-wielder' && baseAR > 0) {
+      if ((fightingStyleAR?.id === 'dual-wielder' || fightingStyleAR?.id === 'strangler') && baseAR > 0) {
         baseAR = Math.max(0, baseAR - 1);
-        reductionSources.push('Dual Wielder (-1 AR)');
+        const stanceLabel = fightingStyleAR.id === 'strangler' ? 'Strangler' : 'Dual Wielder';
+        reductionSources.push(`${stanceLabel} (-1 AR)`);
       }
       if (baseAR > 0) {
         damageReduction += baseAR;
@@ -3405,6 +3470,12 @@ async function applyDamageToToken(token) {
     if (buffsDebuffs.armorUp) {
       damageReduction += 3;
       reductionSources.push('Body of Living Iron (-3)');
+    }
+
+    // Failing Skin (Risen Dawn): once the skin has torn, the hardened thing beneath shows — +2 AR (persists)
+    if (enemyData?.threatTraits?.includes('failingskin') && token.document.getFlag('conan', 'failingSkinActive')) {
+      damageReduction += 2;
+      reductionSources.push('Failing Skin (-2)');
     }
   } else {
     reductionSources.push('AR Ignored (Lotus Miasma)');
@@ -3445,6 +3516,44 @@ async function applyDamageToToken(token) {
       speaker: { alias: 'GM' }
     });
     broadcastFloatingDamage(token.id, 0, false, false, false);
+    return;
+  }
+
+  // ==========================================
+  // SHIELD OF DAWN (Risen Dawn — Dawn Keeper, baseline ability)
+  // ==========================================
+  // 25% chance to deflect an incoming RANGED/THROWN attack: the Keeper takes nothing,
+  // and the attacker takes HALF the damage (reduced by their AR), reflected back.
+  if (!isHealing && enemyData?.id === 'rd-keeper'
+      && ['ranged', 'thrown'].includes(game.conan?.lastDamageAttackType)
+      && Math.random() < 0.25) {
+    const keeperName = enemyData.chatName || enemyData.name || token.name;
+    const reflectFull = Math.floor(damage / 2);
+    const sourceActorId = game.conan?.lastDamageActorId;
+    const sourceActor = sourceActorId ? game.actors.get(sourceActorId) : null;
+
+    let reflectMsg = `${keeperName}'s shield catches the light — the shot glances away harmlessly.`;
+    if (sourceActor && sourceActor.type === 'character2') {
+      const playerToken = canvas.tokens.placeables.find(t => t.actor?.id === sourceActorId);
+      const playerAR = sourceActor.system?.armorRating || 0;
+      const actualReflect = Math.max(0, reflectFull - playerAR);
+      if (actualReflect > 0 && playerToken) {
+        const curLP = sourceActor.system.lifePoints?.value || 0;
+        const newLP = Math.max(0, curLP - actualReflect);
+        await sourceActor.update({ 'system.lifePoints.value': newLP });
+        broadcastFloatingDamage(playerToken.id, actualReflect, newLP <= 0, false);
+        reflectMsg = `${keeperName}'s shield blazes — the shot ricochets back into ${sourceActor.name} for ${actualReflect}${playerAR > 0 ? ` (−${playerAR} AR)` : ''}!`;
+      } else {
+        reflectMsg = `${keeperName}'s shield turns the shot aside — it rebounds at ${sourceActor.name} but glances off their armor.`;
+      }
+    }
+
+    ChatMessage.create({
+      speaker: { alias: enemyData.name },
+      content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-shield-halved"></i></div><div class="msg-titles"><div class="msg-name">Shield of Dawn!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${reflectMsg}</div></div></div>`
+    });
+    broadcastFloatingDamage(token.id, 0, false, false, false); // Keeper takes nothing
+    console.log(`%c[SHIELD OF DAWN] ${keeperName} deflected a ranged attack (reflected ${reflectFull} pre-AR)`, 'color: #7FBF4F; font-weight: bold;');
     return;
   }
 
@@ -3582,6 +3691,22 @@ async function applyDamageToToken(token) {
         // Damage below threshold - mark as wounded
         isWounded = true;
         await token.document.setFlag('conan', 'wounded', true);
+        // Failing Skin (Risen Dawn): first wound tears the skin — buff turns on and STAYS on
+        // (persists even after Rapture clears the wounded flag)
+        if (enemyData?.threatTraits?.includes('failingskin') && !token.document.getFlag('conan', 'failingSkinActive')) {
+          await token.document.setFlag('conan', 'failingSkinActive', true);
+          const fsName = enemyData.chatName || enemyData.name || token.name;
+          const FS_FLAVOR = [
+            `${fsName}'s borrowed skin splits — the thing beneath bares itself, harder and hungrier.`,
+            `The wound peels ${fsName} like a mask; something wrong glistens underneath.`,
+            `${fsName} shudders — the human shape tears, and the true Black Soul shows through.`,
+            `Flesh sloughs from ${fsName} where the blade bit. What stands now was never a person.`,
+          ];
+          ChatMessage.create({
+            content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-sun"></i></div><div class="msg-titles"><div class="msg-name">Failing Skin!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${FS_FLAVOR[Math.floor(Math.random() * FS_FLAVOR.length)]}</div></div></div>`,
+            speaker: { alias: enemyData.name }
+          });
+        }
       }
     } else {
       // Antagonist - has LP, update via token.actor (synthetic actor for unlinked tokens)
@@ -3602,6 +3727,23 @@ async function applyDamageToToken(token) {
         console.log(`%c[LP DAMAGE] %c${token.name}%c — HP: ${currentHP} → ${newHP} (max: ${maxHP}) | ${isHealing ? 'Healed +' + healAmount : 'Took ' + damage + ' dmg'}`, 'color: #ff4444; font-weight: bold;', 'color: #fff; font-weight: bold;', 'color: #ff4444;');
         console.log(`%c  [LP WRITE] %cactor.update('system.lifePoints.value': ${newHP})`, 'color: #ff9944;', 'color: #ffcc88;');
         await actor.update({ 'system.lifePoints.value': newHP });
+
+        // Failing Skin (Risen Dawn antagonist): the skin tears once below half LP — buff turns on and STAYS on
+        if (!isHealing && enemyData?.threatTraits?.includes('failingskin') && newHP > 0 && newHP < maxHP / 2 && !token.document.getFlag('conan', 'failingSkinActive')) {
+          await token.document.setFlag('conan', 'failingSkinActive', true);
+          const fsName = enemyData.chatName || enemyData.name || token.name;
+          const FS_FLAVOR = [
+            `${fsName}'s borrowed skin splits — the thing beneath bares itself, harder and hungrier.`,
+            `Half-broken, ${fsName} sheds the human mask; what was hidden uncoils into the light.`,
+            `${fsName} staggers, and the false flesh tears away — the true Black Soul stands revealed.`,
+            `The wounds run too deep to hide it now: ${fsName}'s borrowed shape comes apart at the seams.`,
+          ];
+          ChatMessage.create({
+            content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-sun"></i></div><div class="msg-titles"><div class="msg-name">Failing Skin!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${FS_FLAVOR[Math.floor(Math.random() * FS_FLAVOR.length)]}</div></div></div>`,
+            speaker: { alias: enemyData.name }
+          });
+          console.log(`%c[FAILING SKIN] ${enemyData.name} torn (below half LP) — +2 AR / +1d4 active`, 'color: #7FBF4F; font-weight: bold;');
+        }
 
         if (newHP <= 0 && !isHealing) {
           // DEATHLESS: redirect killing blow to a living skeleton
@@ -3920,6 +4062,16 @@ async function applyDamageToToken(token) {
   // Show floating damage/healing number (local + broadcast to all clients via ChatMessage)
   broadcastFloatingDamage(token.id, damage, isDead, isWounded, isHealing);
 
+  // Strangler SLAMMED: marquee banner across the target token (only on damaging, non-healing hits).
+  // Also makes the target Unconscious until the end of their next turn (cleared by updateCombat hook).
+  // Order matters: set the flag BEFORE the banner — the banner's ticker reads the flag on first frame
+  // and self-removes if it's not set yet, so the flag must already be in place.
+  if (game.conan?.lastDamageStranglerSlam && !isHealing && damage > 0 && token.actor) {
+    await token.actor.update({ 'system.conditions.unconscious': true });
+    await token.actor.setFlag('conan', 'stranglerSlamStun', { active: true });
+    broadcastSlammedBanner(token.id);
+  }
+
   // ==========================================
   // MADWOMAN TRAIT (Threat Engine — Silk Vipers)
   // ==========================================
@@ -4191,6 +4343,9 @@ async function applyDamageToToken(token) {
         active: true,
         combatantId: combatant?.id || null
       });
+      // Light the stunned condition so it runs through the unified system
+      // (no magic / no stamina / no move + icon), cleared by the stun auto-expiry.
+      await token.actor.update({ 'system.conditions.stunned': true });
       game.conan.lastDamageEffect = null;
       ChatMessage.create({
         speaker: { alias: 'GM' },
@@ -5044,7 +5199,8 @@ async function applyDamageToToken(token) {
       combatantId: combatant?.id || null,
       source: 'garrote'
     });
-    await actor.update({ 'system.conditions.bound': true });
+    // Garrote is decoupled from the `bound` condition — it's its own thing (boundDebuff
+    // flag + token lock + escape buttons). Will set `grappled` here later. See status-effect.md.
 
     const garroteFlavors = [
       `The silk whip coils around ${actor.name}'s throat — pulling tight!`,
@@ -5150,6 +5306,39 @@ async function applyDamageToToken(token) {
         content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-explosion"></i></div><div class="msg-titles"><div class="msg-name">Volatile!</div></div></div><div class="enemy-msg-body"><div style="color: #ccc; text-align: center; font-style: italic;">${volName} detonates in a pillar of flame!</div><div class="roll-row" style="justify-content: center; margin-top: 6px;"><div class="roll-dice"><div class="die dmg">${volRoll.total}</div></div><div class="roll-total" style="color: #ff4444;">${volDamage} fire damage${playerAR > 0 ? ` (−${playerAR} AR = ${actualDamage})` : ''}</div></div></div></div>`
       });
       console.log(`%c[VOLATILE] ${volName} explodes for ${actualDamage} fire damage to ${sourceActor.name}!`, 'color: #ff4500; font-weight: bold;');
+    }
+  }
+
+  // ==========================================
+  // RAPTURE ABILITY (Risen Dawn — Acolytes, baseline for all)
+  // ==========================================
+  // On an Acolyte's death: every OTHER Acolyte in the SAME area sheds its Wounded state.
+  // "Same area" uses the Area tool; if no areas are drawn, the whole scene is one area.
+  if (isDead && enemyData?.id === 'rd-acolyte' && !isHealing) {
+    const raptAreaData = canvas.scene?.getFlag('conan', 'areaData');
+    const raptHasAreas = raptAreaData?.areas && Object.keys(raptAreaData.areas).length > 0;
+    const dyingArea = raptHasAreas ? _getTokenOverlapArea(token, raptAreaData.areas) : null;
+
+    const raptReset = [];
+    for (const t of canvas.tokens.placeables) {
+      if (t.id === token.id) continue;                                  // skip the dying acolyte
+      const tEnemy = t.document?.getFlag('conan', 'enemyData');
+      if (tEnemy?.id !== 'rd-acolyte') continue;                        // acolytes only
+      if (t.document?.getFlag('conan', 'dead')) continue;              // skip already-dead
+      if (!t.document?.getFlag('conan', 'wounded')) continue;         // only the wounded rise
+      if (raptHasAreas && _getTokenOverlapArea(t, raptAreaData.areas) !== dyingArea) continue; // same area only
+      await t.document.setFlag('conan', 'wounded', false);
+      await t.document.update({ 'texture.tint': null });               // clear orange wounded tint
+      raptReset.push(t);
+    }
+
+    if (raptReset.length > 0) {
+      const raptName = enemyData.chatName || enemyData.name;
+      ChatMessage.create({
+        speaker: { alias: enemyData.name },
+        content: `<div class="enemy-msg theme-human"><div class="enemy-msg-header"><div class="msg-icon"><i class="fas fa-sun"></i></div><div class="msg-titles"><div class="msg-name">Rapture!</div></div></div><div class="enemy-msg-body"><div class="enemy-msg-flavor">${raptName} falls — and ${raptReset.length} Acolyte${raptReset.length > 1 ? 's rise' : ' rises'} whole, wounds closing as the death feeds them.</div></div></div>`
+      });
+      console.log(`%c[RAPTURE] ${raptName} death reset Wounded on ${raptReset.length} acolyte(s)`, 'color: #7FBF4F; font-weight: bold;');
     }
   }
 
@@ -5740,10 +5929,80 @@ function broadcastFloatingDamage(tokenId, damage, isDead, isWounded, isHealing =
   showFloatingDamage(tokenId, damage, isDead, isWounded, isHealing);
 }
 
+/**
+ * Show a scrolling SLAMMED! marquee banner across the target token.
+ * Fires when a Strangler flex damage is applied. Banner sits at token center,
+ * matches the chat-card stamp styling, auto-removes after a few seconds.
+ */
+function showSlammedBanner(tokenId) {
+  const token = canvas.tokens.get(tokenId);
+  if (!token) return;
+
+  // Remove any existing banner for this token (re-slam) and start fresh.
+  document.querySelectorAll(`.conan-slam-banner[data-token-id="${tokenId}"]`).forEach(el => el.remove());
+
+  const banner = document.createElement('div');
+  banner.className = 'conan-slam-banner';
+  banner.dataset.tokenId = tokenId;
+  banner.innerHTML = `<div class="conan-slam-banner-scroll"><span>SLAMMED!</span><span>SLAMMED!</span><span>SLAMMED!</span><span>SLAMMED!</span></div>`;
+  document.body.appendChild(banner);
+
+  // Per-frame: follow the token, scale to its current screen size, self-remove when slam flag clears.
+  // Grace period: socket-broadcast banners on other clients race the actor flag sync, so we ignore
+  // a missing flag for the first ~1.5s to let propagation catch up.
+  const spans = banner.querySelectorAll('.conan-slam-banner-scroll span');
+  const startTs = performance.now();
+  const GRACE_MS = 1500;
+  const updatePosition = () => {
+    const t = canvas.tokens.get(tokenId);
+    if (!t) {
+      canvas.app.ticker.remove(updatePosition);
+      banner.remove();
+      return;
+    }
+    const stillSlammed = !!t.actor?.getFlag('conan', 'stranglerSlamStun')?.active;
+    if (!stillSlammed && (performance.now() - startTs) > GRACE_MS) {
+      canvas.app.ticker.remove(updatePosition);
+      banner.remove();
+      return;
+    }
+    const tokenBounds = t.bounds;
+    const transform = canvas.stage.worldTransform;
+    const screenW = tokenBounds.width * transform.a;
+    const bannerW = Math.max(40, screenW * 0.92);
+    const fontPx  = Math.max(8, bannerW * 0.18);
+    const padX    = Math.max(3, bannerW * 0.06);
+    const borderW = Math.max(1, Math.round(bannerW * 0.018));
+    const centerX = tokenBounds.x + (tokenBounds.width / 2);
+    const centerY = tokenBounds.y + (tokenBounds.height / 2);
+    banner.style.left = `${(centerX * transform.a) + transform.tx}px`;
+    banner.style.top  = `${(centerY * transform.d) + transform.ty}px`;
+    banner.style.width = `${bannerW}px`;
+    banner.style.borderWidth = `${borderW}px`;
+    spans.forEach(s => {
+      s.style.fontSize = `${fontPx}px`;
+      s.style.padding = `0 ${padX}px`;
+      s.style.letterSpacing = `${Math.max(1, fontPx * 0.12)}px`;
+    });
+  };
+  updatePosition();
+  canvas.app.ticker.add(updatePosition);
+}
+
+/**
+ * Show the SLAMMED banner locally + broadcast to all clients so every player sees it.
+ */
+function broadcastSlammedBanner(tokenId) {
+  showSlammedBanner(tokenId);
+  game.socket.emit("system.conan", { action: "slamBanner", tokenId });
+}
+
 // Make functions globally accessible
 window.applyDamageToToken = applyDamageToToken;
 window.showFloatingDamage = showFloatingDamage;
 window.broadcastFloatingDamage = broadcastFloatingDamage;
+window.showSlammedBanner = showSlammedBanner;
+window.broadcastSlammedBanner = broadcastSlammedBanner;
 
 /**
  * Auto-clear combat-duration effects when combat ends
@@ -5989,6 +6248,43 @@ Hooks.on('deleteCombat', async (combat, options, userId) => {
 });
 
 /**
+ * Single source of truth for tearing down a condition's mechanical effects.
+ * Used by BOTH manual removal (_onToggleCondition in actor-sheet2.js) and
+ * turn-based auto-expiry (updateCombat below) so the two paths can never drift.
+ * Clears the backing debuff flag and unlocks the token if the effect locked it.
+ *
+ * Does NOT post chat, charge SP, or set the condition boolean — callers own those,
+ * since they differ between manual dismissal and automatic expiry.
+ *
+ * @param {Actor} actor   The affected actor
+ * @param {string} key    Condition key (stunned, bound, blinded, poisoned, burning, unconscious)
+ * @returns {Promise<boolean>} true if a backing flag was found and cleared
+ */
+async function clearConditionEffects(actor, key) {
+  if (!actor) return false;
+  // condition key → backing flag that carries the timer + mechanical teeth
+  const CONDITION_FLAGS = {
+    stunned: 'stunnedDebuff',
+    // 'bound' intentionally NOT mapped — Garrote owns boundDebuff separately (decoupled).
+    blinded: 'glamourDebuff',
+    poisoned: 'poisonEffects',
+    burning: 'burningDebuff',
+    unconscious: 'stranglerSlamStun'
+  };
+  const flagKey = CONDITION_FLAGS[key];
+  if (!flagKey) return false;
+  const flag = actor.getFlag('conan', flagKey);
+  if (!flag) return false;
+  // Unlock the token if this effect locked it (e.g. Pict stun, Garrote bound)
+  if (flag.tokenId) {
+    const tokenDoc = game.scenes.active?.tokens.get(flag.tokenId);
+    if (tokenDoc?.locked) await tokenDoc.update({ locked: false });
+  }
+  await actor.unsetFlag('conan', flagKey);
+  return true;
+}
+
+/**
  * Handle combat turn changes for maintained spell costs
  * Bane Weapon: 3 LP per round to maintain (deducted on caster's turn)
  */
@@ -5998,6 +6294,32 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
 
   // Only process when turn changes (not just round changes)
   if (changed.turn === undefined && changed.round === undefined) return;
+
+  // === DEFENSIVE FIGHTER: Reset moveCount at the start of each new round ===
+  // The Move Action allowance refreshes per round, so the +2 AR bonus comes back too.
+  // currentArea reset to wherever the token is now (so the next move is the FIRST move).
+  if (changed.round !== undefined) {
+    for (const combatant of combat.combatants) {
+      const actor = combatant.actor;
+      if (!actor) continue;
+      const fs = actor.getFlag('conan', 'fightingStyle');
+      if (fs?.id !== 'defensive-fighter') continue;
+      const tokenDoc = combatant.token;
+      const areaData = canvas.scene?.getFlag('conan', 'areaData');
+      let currentArea = null;
+      if (tokenDoc && areaData?.areas) {
+        const gridSize = canvas.grid.size;
+        const cx = tokenDoc.x + ((tokenDoc.width || 1) * gridSize) / 2;
+        const cy = tokenDoc.y + ((tokenDoc.height || 1) * gridSize) / 2;
+        currentArea = _getAreaAtPoint(cx, cy, areaData.areas);
+      }
+      await actor.setFlag('conan', 'defensiveFighterMoves', {
+        roundStartArea: currentArea,
+        currentArea: currentArea,
+        moveCount: 0
+      });
+    }
+  }
 
   // === COUNTER WARD: Clear alert when turn advances ===
   if (game.conan?.counterWardAlert) {
@@ -6084,17 +6406,29 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     if (stunPrev?.actor) {
       const stunFlag = stunPrev.actor.getFlag('conan', 'stunnedDebuff');
       if (stunFlag?.active) {
-        await stunPrev.actor.unsetFlag('conan', 'stunnedDebuff');
-        // Unlock token if it was locked by Pict Stunned trait
-        if (stunFlag.tokenId) {
-          const stunTokenDoc = game.scenes.active?.tokens.get(stunFlag.tokenId);
-          if (stunTokenDoc) await stunTokenDoc.update({ locked: false });
-        }
-        // Clear the condition flag on the character sheet
+        await clearConditionEffects(stunPrev.actor, 'stunned'); // unset flag + unlock token
+        // Clear the condition flag on the character sheet (turns off the icon)
         await stunPrev.actor.update({ 'system.conditions.stunned': false });
         const stunSource = stunFlag.source === 'pict' ? 'the stun' : 'the darkness';
         ChatMessage.create({
           content: `<div class="conan-enemy-roll ability-use"><div class="roll-header" style="color: #4B0082;">Stun Fades</div><div class="roll-section ability-desc"><strong>${stunPrev.actor.name}</strong> shakes off ${stunSource} and can move again.</div></div>`,
+          speaker: ChatMessage.getSpeaker({ alias: 'System' })
+        });
+      }
+    }
+  }
+
+  // === STRANGLER SLAM: Auto-clear Unconscious at END of slammed combatant's turn ===
+  const slamPrevIdx = combat.previous?.turn;
+  if (slamPrevIdx !== undefined && slamPrevIdx !== null) {
+    const slamPrev = combat.turns[slamPrevIdx];
+    if (slamPrev?.actor) {
+      const slamFlag = slamPrev.actor.getFlag('conan', 'stranglerSlamStun');
+      if (slamFlag?.active) {
+        await clearConditionEffects(slamPrev.actor, 'unconscious'); // unset flag + unlock token
+        await slamPrev.actor.update({ 'system.conditions.unconscious': false });
+        ChatMessage.create({
+          content: `<div class="conan-enemy-roll ability-use"><div class="roll-header" style="color: #9370DB;">Slam Wears Off</div><div class="roll-section ability-desc"><strong>${slamPrev.actor.name}</strong> shakes off the SLAM and regains consciousness.</div></div>`,
           speaker: ChatMessage.getSpeaker({ alias: 'System' })
         });
       }
@@ -6168,14 +6502,23 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     }
   }
 
-  // === DEFENSIVE FIGHTING: Auto-expire at start of defender's next turn ===
+  // === PRONE: Reminder at the start of a prone combatant's turn ===
+  const proneCombatant = combat.combatant;
+  if (proneCombatant?.actor?.system?.conditions?.prone) {
+    ChatMessage.create({
+      content: `<div class="conan-roll condition-msg condition-on condition-prone"><h3>Prone</h3><div class="condition-section"><strong>${proneCombatant.actor.name}</strong> is Prone — moving costs <strong>2 actions</strong>. Stand up (1 action) then take one more, or attack twice at half damage.</div></div>`,
+      speaker: ChatMessage.getSpeaker({ actor: proneCombatant.actor })
+    });
+  }
+
+  // === COWERING (was Defensive Fighting): Auto-expire at start of defender's next turn ===
   const defCombatant = combat.combatant;
   if (defCombatant?.actor) {
     const defFlag = defCombatant.actor.getFlag('conan', 'defensiveFighting');
     if (defFlag) {
       await defCombatant.actor.unsetFlag('conan', 'defensiveFighting');
       ChatMessage.create({
-        content: `<div class="conan-roll"><div class="roll-header">${defCombatant.actor.name}</div><div class="roll-section ability-desc">${defCombatant.actor.name} is no longer fighting defensively.</div></div>`,
+        content: `<div class="conan-roll"><div class="roll-header">${defCombatant.actor.name}</div><div class="roll-section ability-desc">${defCombatant.actor.name} is no longer cowering.</div></div>`,
         speaker: ChatMessage.getSpeaker({ actor: defCombatant.actor })
       });
     }
@@ -6190,8 +6533,8 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
     if (glamourActor?.type === 'character2') {
       const glamourFlag = glamourActor.getFlag('conan', 'glamourDebuff');
       if (glamourFlag?.active) {
+        await clearConditionEffects(glamourActor, 'blinded'); // unset flag + unlock token
         await glamourActor.update({ 'system.conditions.blinded': false });
-        await glamourActor.unsetFlag('conan', 'glamourDebuff');
         ChatMessage.create({
           speaker: ChatMessage.getSpeaker({ actor: glamourActor }),
           content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title">${glamourActor.name} — Glamour Fades</div></div><div style="text-align: center; padding: 8px; color: #2d6b2d; font-style: italic;">The blinding sorcery loosens its grip — sight returns!</div></div>`
@@ -6749,11 +7092,16 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
   }
 
   // === POISON: LP DRAIN ON TURN START ===
+  // Random 1-3 LP drained each round. The amount visible to the player IS the rolled value
+  // (unlike the silent checksDown penalty) — losing 3 LP in one round vs 1 LP feels different
+  // and the player should see the severity of the tick.
   const poisonEffects = actor.getFlag('conan', 'poisonEffects');
   if (poisonEffects?.active && poisonEffects.effects?.lpDrain) {
     const currentLP = actor.system.lifePoints?.value ?? 0;
     if (currentLP > 0) {
-      const newLP = currentLP - 1;
+      const drainRoll = Math.ceil(Math.random() * 3);
+      const drainAmount = Math.min(drainRoll, currentLP);
+      const newLP = currentLP - drainAmount;
       await actor.update({ 'system.lifePoints.value': newLP });
 
       const ownerColor = game.users.find(u => u.character?.id === actor.id)?.color || '#32CD32';
@@ -6761,7 +7109,7 @@ Hooks.on('updateCombat', async (combat, changed, options, userId) => {
         content: `<div class="conan-roll" style="border-color: ${ownerColor};">
           <h3 style="color: #32CD32;">Venom</h3>
           <div class="skill-effect" style="color: #ccc;"><em>The poison burns through ${actor.name}'s veins.</em></div>
-          <div class="skill-effect" style="color: #ff6b6b;"><strong>-1 LP</strong> (${currentLP} → ${newLP})</div>
+          <div class="skill-effect" style="color: #ff6b6b;"><strong>-${drainAmount} LP</strong> (${currentLP} → ${newLP})</div>
         </div>`,
         speaker: ChatMessage.getSpeaker({ alias: 'System' }),
         rollMode: game.settings.get('core', 'rollMode')
@@ -7239,6 +7587,9 @@ Hooks.on('hoverToken', (token, hovered) => {
     } else if (actor?.system?.defense) {
       phys = actor.system.defense.physical;
       sorc = actor.system.defense.sorcery;
+      // Cosmetic overrides matching the sheet display
+      if (actor.system.conditions?.unconscious) { phys = 0; sorc = 0; }
+      else if (actor.system.conditions?.bound) { phys = actor.system.defense.physicalBound ?? phys; }
     }
 
     if (phys != null && sorc != null) {
@@ -7308,6 +7659,46 @@ Hooks.on('refreshToken', (token) => {
       // Player: invalidate vis cache so isVisible re-evaluates on next render frame
       _invalidatePlayerVisCache();
     }
+  }
+});
+
+// ========== DEFENSIVE FIGHTER MOVE TRACKING ==========
+// Fires once per actual TokenDocument position change (drag-drop / keyboard / drag-ruler),
+// NOT once per animation frame. We pivot on updateToken specifically because refreshToken
+// uses bbox-overlap which oscillates between adjacent areas during animation.
+Hooks.on('updateToken', async (tokenDoc, change, options, userId) => {
+  if (change.x === undefined && change.y === undefined) return; // not a position change
+  const actor = tokenDoc.actor;
+  if (!actor || actor.type !== 'character2' || !tokenDoc.actorLink) return;
+  if (!actor.testUserPermission(game.user, 'OWNER')) return; // one-client write
+  const fs = actor.getFlag('conan', 'fightingStyle');
+  if (fs?.id !== 'defensive-fighter') return;
+
+  const areaData = canvas.scene?.getFlag('conan', 'areaData');
+  if (!areaData?.areas || Object.keys(areaData.areas).length === 0) return;
+
+  // Compute destination area by token CENTER (not bbox overlap → no oscillation).
+  const gridSize = canvas.grid.size;
+  const newX = (change.x ?? tokenDoc.x) + ((tokenDoc.width || 1) * gridSize) / 2;
+  const newY = (change.y ?? tokenDoc.y) + ((tokenDoc.height || 1) * gridSize) / 2;
+  const newArea = _getAreaAtPoint(newX, newY, areaData.areas);
+  if (newArea === null) return; // landed between areas, ignore
+
+  const moves = actor.getFlag('conan', 'defensiveFighterMoves') || { moveCount: 0, currentArea: null };
+  const dfLastArea = moves.currentArea ?? moves.roundStartArea ?? null;
+  if (newArea === dfLastArea) return; // same area, no Move action
+
+  const nextCount = (moves.moveCount || 0) + 1;
+  if (nextCount >= 2) {
+    await actor.setFlag('conan', 'fightingStyleSpent', true);
+    await actor.unsetFlag('conan', 'fightingStyle');
+    await actor.unsetFlag('conan', 'defensiveFighterMoves');
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="conan-roll"><div class="roll-header"><div class="roll-title" style="color: #c1272d;">Defensive Fighter Ends</div></div><div style="padding: 8px 12px; color: #aaa; font-style: italic;">${actor.name} took a second Move action this round — the stance can no longer be maintained.</div></div>`
+    });
+  } else {
+    await actor.setFlag('conan', 'defensiveFighterMoves', { ...moves, currentArea: newArea, moveCount: nextCount });
   }
 });
 

@@ -52,6 +52,9 @@
                 {{#if hasARDebuff}}
                 <div class="sheet2-arDebuffStamp" title="Fighting Style hindrance (-{{arDebuff}} AR)">-{{arDebuff}}</div>
                 {{/if}}
+                {{#if hasARStanceBonus}}
+                <div class="sheet2-arBonusStamp" title="Defensive Fighter (+{{arStanceBonus}} AR)">+{{arStanceBonus}}</div>
+                {{/if}}
                 <span class="sheet2-vitalNumber">{{effectiveAR}}</span>
               </div>
 

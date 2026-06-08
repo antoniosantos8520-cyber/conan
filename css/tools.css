@@ -2784,6 +2784,58 @@
 }
 
 /* ============================================================================
+   LIBRARY TAB — document rows
+   ============================================================================ */
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lib-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border: 1px solid var(--tools-border, #33333a);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--tools-panel2, #1b1b20) 0%, var(--tools-panel, #151519) 100%);
+  transition: border-color .15s ease;
+}
+.lib-item:hover {
+  border-color: #E08A2B;
+}
+.lib-item-icon {
+  flex: 0 0 auto;
+  font-size: 17px;
+  color: #E08A2B;
+}
+.lib-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--tools-text, #f1e4cc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-item .lib-open-btn {
+  flex: 0 0 auto;
+}
+
+/* Library document viewer (ApplicationV2 iframe window) */
+.bns-library-viewer .window-content {
+  padding: 0;
+  overflow: hidden;
+}
+.bns-library-viewer .bns-library-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+/* ============================================================================
    EFFECT TYPE CARDS
    ============================================================================ */
 
@@ -7780,6 +7832,13 @@
 .enemy-active-effects .active-effect-btn .effect-count {
   font-weight: bold;
   font-size: 11px;
+}
+
+/* Default effect-icon sizing — every per-effect class can override (e.g., tide-of-stone adds
+   border-radius: 50%). Without this, conditions like Unconscious render at the image's native size. */
+.enemy-active-effects .active-effect-btn .effect-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .enemy-active-effects .active-effect-btn.tide-of-stone-effect {

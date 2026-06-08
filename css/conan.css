@@ -1675,6 +1675,16 @@
   margin: 0;
 }
 
+/* Stamina-boosted result square — outline indicator (skill / attack / damage) */
+.conan-roll .skill-result-box.sp-boosted,
+.conan-roll .attack-result-box.sp-boosted,
+.conan-roll .damage-result-box.sp-boosted,
+.spell-chat-card .attack-result-box.sp-boosted,
+.spell-chat-card .damage-result-box.sp-boosted {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 8px 2px rgba(255, 107, 107, 0.75);
+}
+
 .conan-roll .roll-result-wrapper .mounted-attack-results {
   margin: 0;
 }
@@ -3822,6 +3832,9 @@
   color: #90EE90;
   cursor: default;
   pointer-events: none;
+  /* Chosen button glows instead of graying out */
+  opacity: 1 !important;
+  box-shadow: 0 0 12px 3px rgba(76, 175, 80, 0.85), 0 0 5px rgba(76, 175, 80, 0.6) !important;
 }
 
 /* Skill Breakdown Panel (green theme) */

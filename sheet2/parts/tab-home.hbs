@@ -23,7 +23,7 @@
           <span class="sheet2-triLabel">Flex</span>
         </div>
 
-        <div class="sheet2-tri defensive-fighting-toggle {{#if defensiveFighting}}defensive-fighting-active{{/if}}" title="Physical Defense: {{system.defense.physical}}{{#if defensiveFighting}} (Defensive Fighting +2){{/if}}{{#if hasToughSouled}} (Tough-Souled +1){{/if}}{{#if blockerActive}} (Blocker +1){{/if}}{{#if protectBonus}} (Protect +{{protectBonus}}){{/if}}">
+        <div class="sheet2-tri defensive-fighting-toggle {{#if defensiveFighting}}defensive-fighting-active{{/if}}" title="Physical Defense: {{system.defense.physical}}{{#if defensiveFighting}} (Cowering +2){{/if}}{{#if hasToughSouled}} (Tough-Souled +1){{/if}}{{#if blockerActive}} (Blocker +1){{/if}}{{#if protectBonus}} (Protect +{{protectBonus}}){{/if}}">
           {{#if system.armorEquipped.shield}}
           <img src="systems/conan/images/icons/shield_icon.png" class="sheet2-triShieldBadge" alt="Shield" title="Shield Equipped (+1)"/>
           {{/if}}
@@ -35,6 +35,9 @@
           {{/if}}
           <span class="sheet2-triDisplay {{#if protectBonus}}protect-boosted{{/if}} {{#if defensiveFighting}}defend-boosted{{/if}}">{{system.defense.physical}}</span>
           <span class="sheet2-triLabel">Physical</span>
+          {{#if hasPDDebuff}}
+          <div class="sheet2-pdDebuffStamp" title="Fighting Style hindrance (-{{pdDebuff}} PD)">-{{pdDebuff}}</div>
+          {{/if}}
         </div>
 
         <div class="sheet2-tri" title="Sorcery Defense: {{system.defense.sorcery}}{{#if hasToughSouled}} (Tough-Souled +1){{/if}}{{#if hasUncannyWarding}} (Uncanny Warding +{{#if hasUncannyWardingII}}2{{else}}1{{/if}}){{/if}}">

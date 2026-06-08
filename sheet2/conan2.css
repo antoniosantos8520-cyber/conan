@@ -1667,6 +1667,127 @@ select.sheet2-btsInput option {
   box-shadow: 0 0 8px rgba(193, 39, 45, 0.55), 0 2px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* AR bonus stamp — top-right corner. Green sibling of the -1 debuff stamp.
+   Rendered when a Fighting Style adds AR (e.g., Defensive Fighter +1/+2). */
+.sheet2-arBonusStamp {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 11;
+  pointer-events: none;
+  font-family: 'Trajan Pro', 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #2d8a3e;
+  background: #f4e9d2;
+  border: 2px solid #2d8a3e;
+  border-radius: 4px;
+  padding: 1px 5px 2px;
+  transform: rotate(12deg);
+  box-shadow: 0 0 8px rgba(45, 138, 62, 0.55), 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* SLAMMED stamp — rotated marquee banner across the damage card when Strangler flex triggers.
+   Banner stays put; inner row of "SLAMMED!" repeats scrolls continuously through it. */
+.strangler-slam-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  z-index: 20;
+  pointer-events: none;
+  width: 280px;
+  overflow: hidden;
+  border: 4px solid #c1272d;
+  border-radius: 8px;
+  background: rgba(244, 233, 210, 0.82);
+  opacity: 0.95;
+  box-shadow: 0 0 12px rgba(193, 39, 45, 0.55), 0 2px 4px rgba(0, 0, 0, 0.6);
+  padding: 4px 0;
+}
+.strangler-slam-scroll {
+  display: inline-flex;
+  width: max-content;
+  animation: strangler-slam-marquee 5s linear infinite;
+}
+.strangler-slam-scroll span {
+  font-family: 'Trajan Pro', 'Cinzel', serif;
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  line-height: 1;
+  color: #c1272d;
+  text-shadow: 0 0 10px rgba(193, 39, 45, 0.7), 0 2px 3px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  padding: 0 24px;
+}
+@keyframes strangler-slam-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* The damage card needs to be positioned so the stamp overlays it */
+.conan-roll.damage-roll { position: relative; }
+
+/* On-canvas SLAMMED banner — sits over the target token after a Strangler flex applies.
+   Width, font-size, padding, border-width are all set inline by showSlammedBanner()
+   so the banner scales with the token's screen dimensions. */
+.conan-slam-banner {
+  position: fixed;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+  border-style: solid;
+  border-color: #c1272d;
+  border-radius: 6px;
+  background: rgba(244, 233, 210, 0.85);
+  box-shadow: 0 0 12px rgba(193, 39, 45, 0.7), 0 2px 5px rgba(0, 0, 0, 0.6);
+  padding: 2px 0;
+  animation: conan-slam-banner-in 1s ease-out forwards;
+}
+.conan-slam-banner-scroll {
+  display: inline-flex;
+  width: max-content;
+  animation: strangler-slam-marquee 4s linear infinite;
+}
+.conan-slam-banner-scroll span {
+  font-family: 'Trajan Pro', 'Cinzel', serif;
+  font-weight: 900;
+  line-height: 1;
+  color: #c1272d;
+  text-shadow: 0 0 6px rgba(193, 39, 45, 0.7), 0 1px 2px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+@keyframes conan-slam-banner-in {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(-8deg) scale(0.6); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1.05); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1); }
+}
+
+/* PD debuff stamp — same rubber-stamp treatment as AR, on the Physical tile */
+.sheet2-pdDebuffStamp {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  z-index: 11;
+  pointer-events: none;
+  font-family: 'Trajan Pro', 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #c1272d;
+  background: #f4e9d2;
+  border: 2px solid #c1272d;
+  border-radius: 4px;
+  padding: 1px 5px 2px;
+  transform: rotate(-12deg);
+  box-shadow: 0 0 8px rgba(193, 39, 45, 0.55), 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
 /* Stat bonus skill icons - positioned on stat die wrapper */
 .sheet2-statBonusIcon {
   position: absolute;

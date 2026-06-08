@@ -140,15 +140,17 @@ The d10 Flex Die is a core Monolith mechanic. When it triggers:
 
 ### Conditions in Combat
 
-Conditions have real mechanical effects:
+Conditions aren't just reminders. Once applied — by the GM, a player, a spell, or an enemy ability — they **enforce themselves** on the character sheet and in chat, so there's minimal tracking for anyone at the table.
 
-- **Blinded**: Auto-miss all attacks unless Flex die saves you
-- **Stunned**: Skip your next turn
-- **Bound**: Cannot move, take 1d4 damage per turn until freed
-- **Poisoned**: Flex die disrupted, stamina spend blocked, spell casting interrupted
-- **Burning**: 1d4 fire damage per round with 50/50 chance to extinguish each tick
-- **Frightened**: -1 to checks and attacks
-- **Bleeding**: 1 damage per round until healed
+- **Unconscious** — Out cold. Physical & Sorcery Defense display as **0/0** (on the sheet field and the GM's hover tooltip). All attack, skill, and spell rolls are blocked with a "cannot act" notice. Death saves still work.
+- **Stunned** — Head ringing: **no magic, no Stamina spends, and the token is locked in place.** Attacks and skill checks are still allowed; defenses are unchanged. Applied manually, by the Pict *Stunned* trait (spend 1 SP to shake it off early), or by *Wave of Darkness*; clears at the end of the stunned character's next turn.
+- **Bound** — Hands tied: **unarmed attacks only** (weapon, thrown, and ranged attacks are blocked). Sorcery and Stamina still flow freely. The shield's Physical Defense contribution is dropped on the sheet + tooltip while bound — but your gear stays equipped, no re-equipping when it clears.
+- **Blinded** — The token's **vision is cut off**, and every attack **auto-misses unless the Flex die saves it**. A blind swing also carries a **25% chance of friendly fire** — the engine rolls a normal attack and flags it for the GM to resolve against a nearby ally. (Blind even overrides Cruel Fate.)
+- **Prone** — Knocked down: the prone fighter's own **physical attack damage is halved** when it lands. At the start of their turn the engine reminds them that moving costs 2 actions (stand up = 1 action, then take one more).
+- **Poisoned** — Hidden severity (1–3): a fresh per-roll penalty to checks/attacks/casting, a per-round Life Point drain reported in chat, and Stamina spends that fizzle to nothing.
+- **Burning** — 1d4 fire damage per round, with a 50/50 chance to extinguish on each tick (up to 3 rounds).
+
+*Being finalized next: Grappled, Bleeding, Frightened.*
 
 ### Defense Hover Tooltip (GM Only)
 
@@ -352,6 +354,45 @@ How-to videos, tips and tricks, and feature walkthroughs — **coming soon**.
 ---
 
 ## Release History
+
+### v0.9.7 — 2026-06-07
+
+**Status effects that enforce themselves, cross-client Stamina sync, and a pile of combat fixes.**
+
+**Self-enforcing status effects (players)**
+- Five conditions now apply their own mechanics on the sheet and in chat — minimal tracking for player or GM:
+  - **Unconscious** — defenses show 0/0 (sheet + GM tooltip); all attack/skill/spell rolls blocked; death saves still allowed
+  - **Stunned** — no magic, no Stamina spends, token locked; attacks/skills still work (covers manual, Pict trait, and Wave of Darkness)
+  - **Bound** — unarmed attacks only; sorcery + Stamina still flow; shield's Physical Defense dropped while bound (gear stays equipped)
+  - **Blinded** — token vision cut; attacks auto-miss unless Flex saves them, with a 25% friendly-fire chance for the GM to resolve; overrides Cruel Fate
+  - **Prone** — the prone fighter's physical attack damage is halved; turn-start reminder that moving costs 2 actions
+- Unified condition teardown (`clearConditionEffects`) so manual removal and turn-based expiry always match — early-dismissed timed effects no longer linger
+- *Garrote* (Silk Vipers / Bride) decoupled into its own effect; *Wave of Darkness* now runs through the standard stun system
+
+**Stamina-spend (SP boost) now syncs to everyone**
+- Spending Stamina to boost a skill, attack, or damage roll now shows the boosted total + breakdown for the **GM and all players**, not just the clicking player (flag-persisted, re-rendered on every client)
+- **Fix**: the GM's Smart Mouse used to apply a player's *un-boosted* damage — it now picks up the boosted total
+- The chosen spend button **glows** instead of graying out; boosted result boxes get a red outline
+
+**Poison severity randomization (PCs)**
+- `checksDown` rolls a fresh hidden 1–3 penalty per check/attack/cast; `lpDrain` rolls a visible 1–3 per round reported in the Venom card; breakdown panels show the actual rolled value
+- Every SP-cost spell now consistently fizzles when poisoned (`noStamina`)
+
+**Fighting Styles — Defensive Fighter + Strangler**
+- **Defensive Fighter** (Shield + One-Handed): passive +1 AR, **+2 while you haven't moved this round**; a second area-move ends the stance (book hindrance)
+- **Strangler** (two fists, no armor): both fists add to damage; a damage Flex triggers **SLAMMED** — a marquee banner on the target + Unconscious until the end of their next turn (−1 AR / −1 PD hindrance)
+- **Dual Wielder** weapon-pick mode with a persistent paired-weapon outline; qualification reworked (no skill prereq, shield excluded)
+- Stances auto-drop if your loadout no longer qualifies
+
+**New enemies — Risen Dawn**
+- The **Risen Dawn** false-Mitra sun-cult group (Acolyte, Dawn Keeper, Sun Brother, High Hierophant) with their own Threat-Engine trait pool + skull tiers, plus bestiary additions
+
+**Enemy card polish**
+- Full-card art centering, more readable stat dice, and a fix so every condition icon (e.g. Unconscious) renders at the correct size on enemy cards
+
+**Combat fixes**
+- Mounted-attack SP-boost no longer corrupts the card display
+- Cruel Fate no longer rides along on a blinded attack
 
 ### v0.9.6 — 2026-05-29
 

@@ -52,6 +52,7 @@
       },
       "defense": {
         "physical": 10,
+        "physicalBound": 10,
         "sorcery": 10,
         "ar": 0,
         "arLocked": true,
@@ -163,6 +164,7 @@
       },
       "defense": {
         "physical": "",
+        "physicalBound": "",
         "sorcery": ""
       },
       "threshold": 4,

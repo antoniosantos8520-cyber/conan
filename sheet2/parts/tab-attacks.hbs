@@ -368,8 +368,18 @@
             <label>Hindrance</label>
             <p>{{style.hindrance}}</p>
           </div>
+          {{#if style.recommendedSkill}}
+          <div class="sheet2-stanceEditBlock sheet2-stanceEditRecommended">
+            <label>Recommended Skill</label>
+            <p><strong>{{style.recommendedSkill.name}}</strong> — {{style.recommendedSkill.note}}</p>
+          </div>
+          {{/if}}
           <div class="sheet2-stanceEditCost">
+            {{#if (eq style.costSP 0)}}
+            <strong>Adoption cost:</strong> Free
+            {{else}}
             <strong>Adoption cost:</strong> {{style.costSP}} SP or {{style.costActions}} Actions
+            {{/if}}
           </div>
         </div>
       </div>

@@ -2284,6 +2284,116 @@
               ]
             }
           ]
+        },
+        "risenDawn": {
+          "name": "Risen Dawn",
+          "description": "A cult of Mitra — or so the city believes. The Risen Dawn keep open temples, feed the poor, and welcome the lost into the warmth of the sun god. It is a mask. They are the public arm of the Black Souls: smiling shepherds who guide 'vessels' to the pools to be filled by the Sleeper. Unlike the human Black Hearts, the things behind these faces have already been replaced — they merely keep their skin suits, for now. When enough of the city wears the cult's mark, the disguise comes off and the dawn rises black.",
+          "enemies": [
+            {
+              "id": "rd-acolyte",
+              "name": "Acolyte of the Risen Dawn",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 3, "die": "D8" },
+                "wits": { "value": 3, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 8, "max": 10 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": { "min": 10, "max": 13 },
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Dagger", "range": "Touch", "damage": "1D6+2" },
+                "ranged": { "name": "Thrown Knife", "range": "Medium", "damage": "1D6+1" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Rapture", "description": "When an Acolyte falls within the same area, the others do not mourn — they rise. Every other Acolyte in that area sheds its Wounded state and stands whole, as though the death fed them. A pack must often be cut down all at once." }
+              ]
+            },
+            {
+              "id": "rd-keeper",
+              "name": "Dawn Keeper",
+              "type": "Minion",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 3, "die": "D8" },
+                "grit": { "value": 4, "die": "D8" },
+                "wits": { "value": 2, "die": "D6" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 7, "max": 9 }
+              },
+              "threshold": { "min": 12, "max": 15 },
+              "lifePoints": null,
+              "ar": null,
+              "attacks": {
+                "melee": { "name": "Sunsteel Maul", "range": "Close", "damage": "1D10+5" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": 1 },
+              "rules": [
+                { "name": "Shield of Dawn", "description": "The wall of the rite, planting themselves between the unbeliever and the Sleeper's work. Their broad gilded shields catch the light — an incoming ranged attack has a chance (25%) to be turned aside entirely and hurled back at the shooter for half its force." }
+              ]
+            },
+            {
+              "id": "rd-sun-brother",
+              "name": "Sun Brother",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 4, "die": "D10" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 4, "die": "D10" },
+                "wits": { "value": 4, "die": "D8" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 9, "max": 11 }
+              },
+              "threshold": null,
+              "lifePoints": 50,
+              "ar": { "min": 3, "max": 5 },
+              "attacks": {
+                "melee": { "name": "Radiant Blade", "range": "Close", "damage": "1D10+4" },
+                "ranged": { "name": "Radiant Curse", "range": "Long", "damage": "1D8+3", "special": "Radiant" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Radiant Curse", "description": "To the congregation he is a beloved preacher who heals with the sun's touch. Cross him and the open hand levels, and a lance of sick, burning light leaps the field — the Sleeper's power dressed as dawn, searing flesh and faith alike. A warrior-priest as deadly at range as in the press of melee." },
+                { "name": "Sunburst", "description": "The Sun Brother throws wide his arms and the air detonates in a blinding flare of false light. Each foe caught in the burst must pass a Grit check (Difficulty 9–12) or be Stunned until the end of their next turn. Activate, then click each caught target to test them." }
+              ]
+            },
+            {
+              "id": "rd-hierophant",
+              "name": "High Hierophant",
+              "type": "Antagonist",
+              "stats": {
+                "might": { "value": 3, "die": "D8" },
+                "edge": { "value": 4, "die": "D8" },
+                "grit": { "value": 4, "die": "D10" },
+                "wits": { "value": 6, "die": "D12" }
+              },
+              "defenses": {
+                "physical": { "min": 10, "max": 12 },
+                "sorcery": { "min": 11, "max": 13 }
+              },
+              "threshold": null,
+              "lifePoints": 55,
+              "ar": { "min": 2, "max": 4 },
+              "attacks": {
+                "melee": { "name": "Solar Scepter", "range": "Close", "damage": "1D10+3" }
+              },
+              "actions": { "perTurn": 2, "attackLimit": null },
+              "rules": [
+                { "name": "Dawn's Burst", "description": "The Hierophant raises the scepter and the air ignites — a blinding detonation of false light. All within Close range are struck blind and stunned, the sun's blessing turned to a weapon by the thing that wears the high priest's skin." },
+                { "name": "Voice of the Dawn", "description": "To the city, the most beloved holy man in its walls — the gentle face of the Risen Dawn. To the cult, a high servant of the Sleeper. Where the Hierophant speaks, the faithful do not waver, and the vessels walk willingly to the pools." }
+              ]
+            }
+          ]
         }
       }
     }
