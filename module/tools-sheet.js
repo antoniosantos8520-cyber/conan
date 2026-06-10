@@ -6322,11 +6322,9 @@ export default class ConanToolsSheet extends ActorSheet {
     event.stopPropagation();
     event.stopImmediatePropagation();
     const id = event.currentTarget.dataset.weaponId;
-    console.log('[WeaponDelete] CLICK id=', id);
     const weapons = this.actor.getFlag('conan', 'workshopWeapons') || {};
-    console.log('[WeaponDelete] keys before:', Object.keys(weapons));
     const w = weapons[id];
-    if (!w) { console.warn('[WeaponDelete] no weapon found'); return; }
+    if (!w) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: 'Delete Weapon' },
@@ -6334,15 +6332,11 @@ export default class ConanToolsSheet extends ActorSheet {
       rejectClose: false,
       modal: true
     });
-    console.log('[WeaponDelete] confirmed:', confirmed);
     if (!confirmed) return;
 
-    console.log('[WeaponDelete] ForcedDeletion operator:', foundry.data?.operators?.ForcedDeletion);
-    await this.actor.update({
-      'flags.conan.workshopWeapons': { [id]: new foundry.data.operators.ForcedDeletion() }
-    });
-    const after = this.actor.getFlag('conan', 'workshopWeapons') || {};
-    console.log('[WeaponDelete] keys after:', Object.keys(after));
+    // Remove just this key from the object flag (version-stable). The previous
+    // foundry.data.operators.ForcedDeletion API doesn't exist and threw for players.
+    await this.actor.update({ [`flags.conan.workshopWeapons.-=${id}`]: null });
     ui.notifications.info(`Deleted ${w.name}`);
     this._renderWorkshopWeapons(this.element);
     this.element.find('.workshop-weapon-edit').off('click').on('click', this._onWorkshopWeaponEdit.bind(this));
@@ -6691,11 +6685,9 @@ export default class ConanToolsSheet extends ActorSheet {
     event.stopPropagation();
     event.stopImmediatePropagation();
     const id = event.currentTarget.dataset.armorId;
-    console.log('[ArmorDelete] CLICK id=', id);
     const armors = this.actor.getFlag('conan', 'workshopArmors') || {};
-    console.log('[ArmorDelete] keys before:', Object.keys(armors));
     const a = armors[id];
-    if (!a) { console.warn('[ArmorDelete] no armor found'); return; }
+    if (!a) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: 'Delete Armor' },
@@ -6703,15 +6695,11 @@ export default class ConanToolsSheet extends ActorSheet {
       rejectClose: false,
       modal: true
     });
-    console.log('[ArmorDelete] confirmed:', confirmed);
     if (!confirmed) return;
 
-    console.log('[ArmorDelete] ForcedDeletion operator:', foundry.data?.operators?.ForcedDeletion);
-    await this.actor.update({
-      'flags.conan.workshopArmors': { [id]: new foundry.data.operators.ForcedDeletion() }
-    });
-    const after = this.actor.getFlag('conan', 'workshopArmors') || {};
-    console.log('[ArmorDelete] keys after:', Object.keys(after));
+    // Remove just this key from the object flag (version-stable). The previous
+    // foundry.data.operators.ForcedDeletion API doesn't exist and threw for players.
+    await this.actor.update({ [`flags.conan.workshopArmors.-=${id}`]: null });
     ui.notifications.info(`Deleted ${a.name}`);
     this._renderWorkshopArmors(this.element);
     this.element.find('.workshop-armor-edit').off('click').on('click', this._onWorkshopArmorEdit.bind(this));
@@ -7009,9 +6997,9 @@ export default class ConanToolsSheet extends ActorSheet {
     });
     if (!confirmed) return;
 
-    await this.actor.update({
-      'flags.conan.workshopShields': { [id]: new foundry.data.operators.ForcedDeletion() }
-    });
+    // Remove just this key from the object flag (version-stable). The previous
+    // foundry.data.operators.ForcedDeletion API doesn't exist and threw for players.
+    await this.actor.update({ [`flags.conan.workshopShields.-=${id}`]: null });
     ui.notifications.info(`Deleted ${s.name}`);
     this._renderWorkshopShields(this.element);
     this.element.find('.workshop-shield-edit').off('click').on('click', this._onWorkshopShieldEdit.bind(this));
