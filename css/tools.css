@@ -9927,7 +9927,8 @@
   color: var(--tools-accent);
 }
 
-.create-weapon-btn {
+.create-weapon-btn,
+.custom-weapon-btn {
   width: 100%;
   padding: 8px 12px;
   background: linear-gradient(180deg, rgba(184, 134, 11, 0.3) 0%, rgba(139, 105, 20, 0.4) 100%);
@@ -9944,10 +9945,65 @@
   transition: all 0.15s ease;
 }
 
-.create-weapon-btn:hover {
+.create-weapon-btn:hover,
+.custom-weapon-btn:hover {
   border-color: rgba(218, 165, 32, 0.8);
   background: linear-gradient(180deg, rgba(184, 134, 11, 0.5) 0%, rgba(139, 105, 20, 0.6) 100%);
   box-shadow: 0 0 8px rgba(184, 134, 11, 0.3);
+}
+
+/* Split Create | Custom weapon buttons */
+.weapon-btn-split {
+  display: flex;
+  gap: 6px;
+}
+.weapon-btn-split .create-weapon-btn,
+.weapon-btn-split .custom-weapon-btn {
+  flex: 1;
+  width: auto;
+}
+
+/* Custom Weapons picker — dropdown + Add/Modify/Delete (BPM: solid dark, white text, red on action) */
+.cw-lib-select {
+  width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 34px;
+  line-height: 1.6;
+  padding: 6px 10px;
+  background: #1B1B20;
+  color: #FFFFFF;
+  border: 2px solid #2a2a2e;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.cw-lib-add,
+.cw-lib-mod,
+.cw-lib-del {
+  flex: 1;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, #1B1B20 0%, #0B0B0D 100%);
+  border: 2px solid #2a2a2e;
+  border-radius: 4px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.cw-lib-add:hover,
+.cw-lib-mod:hover,
+.cw-lib-del:hover {
+  border-color: #E10600;
+  box-shadow: 0 0 10px rgba(225, 6, 0, 0.4);
+}
+/* Delete is destructive — red text emphasis (still on dark, high contrast) */
+.cw-lib-del {
+  color: #E10600;
 }
 
 /* Dialog Buttons */

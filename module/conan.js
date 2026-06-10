@@ -93,6 +93,15 @@ Hooks.once('init', async function() {
     default: []
   });
 
+  game.settings.register('conan', 'customEnemyWeapons', {
+    name: 'Custom Enemy Weapons',
+    hint: 'Stores GM-created reusable custom weapons for the enemy builder',
+    scope: 'world',
+    config: false, // Hidden from settings UI
+    type: Array,
+    default: []
+  });
+
   // Register Winds of Fate settings (universal roll modifiers)
   game.settings.register('conan', 'windsOfFatePlayers', {
     name: 'Winds of Fate (Players)',

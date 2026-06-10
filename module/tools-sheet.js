@@ -2269,10 +2269,18 @@ export default class ConanToolsSheet extends ActorSheet {
     const group = card.dataset.group;
 
     const enemyData = this._findEnemyData(category, group, enemyId);
-    if (!enemyData) return;
+    if (!enemyData) {
+      console.warn(`Conan | Preview: no enemy data found for ${category}/${group}/${enemyId}`);
+      return;
+    }
 
     // Open the roll dialog (preview mode)
-    showEnemyRollDialog(enemyData, null);
+    try {
+      showEnemyRollDialog(enemyData, null);
+    } catch (err) {
+      console.error(`Conan | Preview dialog failed for "${enemyData.name}" (${enemyData.id}):`, err);
+      ui.notifications.error(`Could not open preview for ${enemyData.name} — see console (F12).`);
+    }
   }
 
   _onEnemyExpandClick(event) {
@@ -2610,11 +2618,11 @@ export default class ConanToolsSheet extends ActorSheet {
           <div class="enemy-detail-defenses">
             <div class="enemy-detail-defense">
               <span class="label">Physical</span>
-              <span class="value">${enemy.defenses.physical.min}-${enemy.defenses.physical.max}</span>
+              <span class="value">${enemy.defenses.physical ? `${enemy.defenses.physical.min}-${enemy.defenses.physical.max}` : '—'}</span>
             </div>
             <div class="enemy-detail-defense">
               <span class="label">Sorcery</span>
-              <span class="value">${enemy.defenses.sorcery.min}-${enemy.defenses.sorcery.max}</span>
+              <span class="value">${enemy.defenses.sorcery ? `${enemy.defenses.sorcery.min}-${enemy.defenses.sorcery.max}` : '—'}</span>
             </div>
             ${enemy.threshold ? `
               <div class="enemy-detail-defense threshold">
@@ -2799,7 +2807,7 @@ export default class ConanToolsSheet extends ActorSheet {
 
     const typesByCategory = this._getEnemyTypesByCategory();
     const categories = Object.keys(typesByCategory);
-    const diceOptions = ['D6', 'D8', 'D10'];
+    const diceOptions = ['D6', 'D8', 'D10', 'D12'];
     const weaponCatalog = this._getEnemyWeaponCatalog();
 
     // Build category options
@@ -2956,7 +2964,10 @@ export default class ConanToolsSheet extends ActorSheet {
               </div>
             </fieldset>
 
-            <button type="button" class="create-weapon-btn"><i class="fas fa-hammer"></i> Create Custom Weapon</button>
+            <div class="weapon-btn-split">
+              <button type="button" class="create-weapon-btn"><i class="fas fa-hammer"></i> Create</button>
+              <button type="button" class="custom-weapon-btn"><i class="fas fa-khanda"></i> Custom</button>
+            </div>
 
             <fieldset class="enemy-creator-fieldset">
               <legend>Actions</legend>
@@ -3064,23 +3075,32 @@ export default class ConanToolsSheet extends ActorSheet {
           $(this).find('input[type="radio"]').prop('checked', true);
         });
 
-        // Create Custom Weapon button handler
-        html.find('.create-weapon-btn').click(() => {
+        // Weapon editor — existing=null creates a new weapon, a saved weapon modifies it in place
+        const openWeaponEditor = (existing = null) => {
+          const isEdit = !!existing;
+          let exDice = '', exBonus = 0;
+          if (existing?.damage) {
+            const dm = String(existing.damage).match(/^(\d*d\d+)(?:\+(\d+))?$/i);
+            if (dm) { exDice = dm[1]; exBonus = parseInt(dm[2]) || 0; } else { exDice = existing.damage; }
+          }
+          const exType = existing?.type || 'melee';
+          const exRange = existing?.range || 'Close';
+          const selAttr = (a, b) => a === b ? ' selected' : '';
           const cwContent = `
             <form class="create-weapon-form">
               <div style="display:flex; flex-direction:column; gap:8px;">
                 <div style="display:flex; gap:8px;">
                   <div style="flex:1;">
                     <label style="font-size:11px; color:#aaa;">Name</label>
-                    <input type="text" name="cw-name" placeholder="e.g. Flame Breath" style="width:100%;">
+                    <input type="text" name="cw-name" placeholder="e.g. Flame Breath" value="${existing?.name || ''}" style="width:100%;">
                   </div>
                 </div>
                 <div style="display:flex; gap:8px;">
                   <div style="flex:1;">
                     <label style="font-size:11px; color:#aaa;">Type</label>
                     <select name="cw-type" style="width:100%;">
-                      <option value="melee">Melee</option>
-                      <option value="ranged">Ranged</option>
+                      <option value="melee"${selAttr(exType, 'melee')}>Melee</option>
+                      <option value="ranged"${selAttr(exType, 'ranged')}>Ranged</option>
                     </select>
                   </div>
                   <div style="flex:1;">
@@ -3095,20 +3115,20 @@ export default class ConanToolsSheet extends ActorSheet {
                   <div style="flex:1;">
                     <label style="font-size:11px; color:#aaa;">Range</label>
                     <select name="cw-range" style="width:100%;">
-                      <option value="Touch">Touch</option>
-                      <option value="Close">Close</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Long">Long</option>
-                      <option value="Distant">Distant</option>
+                      <option value="Touch"${selAttr(exRange, 'Touch')}>Touch</option>
+                      <option value="Close"${selAttr(exRange, 'Close')}>Close</option>
+                      <option value="Medium"${selAttr(exRange, 'Medium')}>Medium</option>
+                      <option value="Long"${selAttr(exRange, 'Long')}>Long</option>
+                      <option value="Distant"${selAttr(exRange, 'Distant')}>Distant</option>
                     </select>
                   </div>
                   <div style="flex:1;">
                     <label style="font-size:11px; color:#aaa;">Damage Dice</label>
-                    <input type="text" name="cw-dice" placeholder="e.g. 1d8" style="width:100%;">
+                    <input type="text" name="cw-dice" placeholder="e.g. 1d8" value="${exDice}" style="width:100%;">
                   </div>
                   <div style="flex:1;">
                     <label style="font-size:11px; color:#aaa;">Bonus</label>
-                    <input type="number" name="cw-bonus" value="0" min="0" max="20" style="width:100%;">
+                    <input type="number" name="cw-bonus" value="${exBonus}" min="0" max="20" style="width:100%;">
                   </div>
                 </div>
               </div>
@@ -3116,13 +3136,13 @@ export default class ConanToolsSheet extends ActorSheet {
           `;
 
           new Dialog({
-            title: "Create Custom Weapon",
+            title: isEdit ? "Modify Custom Weapon" : "Create Custom Weapon",
             content: cwContent,
             buttons: {
               create: {
-                icon: '<i class="fas fa-hammer"></i>',
-                label: "Create",
-                callback: (cwHtml) => {
+                icon: `<i class="fas ${isEdit ? 'fa-pen' : 'fa-hammer'}"></i>`,
+                label: isEdit ? "Save Changes" : "Create",
+                callback: async (cwHtml) => {
                   const name = cwHtml.find('[name="cw-name"]').val()?.trim();
                   if (!name) {
                     ui.notifications.warn("Weapon needs a name!");
@@ -3133,6 +3153,19 @@ export default class ConanToolsSheet extends ActorSheet {
                   const dice = cwHtml.find('[name="cw-dice"]').val()?.trim() || "1d6";
                   const bonus = parseInt(cwHtml.find('[name="cw-bonus"]').val()) || 0;
                   const damage = bonus > 0 ? `${dice}+${bonus}` : dice;
+
+                  // MODIFY: update the existing library entry in place (same id) and stop
+                  if (isEdit) {
+                    try {
+                      const lib = [...(game.settings.get('conan', 'customEnemyWeapons') || [])];
+                      const idx = lib.findIndex(x => x.id === existing.id);
+                      if (idx >= 0) lib[idx] = { id: existing.id, name, type, damage, range };
+                      else lib.push({ id: existing.id, name, type, damage, range });
+                      await game.settings.set('conan', 'customEnemyWeapons', lib);
+                    } catch (e) { console.error('Conan | Failed to update custom weapon:', e); }
+                    ui.notifications.info(`Updated "${name}".`);
+                    return;
+                  }
 
                   // Find first empty slot for this weapon type
                   const slot0 = html.find(`select[name="${type}.weapon.0"]`);
@@ -3157,6 +3190,15 @@ export default class ConanToolsSheet extends ActorSheet {
                   if (!targetSlot.data('customWeapons')) targetSlot.data('customWeapons', {});
                   targetSlot.data('customWeapons')[customKey] = { name, damage, range };
 
+                  // Persist to the reusable custom-weapons library (survives across sessions)
+                  try {
+                    const lib = [...(game.settings.get('conan', 'customEnemyWeapons') || [])];
+                    lib.push({ id: customKey, name, type, damage, range });
+                    await game.settings.set('conan', 'customEnemyWeapons', lib);
+                  } catch (e) {
+                    console.error('Conan | Failed to persist custom weapon:', e);
+                  }
+
                   ui.notifications.info(`${name} added to ${type} slot.`);
                 }
               },
@@ -3167,6 +3209,76 @@ export default class ConanToolsSheet extends ActorSheet {
             },
             default: "create"
           }).render(true);
+        };
+
+        // Create button → open the editor empty
+        html.find('.create-weapon-btn').click(() => openWeaponEditor(null));
+
+        // Custom weapons library — pick a saved weapon and add it to an open slot
+        html.find('.custom-weapon-btn').click(() => {
+          const lib = game.settings.get('conan', 'customEnemyWeapons') || [];
+          if (!lib.length) {
+            ui.notifications.info('No saved custom weapons yet — use Create to make one.');
+            return;
+          }
+          const optionsHtml = lib.map(w => `<option value="${w.id}">${w.name} (${w.type})</option>`).join('');
+          const content = `
+            <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+              <select class="cw-lib-select">${optionsHtml}</select>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="cw-lib-add"><i class="fas fa-plus"></i> Add</button>
+                <button type="button" class="cw-lib-mod"><i class="fas fa-pen"></i> Modify</button>
+                <button type="button" class="cw-lib-del"><i class="fas fa-trash"></i> Delete</button>
+              </div>
+            </div>
+          `;
+          const pickerDlg = new Dialog({
+            title: 'Custom Weapons',
+            content,
+            buttons: { close: { icon: '<i class="fas fa-times"></i>', label: 'Close' } },
+            default: 'close',
+            render: (dlgHtml) => {
+              const getSel = () => {
+                const id = dlgHtml.find('.cw-lib-select').val();
+                return (game.settings.get('conan', 'customEnemyWeapons') || []).find(x => x.id === id);
+              };
+              // ADD selected weapon to an open slot
+              dlgHtml.find('.cw-lib-add').click(() => {
+                const w = getSel();
+                if (!w) return;
+                const type = w.type || 'melee';
+                const slot0 = html.find(`select[name="${type}.weapon.0"]`);
+                const slot1 = html.find(`select[name="${type}.weapon.1"]`);
+                const targetSlot = !slot0.val() ? slot0 : (!slot1.val() ? slot1 : null);
+                if (!targetSlot) { ui.notifications.warn(`Both ${type} weapon slots are full. Clear one first.`); return; }
+                if (!targetSlot.find(`option[value="${w.id}"]`).length) {
+                  targetSlot.append(`<option value="${w.id}" data-damage="${w.damage}" data-range="${w.range}" data-custom="true">${w.name}</option>`);
+                }
+                targetSlot.val(w.id);
+                if (!targetSlot.data('customWeapons')) targetSlot.data('customWeapons', {});
+                targetSlot.data('customWeapons')[w.id] = { name: w.name, damage: w.damage, range: w.range };
+                ui.notifications.info(`${w.name} added to ${type} slot.`);
+              });
+              // MODIFY selected weapon — reopen the editor pre-filled
+              dlgHtml.find('.cw-lib-mod').click(() => {
+                const w = getSel();
+                if (!w) return;
+                pickerDlg.close();
+                openWeaponEditor(w);
+              });
+              // DELETE selected weapon from the library (doesn't affect enemies already built with it)
+              dlgHtml.find('.cw-lib-del').click(async () => {
+                const w = getSel();
+                if (!w) return;
+                const next = (game.settings.get('conan', 'customEnemyWeapons') || []).filter(x => x.id !== w.id);
+                await game.settings.set('conan', 'customEnemyWeapons', next);
+                dlgHtml.find(`.cw-lib-select option[value="${w.id}"]`).remove();
+                ui.notifications.info(`Deleted "${w.name}".`);
+                if (!dlgHtml.find('.cw-lib-select option').length) pickerDlg.close();
+              });
+            }
+          });
+          pickerDlg.render(true);
         });
 
         // Test attack button handler
@@ -3180,7 +3292,20 @@ export default class ConanToolsSheet extends ActorSheet {
             return;
           }
 
-          const weapon = weaponCatalogRef[type][weaponKey];
+          // Resolve weapon from catalog OR from a custom weapon (stored on the select / option attrs)
+          let weapon = weaponCatalogRef[type][weaponKey];
+          if (!weapon) {
+            const sel = html.find(`select[name="${type}.weapon.${index}"]`);
+            weapon = (sel.data('customWeapons') || {})[weaponKey];
+            if (!weapon) {
+              const opt = sel.find(`option[value="${weaponKey}"]`);
+              if (opt.length) weapon = { name: opt.text().trim(), damage: opt.attr('data-damage') || '1d6', range: opt.attr('data-range') || 'Close' };
+            }
+          }
+          if (!weapon) {
+            ui.notifications.warn('Could not find that weapon to roll.');
+            return;
+          }
           const statName = type === 'melee' ? 'might' : 'edge';
           const statValue = parseInt(html.find(`input[name="stats.${statName}.value"]`).val()) || 2;
           const statDie = html.find(`input[name="stats.${statName}.die"]:checked`).val() || 'D6';
@@ -3231,11 +3356,19 @@ export default class ConanToolsSheet extends ActorSheet {
           const meleeWeapons = Array.isArray(enemy.attacks.melee) ? enemy.attacks.melee : [enemy.attacks.melee];
           meleeWeapons.forEach((weapon, i) => {
             if (i < 2 && weapon) {
+              const sel = html.find(`select[name="melee.weapon.${i}"]`);
               const meleeKey = Object.entries(weaponCatalogRef.melee).find(([k, w]) =>
                 w.name === weapon.name
               )?.[0];
               if (meleeKey) {
-                html.find(`select[name="melee.weapon.${i}"]`).val(meleeKey);
+                sel.val(meleeKey);
+              } else {
+                // Custom weapon — recreate a custom option so it pre-loads and re-saves
+                const key = `custom_edit_${i}_${Date.now()}`;
+                sel.append(`<option value="${key}" data-damage="${weapon.damage}" data-range="${weapon.range}" data-custom="true">${weapon.name}</option>`);
+                sel.val(key);
+                if (!sel.data('customWeapons')) sel.data('customWeapons', {});
+                sel.data('customWeapons')[key] = { name: weapon.name, damage: weapon.damage, range: weapon.range };
               }
             }
           });
@@ -3244,11 +3377,19 @@ export default class ConanToolsSheet extends ActorSheet {
           const rangedWeapons = Array.isArray(enemy.attacks.ranged) ? enemy.attacks.ranged : [enemy.attacks.ranged];
           rangedWeapons.forEach((weapon, i) => {
             if (i < 2 && weapon) {
+              const sel = html.find(`select[name="ranged.weapon.${i}"]`);
               const rangedKey = Object.entries(weaponCatalogRef.ranged).find(([k, w]) =>
                 w.name === weapon.name
               )?.[0];
               if (rangedKey) {
-                html.find(`select[name="ranged.weapon.${i}"]`).val(rangedKey);
+                sel.val(rangedKey);
+              } else {
+                // Custom weapon — recreate a custom option so it pre-loads and re-saves
+                const key = `custom_edit_${i}_${Date.now()}`;
+                sel.append(`<option value="${key}" data-damage="${weapon.damage}" data-range="${weapon.range}" data-custom="true">${weapon.name}</option>`);
+                sel.val(key);
+                if (!sel.data('customWeapons')) sel.data('customWeapons', {});
+                sel.data('customWeapons')[key] = { name: weapon.name, damage: weapon.damage, range: weapon.range };
               }
             }
           });
@@ -9130,8 +9271,8 @@ function showEnemyRollDialog(enemyData, token = null) {
   const randomFromRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
   // Get current values - randomize from range for preview, use actual for placed
-  const physDef = isPlaced ? enemyData.physicalDefense : randomFromRange(enemyData.defenses.physical.min, enemyData.defenses.physical.max);
-  const sorcDef = isPlaced ? enemyData.sorceryDefense : randomFromRange(enemyData.defenses.sorcery.min, enemyData.defenses.sorcery.max);
+  const physDef = isPlaced ? enemyData.physicalDefense : (enemyData.defenses.physical ? randomFromRange(enemyData.defenses.physical.min, enemyData.defenses.physical.max) : null);
+  const sorcDef = isPlaced ? enemyData.sorceryDefense : (enemyData.defenses.sorcery ? randomFromRange(enemyData.defenses.sorcery.min, enemyData.defenses.sorcery.max) : null);
   const ar = isPlaced ? (enemyData.armorRating || null) : (enemyData.ar ? randomFromRange(enemyData.ar.min, enemyData.ar.max) : null);
 
   // Check if this token has a Protect bonus (for green defense indicator)
